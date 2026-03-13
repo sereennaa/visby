@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { authService } from '../../services/auth';
@@ -24,24 +26,23 @@ type SettingsScreenProps = {
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { user, logout, settings, updateSettings } = useStore();
+  const [infoModal, setInfoModal] = useState<{ title: string; message: string } | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [comingSoonBanner, setComingSoonBanner] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log Out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await authService.signOut();
-          } catch {
-            // proceed even if remote sign-out fails
-          }
-          logout();
-          navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
-        },
-      },
-    ]);
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
+    try {
+      await authService.signOut();
+    } catch {
+      // proceed even if remote sign-out fails
+    }
+    logout();
+    navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   };
 
   const renderRow = (
@@ -104,6 +105,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {comingSoonBanner && (
+            <Card style={styles.comingSoonBanner}>
+              <View style={styles.bannerContent}>
+                <Icon name="info" size={16} color={colors.primary.wisteriaDark} />
+                <Text variant="bodySmall" color={colors.primary.wisteriaDark} style={styles.bannerText}>
+                  Password change will be available in a future update.
+                </Text>
+                <TouchableOpacity onPress={() => setComingSoonBanner(false)}>
+                  <Icon name="close" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+              </View>
+            </Card>
+          )}
+
           {/* Account */}
           <Text variant="h3" color={colors.text.secondary} style={styles.sectionLabel}>
             Account
@@ -111,9 +126,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <Card style={styles.sectionCard}>
             {renderRow('person', 'Edit Profile', () => navigation.navigate('EditProfile'))}
             <View style={styles.separator} />
-            {renderRow('lock', 'Change Password', () =>
-              Alert.alert('Coming Soon', 'Password change will be available in a future update.'),
-            )}
+            {renderRow('lock', 'Change Password', () => setComingSoonBanner(true))}
           </Card>
 
           {/* Preferences */}
@@ -143,11 +156,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           </Text>
           <Card style={styles.sectionCard}>
             {renderRow('help', 'Help & Support', () =>
-              Alert.alert('Help & Support', 'For questions or issues, email support@visby.app.'),
+              setInfoModal({ title: 'Help & Support', message: 'For questions or issues, email support@visby.app.' }),
             )}
             <View style={styles.separator} />
             {renderRow('info', 'About Visby', () =>
-              Alert.alert('Visby', 'Version 1.0.0\n\nExplore the world, one stamp at a time.'),
+              setInfoModal({ title: 'Visby', message: 'Version 1.0.0\n\nExplore the world, one stamp at a time.' }),
             )}
           </Card>
 
@@ -159,6 +172,47 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             {renderRow('logout', 'Log Out', handleLogout, { danger: true })}
           </Card>
         </ScrollView>
+
+        {/* Info Modal */}
+        <Modal visible={!!infoModal} transparent animationType="fade">
+          <Pressable style={styles.overlay} onPress={() => setInfoModal(null)}>
+            <Pressable style={styles.modalCard}>
+              <Text variant="h2" style={styles.modalTitle}>{infoModal?.title}</Text>
+              <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
+                {infoModal?.message}
+              </Text>
+              <Button title="OK" onPress={() => setInfoModal(null)} variant="primary" size="md" fullWidth />
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Logout Confirmation Modal */}
+        <Modal visible={showLogoutConfirm} transparent animationType="fade">
+          <Pressable style={styles.overlay} onPress={() => setShowLogoutConfirm(false)}>
+            <Pressable style={styles.modalCard}>
+              <Text variant="h2" style={styles.modalTitle}>Log Out</Text>
+              <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
+                Are you sure you want to log out?
+              </Text>
+              <View style={styles.modalActions}>
+                <Button
+                  title="Cancel"
+                  onPress={() => setShowLogoutConfirm(false)}
+                  variant="ghost"
+                  size="md"
+                  style={styles.modalActionButton}
+                />
+                <Button
+                  title="Log Out"
+                  onPress={confirmLogout}
+                  variant="primary"
+                  size="md"
+                  style={styles.modalActionButton}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -264,6 +318,51 @@ const styles = StyleSheet.create({
   },
   toggleKnobOff: {
     alignSelf: 'flex-start',
+  },
+  comingSoonBanner: {
+    backgroundColor: colors.primary.wisteriaFaded,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  bannerText: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.xl,
+    width: '85%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  modalActionButton: {
+    flex: 1,
   },
 });
 

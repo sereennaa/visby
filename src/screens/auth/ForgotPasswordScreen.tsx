@@ -6,7 +6,6 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,11 +53,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
       await authService.resetPassword(email);
       setSent(true);
     } catch (err: any) {
-      Alert.alert(
-        'Error',
-        err.message || 'Failed to send reset email. Please try again.',
-        [{ text: 'OK' }]
-      );
+      setError(err.message || 'Failed to send reset email. Please try again.');
     } finally {
       setLoading(false);
     }

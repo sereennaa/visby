@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse } from '../types';
-import { LEVEL_THRESHOLDS } from '../config/constants';
+import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
+import { checkNewBadges, BadgeCheckContext } from '../services/badges';
 
 interface AppStore {
   // Auth State
@@ -74,6 +75,9 @@ interface AppStore {
   
   // Actions - Location
   setLocation: (location: LocationData | null) => void;
+
+  // Actions - Badges
+  checkAndAwardBadges: (extra?: { quizPerfect?: boolean }) => void;
 
   // Actions - Settings
   updateSettings: (settings: Partial<AppStore['settings']>) => void;
@@ -146,9 +150,15 @@ export const useStore = create<AppStore>()(
       
       // Collection Actions
       setStamps: (stamps) => set({ stamps }),
-      addStamp: (stamp) => set((state) => ({ stamps: [...state.stamps, stamp] })),
+      addStamp: (stamp) => {
+        set((state) => ({ stamps: [...state.stamps, stamp] }));
+        get().checkAndAwardBadges();
+      },
       setBites: (bites) => set({ bites }),
-      addBite: (bite) => set((state) => ({ bites: [...state.bites, bite] })),
+      addBite: (bite) => {
+        set((state) => ({ bites: [...state.bites, bite] }));
+        get().checkAndAwardBadges();
+      },
       setBadges: (badges) => set({ badges }),
       addBadge: (badge) => set((state) => ({ badges: [...state.badges, badge] })),
       
@@ -235,6 +245,8 @@ export const useStore = create<AppStore>()(
             },
           });
         }
+
+        get().checkAndAwardBadges();
       },
       getStreakMultiplier: () => {
         const { user } = get();
@@ -296,7 +308,54 @@ export const useStore = create<AppStore>()(
 
       // Houses Actions
       setUserHouses: (userHouses) => set({ userHouses }),
-      addUserHouse: (house) => set((state) => ({ userHouses: [...state.userHouses, house] })),
+      addUserHouse: (house) => {
+        set((state) => ({ userHouses: [...state.userHouses, house] }));
+        get().checkAndAwardBadges();
+      },
+
+      // Badge Actions
+      checkAndAwardBadges: (extra) => {
+        const { user, stamps, bites, badges, lessonProgress, userHouses, visby } = get();
+
+        const uniqueCuisines = new Set(bites.map((b) => b.cuisine));
+        const context: BadgeCheckContext = {
+          stamps: stamps.length,
+          bites: bites.length,
+          countriesVisited: user?.countriesVisited ?? 0,
+          totalAuraEarned: user?.totalAuraEarned ?? 0,
+          currentStreak: user?.currentStreak ?? 0,
+          longestStreak: user?.longestStreak ?? 0,
+          lessonsCompleted: lessonProgress.filter((lp) => lp.completed).length,
+          housesOwned: userHouses.length,
+          cosmeticsOwned: visby?.ownedCosmetics.length ?? 0,
+          cuisinesCount: uniqueCuisines.size,
+          quizPerfect: extra?.quizPerfect ?? false,
+          earnedBadgeIds: badges.map((b) => b.badgeId),
+        };
+
+        const newBadges = checkNewBadges(context);
+
+        const RARITY_AURA: Record<string, number> = {
+          common: AURA_REWARDS.BADGE_COMMON,
+          uncommon: AURA_REWARDS.BADGE_UNCOMMON,
+          rare: AURA_REWARDS.BADGE_RARE,
+          epic: AURA_REWARDS.BADGE_EPIC,
+          legendary: AURA_REWARDS.BADGE_LEGENDARY,
+        };
+
+        for (const badge of newBadges) {
+          const userBadge: UserBadge = {
+            id: `badge_${badge.id}_${Date.now()}`,
+            userId: user?.id ?? '',
+            badgeId: badge.id,
+            earnedAt: new Date(),
+            progress: 100,
+            isNew: true,
+          };
+          set((s) => ({ badges: [...s.badges, userBadge] }));
+          get().addAura(RARITY_AURA[badge.rarity] ?? 0);
+        }
+      },
 
       // Settings Actions
       updateSettings: (newSettings) => set((state) => ({

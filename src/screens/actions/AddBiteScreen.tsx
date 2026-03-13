@@ -4,7 +4,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
+  Pressable,
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,12 +15,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading } from '../../components/ui/Text';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
-import { BITE_CATEGORIES_INFO } from '../../config/constants';
+import { BITE_CATEGORIES_INFO, AURA_REWARDS } from '../../config/constants';
 import { RootStackParamList, Bite, BiteCategory } from '../../types';
 
 const SELECTABLE_CATEGORIES: BiteCategory[] = [
@@ -41,6 +41,9 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
   const [isMadeAtHome, setIsMadeAtHome] = useState(false);
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [earnedAura, setEarnedAura] = useState(0);
 
   const takePhoto = async () => {
     const cameraResult = await ImagePicker.launchCameraAsync({
@@ -68,15 +71,19 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
   };
 
   const handleSave = () => {
+    setFormError('');
+
     if (!foodName.trim()) {
-      Alert.alert('Missing Name', 'Please enter a food name.');
+      setFormError('Please enter a food name.');
       return;
     }
 
     if (rating === 0) {
-      Alert.alert('Missing Rating', 'Please select a rating.');
+      setFormError('Please select a rating.');
       return;
     }
+
+    const reward = isMadeAtHome ? AURA_REWARDS.BITE_WITH_RECIPE : AURA_REWARDS.BITE_UPLOAD;
 
     const bite: Bite = {
       id: `bite_${Date.now()}`,
@@ -98,13 +105,9 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
     };
 
     addBite(bite);
-    addAura(25);
-
-    Alert.alert(
-      'Bite Saved! +25 Aura',
-      `${foodName} has been added to your collection!`,
-      [{ text: 'Yum!', onPress: () => navigation.goBack() }],
-    );
+    addAura(reward);
+    setEarnedAura(reward);
+    setShowSuccess(true);
   };
 
   return (
@@ -260,6 +263,16 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           )}
 
+          {/* Error Banner */}
+          {formError ? (
+            <View style={styles.errorBanner}>
+              <Icon name="close" size={16} color={colors.status.error} />
+              <Text variant="bodySmall" color={colors.status.error}>
+                {formError}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Save Button */}
           <View style={styles.submitSection}>
             <Button
@@ -272,6 +285,34 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Success Modal */}
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => {}}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconContainer}>
+              <Icon name="food" size={48} color={colors.reward.peachDark} />
+            </View>
+            <Heading level={3} style={styles.modalTitle}>Bite Saved!</Heading>
+            <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
+              +{earnedAura} Aura
+            </Text>
+            <Text variant="body" color={colors.text.secondary} style={styles.modalFoodName}>
+              {foodName}
+            </Text>
+            <Button
+              title="Yum!"
+              onPress={() => {
+                setShowSuccess(false);
+                navigation.goBack();
+              }}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -399,6 +440,52 @@ const styles = StyleSheet.create({
   submitSection: {
     marginTop: spacing.md,
     marginBottom: spacing.xl,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.status.errorLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.radius.md,
+    marginBottom: spacing.md,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.screenPadding,
+  },
+  modalContent: {
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.reward.peachLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalAura: {
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalFoodName: {
+    marginBottom: spacing.lg,
+    textAlign: 'center',
   },
 });
 

@@ -4,7 +4,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
+  Pressable,
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,8 +21,25 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
-import { STAMP_TYPES_INFO } from '../../config/constants';
+import { STAMP_TYPES_INFO, AURA_REWARDS } from '../../config/constants';
 import { RootStackParamList, Stamp, StampType } from '../../types';
+
+const getStampReward = (type: StampType): number => {
+  const map: Record<string, number> = {
+    city: AURA_REWARDS.STAMP_CITY,
+    country: AURA_REWARDS.STAMP_COUNTRY,
+    landmark: AURA_REWARDS.STAMP_LANDMARK,
+    park: AURA_REWARDS.STAMP_PARK,
+    beach: AURA_REWARDS.STAMP_BEACH,
+    mountain: AURA_REWARDS.STAMP_MOUNTAIN,
+    museum: AURA_REWARDS.STAMP_MUSEUM,
+    restaurant: AURA_REWARDS.STAMP_RESTAURANT,
+    cafe: AURA_REWARDS.STAMP_CAFE,
+    market: AURA_REWARDS.STAMP_MARKET,
+    hiddenGem: AURA_REWARDS.STAMP_HIDDEN_GEM,
+  };
+  return map[type] || AURA_REWARDS.STAMP_CITY;
+};
 
 const SELECTABLE_TYPES: StampType[] = [
   'city', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'market',
@@ -43,6 +61,9 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   const [selectedType, setSelectedType] = useState<StampType>('city');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [earnedAura, setEarnedAura] = useState(0);
 
   const locationDisplay = currentLocation?.city && currentLocation?.country
     ? `${currentLocation.city}, ${currentLocation.country}`
@@ -74,10 +95,14 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   };
 
   const handleCollect = () => {
+    setFormError('');
+
     if (!locationName.trim()) {
-      Alert.alert('Missing Name', 'Please enter a location name.');
+      setFormError('Please enter a location name.');
       return;
     }
+
+    const reward = getStampReward(selectedType);
 
     const stamp: Stamp = {
       id: `stamp_${Date.now()}`,
@@ -99,13 +124,9 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
     };
 
     addStamp(stamp);
-    addAura(50);
-
-    Alert.alert(
-      'Stamp Collected! +50 Aura',
-      `You collected a ${STAMP_TYPES_INFO[selectedType]?.label || selectedType} stamp at ${locationName}!`,
-      [{ text: 'Awesome!', onPress: () => navigation.goBack() }],
-    );
+    addAura(reward);
+    setEarnedAura(reward);
+    setShowSuccess(true);
   };
 
   return (
@@ -145,9 +166,14 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
             <Input
               label="Location Name"
               value={locationName}
-              onChangeText={setLocationName}
+              onChangeText={(text) => { setLocationName(text); setFormError(''); }}
               placeholder="e.g. Central Park, Eiffel Tower"
             />
+            {formError ? (
+              <Text variant="bodySmall" color={colors.status.error} style={styles.errorText}>
+                {formError}
+              </Text>
+            ) : null}
           </View>
 
           {/* Stamp Type Selector */}
@@ -230,6 +256,34 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Success Modal */}
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => {}}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconContainer}>
+              <Icon name="stamp" size={48} color={colors.primary.wisteriaDark} />
+            </View>
+            <Heading level={3} style={styles.modalTitle}>Stamp Collected!</Heading>
+            <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
+              +{earnedAura} Aura
+            </Text>
+            <Text variant="body" color={colors.text.secondary} style={styles.modalLocation}>
+              {locationName}
+            </Text>
+            <Button
+              title="Awesome!"
+              onPress={() => {
+                setShowSuccess(false);
+                navigation.goBack();
+              }}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -335,6 +389,45 @@ const styles = StyleSheet.create({
   submitSection: {
     marginTop: spacing.md,
     marginBottom: spacing.xl,
+  },
+  errorText: {
+    marginTop: spacing.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.screenPadding,
+  },
+  modalContent: {
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary.wisteriaFaded,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalAura: {
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalLocation: {
+    marginBottom: spacing.lg,
+    textAlign: 'center',
   },
 });
 

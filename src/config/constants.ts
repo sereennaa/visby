@@ -243,44 +243,6 @@ export const COUNTRIES: Country[] = [
 ];
 
 // ===================================
-// BADGES
-// ===================================
-
-export const BADGE_DEFINITIONS = [
-  // Explorer Badges
-  { id: 'first_stamp', name: 'First Step', requirement: 1, type: 'stamp_count', icon: 'footsteps' as IconName },
-  { id: 'ten_stamps', name: 'Stamp Collector', requirement: 10, type: 'stamp_count', icon: 'stamp' as IconName },
-  { id: 'fifty_stamps', name: 'Stamp Master', requirement: 50, type: 'stamp_count', icon: 'sparkles' as IconName },
-  { id: 'hundred_stamps', name: 'Stamp Legend', requirement: 100, type: 'stamp_count', icon: 'star' as IconName },
-  
-  // Park Badges
-  { id: 'park_explorer', name: 'Nature Lover', requirement: 5, type: 'stamp_type', stampType: 'park', icon: 'park' as IconName },
-  { id: 'park_ranger', name: 'Park Ranger', requirement: 10, type: 'stamp_type', stampType: 'park', icon: 'nature' as IconName },
-  
-  // Beach Badges
-  { id: 'beach_lover', name: 'Beach Bum', requirement: 5, type: 'stamp_type', stampType: 'beach', icon: 'beach' as IconName },
-  { id: 'beach_master', name: 'Ocean Spirit', requirement: 10, type: 'stamp_type', stampType: 'beach', icon: 'globe' as IconName },
-  
-  // Country Badges
-  { id: 'two_countries', name: 'Border Crosser', requirement: 2, type: 'country_count', icon: 'passport' as IconName },
-  { id: 'five_countries', name: 'Passport Stamper', requirement: 5, type: 'country_count', icon: 'airplane' as IconName },
-  { id: 'ten_countries', name: 'World Traveler', requirement: 10, type: 'country_count', icon: 'country' as IconName },
-  
-  // Foodie Badges
-  { id: 'first_bite', name: 'First Taste', requirement: 1, type: 'bite_count', icon: 'food' as IconName },
-  { id: 'ten_bites', name: 'Food Explorer', requirement: 10, type: 'bite_count', icon: 'bowl' as IconName },
-  { id: 'fifty_bites', name: 'Culinary Master', requirement: 50, type: 'bite_count', icon: 'crown' as IconName },
-  
-  // Streak Badges
-  { id: 'week_streak', name: 'Week Warrior', requirement: 7, type: 'streak', icon: 'flame' as IconName },
-  { id: 'month_streak', name: 'Monthly Maven', requirement: 30, type: 'streak', icon: 'flash' as IconName },
-  
-  // Learning Badges
-  { id: 'first_lesson', name: 'Eager Student', requirement: 1, type: 'lesson_count', icon: 'book' as IconName },
-  { id: 'quiz_ace', name: 'Quiz Ace', requirement: 5, type: 'perfect_quiz', icon: 'school' as IconName },
-];
-
-// ===================================
 // UI CONSTANTS
 // ===================================
 

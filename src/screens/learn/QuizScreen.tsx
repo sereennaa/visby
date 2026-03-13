@@ -26,7 +26,7 @@ type QuizScreenProps = {
 
 export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => {
   const category = route.params?.category;
-  const { addAura } = useStore();
+  const { addAura, checkAndAwardBadges } = useStore();
   const [refreshKey, setRefreshKey] = useState(0);
   const questions = useMemo<QuizQuestion[]>(
     () => category ? getQuizByCategory(category, 10) : getRandomQuiz(10),
@@ -81,6 +81,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
         const finalScore = isCorrect ? score + 1 : score;
         const auraEarned = finalScore * 20;
         addAura(auraEarned);
+        checkAndAwardBadges({ quizPerfect: finalScore === questions.length });
         setIsFinished(true);
       } else {
         setCurrentQuestion(prev => prev + 1);

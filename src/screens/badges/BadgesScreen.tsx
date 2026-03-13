@@ -15,7 +15,8 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
-import { BADGE_DEFINITIONS } from '../../config/constants';
+import { BADGE_DEFINITIONS, BadgeDefinition } from '../../config/badges';
+import { getBadgeProgress, BadgeCheckContext } from '../../services/badges';
 import { RootStackParamList } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -26,53 +27,30 @@ type BadgesScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Badges'>;
 };
 
-type BadgeDef = (typeof BADGE_DEFINITIONS)[number];
-
-const REQUIREMENT_LABELS: Record<string, string> = {
-  stamp_count: 'stamps',
-  bite_count: 'bites',
-  country_count: 'countries',
-  streak: 'day streak',
-  stamp_type: 'stamps',
-  lesson_count: 'lessons',
-  perfect_quiz: 'perfect quizzes',
-};
-
 export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
-  const { stamps, bites, badges, user, lessonProgress } = useStore();
+  const { stamps, bites, badges, user, lessonProgress, userHouses, visby } = useStore();
 
   const earnedBadgeIds = new Set(badges.map((b) => b.badgeId));
 
-  const getProgress = (badge: BadgeDef): number => {
-    switch (badge.type) {
-      case 'stamp_count':
-        return stamps.length;
-      case 'bite_count':
-        return bites.length;
-      case 'country_count':
-        return user?.countriesVisited ?? 0;
-      case 'streak':
-        return user?.longestStreak ?? 0;
-      case 'stamp_type': {
-        const stampType = (badge as any).stampType;
-        return stampType
-          ? stamps.filter((s) => s.type === stampType).length
-          : 0;
-      }
-      case 'lesson_count':
-        return lessonProgress.filter((lp) => lp.completed).length;
-      case 'perfect_quiz':
-        return lessonProgress.filter((lp) => lp.quizScore === 100).length;
-      default:
-        return 0;
-    }
+  const context: BadgeCheckContext = {
+    stamps: stamps.length,
+    bites: bites.length,
+    countriesVisited: user?.countriesVisited ?? 0,
+    totalAuraEarned: user?.totalAuraEarned ?? 0,
+    currentStreak: user?.currentStreak ?? 0,
+    longestStreak: user?.longestStreak ?? 0,
+    lessonsCompleted: lessonProgress.filter((lp) => lp.completed).length,
+    housesOwned: userHouses.length,
+    cosmeticsOwned: visby?.ownedCosmetics.length ?? 0,
+    cuisinesCount: new Set(bites.map((b) => b.cuisine)).size,
+    quizPerfect: false,
+    earnedBadgeIds: badges.map((b) => b.badgeId),
   };
 
-  const renderBadge = ({ item }: { item: BadgeDef }) => {
+  const renderBadge = ({ item }: { item: BadgeDefinition }) => {
     const earned = earnedBadgeIds.has(item.id);
-    const current = getProgress(item);
-    const ratio = Math.min(current / item.requirement, 1);
-    const label = REQUIREMENT_LABELS[item.type] || 'actions';
+    const { current, target, label } = getBadgeProgress(item.id, context);
+    const ratio = Math.min(current / target, 1);
 
     return (
       <Card
@@ -107,7 +85,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
         <Caption align="center" style={!earned ? styles.lockedText : undefined}>
           {earned
             ? 'Earned!'
-            : `${current}/${item.requirement} ${label}`}
+            : `${current}/${target} ${label}`}
         </Caption>
 
         {/* Progress bar */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,18 +21,18 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
   const { user, setUser } = useStore();
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || '');
+  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
   const handleSave = () => {
     if (!displayName.trim() || !username.trim()) {
-      Alert.alert('Oops', 'Name and username cannot be empty.');
+      setMessage({ text: 'Name and username cannot be empty.', type: 'error' });
       return;
     }
     if (user) {
       setUser({ ...user, displayName: displayName.trim(), username: username.trim() });
     }
-    Alert.alert('Saved!', 'Your profile has been updated.', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    setMessage({ text: 'Your profile has been updated!', type: 'success' });
+    setTimeout(() => navigation.goBack(), 1500);
   };
 
   return (
@@ -49,6 +49,22 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
           <View style={{ width: 40 }} />
         </View>
         <ScrollView contentContainerStyle={styles.content}>
+          {message && (
+            <View style={[styles.banner, message.type === 'error' ? styles.bannerError : styles.bannerSuccess]}>
+              <Icon
+                name={message.type === 'error' ? 'close' : 'checkCircle'}
+                size={16}
+                color={message.type === 'error' ? colors.status.error : colors.success.emerald}
+              />
+              <Text
+                variant="bodySmall"
+                color={message.type === 'error' ? colors.status.error : colors.success.emerald}
+                style={styles.bannerText}
+              >
+                {message.text}
+              </Text>
+            </View>
+          )}
           <Card style={styles.card}>
             <Input
               label="Display Name"
@@ -93,4 +109,21 @@ const styles = StyleSheet.create({
   },
   card: { marginBottom: spacing.xl },
   spacer: { height: spacing.md },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: spacing.radius.lg,
+    marginBottom: spacing.md,
+  },
+  bannerError: {
+    backgroundColor: colors.status.errorLight,
+  },
+  bannerSuccess: {
+    backgroundColor: colors.success.honeydew,
+  },
+  bannerText: {
+    flex: 1,
+  },
 });

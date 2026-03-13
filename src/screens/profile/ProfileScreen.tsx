@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,31 +31,24 @@ type ProfileScreenProps = {
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, visby, stamps, bites, badges, logout } = useStore();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await authService.signOut();
-              logout();
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Welcome' }],
-              });
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
-          },
-        },
-      ]
-    );
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
+    try {
+      await authService.signOut();
+      logout();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Welcome' }],
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const getCurrentLevel = () => {
@@ -243,6 +237,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           </View>
         </ScrollView>
+
+        {/* Logout Confirmation Modal */}
+        <Modal visible={showLogoutConfirm} transparent animationType="fade">
+          <Pressable style={styles.overlay} onPress={() => setShowLogoutConfirm(false)}>
+            <Pressable style={styles.modalCard}>
+              <Text variant="h2" style={styles.modalTitle}>Log Out</Text>
+              <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
+                Are you sure you want to log out?
+              </Text>
+              <View style={styles.modalActions}>
+                <Button
+                  title="Cancel"
+                  onPress={() => setShowLogoutConfirm(false)}
+                  variant="ghost"
+                  size="md"
+                  style={styles.modalActionButton}
+                />
+                <Button
+                  title="Log Out"
+                  onPress={confirmLogout}
+                  variant="primary"
+                  size="md"
+                  style={styles.modalActionButton}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -360,6 +382,37 @@ const styles = StyleSheet.create({
   madeWithRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.xl,
+    width: '85%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  modalActionButton: {
+    flex: 1,
   },
 });
 

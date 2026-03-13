@@ -24,7 +24,7 @@ type CosmeticShopScreenProps = {
 };
 
 export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigation }) => {
-  const { user, visby, spendAura, equipCosmetic } = useStore();
+  const { user, visby, spendAura, equipCosmetic, checkAndAwardBadges } = useStore();
 
   const [selectedType, setSelectedType] = useState<CosmeticType>('hat');
   const [previewItem, setPreviewItem] = useState<ShopCosmetic | null>(null);
@@ -76,6 +76,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
         },
       });
     }
+    checkAndAwardBadges();
     setBuyModalVisible(false);
     setBuyModalItem(null);
   };
