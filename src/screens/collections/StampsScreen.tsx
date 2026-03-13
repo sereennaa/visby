@@ -80,33 +80,35 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
         </View>
 
         {/* Stats Overview */}
-        <Card style={styles.statsCard}>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Icon name="globe" size={24} color={colors.calm.ocean} />
-              <Text variant="h2">
-                {new Set(stamps.map(s => s.country)).size}
-              </Text>
-              <Caption>Countries</Caption>
+        {stamps.length > 0 && (
+          <Card style={styles.statsCard}>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Icon name="globe" size={24} color={colors.calm.ocean} />
+                <Text variant="h2">
+                  {new Set(stamps.map(s => s.country)).size}
+                </Text>
+                <Caption>Countries</Caption>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Icon name="city" size={24} color={colors.primary.wisteriaDark} />
+                <Text variant="h2">
+                  {new Set(stamps.map(s => s.city)).size}
+                </Text>
+                <Caption>Cities</Caption>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Icon name="airplane" size={24} color={colors.reward.peachDark} />
+                <Text variant="h2">
+                  {stamps.filter(s => s.isFastTravel).length}
+                </Text>
+                <Caption>Fast Travel</Caption>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Icon name="city" size={24} color={colors.primary.wisteriaDark} />
-              <Text variant="h2">
-                {new Set(stamps.map(s => s.city)).size}
-              </Text>
-              <Caption>Cities</Caption>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Icon name="airplane" size={24} color={colors.reward.peachDark} />
-              <Text variant="h2">
-                {stamps.filter(s => s.isFastTravel).length}
-              </Text>
-              <Caption>Fast Travel</Caption>
-            </View>
-          </View>
-        </Card>
+          </Card>
+        )}
 
         {/* Type Filter */}
         <FlatList

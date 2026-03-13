@@ -169,17 +169,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           </Card>
 
           {/* Stats Grid */}
-          <View style={styles.statsGrid}>
-            {statItems.map((stat, index) => (
-              <Card key={index} style={styles.statCard}>
-                <Icon name={stat.icon} size={20} color={colors.primary.wisteriaDark} />
-                <Text variant="h2" align="center">
-                  {stat.value}
-                </Text>
-                <Caption align="center">{stat.label}</Caption>
-              </Card>
-            ))}
-          </View>
+          {(stamps.length + bites.length + badges.length) > 0 ? (
+            <View style={styles.statsGrid}>
+              {statItems.map((stat, index) => (
+                <Card key={index} style={styles.statCard}>
+                  <Icon name={stat.icon} size={20} color={colors.primary.wisteriaDark} />
+                  <Text variant="h2" align="center">
+                    {stat.value}
+                  </Text>
+                  <Caption align="center">{stat.label}</Caption>
+                </Card>
+              ))}
+            </View>
+          ) : (
+            <Card style={styles.welcomeCard}>
+              <View style={styles.welcomeContent}>
+                <Icon name="rocket" size={40} color={colors.primary.wisteriaDark} />
+                <Text variant="h3" align="center">Your Adventure Begins</Text>
+                <Caption align="center">Start exploring, collecting stamps, and learning to fill up your stats!</Caption>
+              </View>
+            </Card>
+          )}
 
           {/* Streak Info */}
           {user?.currentStreak !== undefined && user.currentStreak > 0 && (
@@ -331,6 +341,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
+  welcomeCard: { marginBottom: spacing.lg },
+  welcomeContent: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

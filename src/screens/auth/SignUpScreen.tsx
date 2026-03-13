@@ -63,7 +63,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       const { user, visby } = await authService.signUp(email, password, username);
       if (user) setUser(user);
       if (visby) setVisby(visby);
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
     } catch (error: any) {
       setFormError(error.message || 'Something went wrong. Please try again.');
     } finally {

@@ -275,7 +275,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
           {/* Continue Learning */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Heading level={2}>Continue Learning</Heading>
+              <Heading level={2}>{lessonProgress.length > 0 ? 'Continue Learning' : 'Start Learning'}</Heading>
               <TouchableOpacity onPress={() => navigation.navigate('LessonCategory', { categoryId: LESSON_CATEGORIES[0].id })}>
                 <Text variant="body" color={colors.primary.wisteriaDark}>
                   See all

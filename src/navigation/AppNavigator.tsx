@@ -14,6 +14,7 @@ import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { SignUpScreen } from '../screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
+import { OnboardingScreen } from '../screens/auth/OnboardingScreen';
 
 // Main Screens
 import { HomeScreen } from '../screens/home/HomeScreen';
@@ -193,6 +194,7 @@ export const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
 
         {/* Main App */}
         <Stack.Screen name="Main" component={MainTabs} />

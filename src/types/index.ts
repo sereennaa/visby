@@ -528,6 +528,7 @@ export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;
+  Onboarding: undefined;
   
   // Main App
   Main: undefined;

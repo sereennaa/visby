@@ -181,6 +181,18 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
             )}
           </View>
 
+          {(user?.countriesVisited || 0) === 0 && (
+            <Card style={styles.tipCard}>
+              <View style={styles.tipContent}>
+                <Icon name="info" size={20} color={colors.primary.wisteriaDark} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="body" style={{ fontWeight: '600' }}>How It Works</Text>
+                  <Caption>Spend Aura to visit a country and explore its rooms. Buy a house for unlimited access. Earn Aura by learning, collecting stamps, and keeping your streak!</Caption>
+                </View>
+              </View>
+            </Card>
+          )}
+
           {COUNTRIES.map((country) => {
             const owned = hasHouse(country.id);
             return (
@@ -329,6 +341,8 @@ const styles = StyleSheet.create({
   multiplierText: { fontFamily: 'Baloo2-Bold', fontSize: 12, color: '#7A5A00' },
   housesOwnedRow: { marginTop: spacing.xs },
   housesOwnedText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.secondary },
+  tipCard: { marginBottom: spacing.md },
+  tipContent: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   countryCard: { marginBottom: spacing.md },
   countryRow: { flexDirection: 'row', alignItems: 'flex-start' },
   flagCircle: {

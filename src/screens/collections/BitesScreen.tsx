@@ -97,81 +97,85 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
         </View>
 
         {/* Stats Overview */}
-        <Card style={styles.statsCard}>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Icon name="star" size={24} color={colors.reward.gold} />
-              <Text variant="h2">{avgRating}</Text>
-              <Caption>Avg Rating</Caption>
+        {bites.length > 0 && (
+          <Card style={styles.statsCard}>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Icon name="star" size={24} color={colors.reward.gold} />
+                <Text variant="h2">{avgRating}</Text>
+                <Caption>Avg Rating</Caption>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Icon name="recipe" size={24} color={colors.calm.ocean} />
+                <Text variant="h2">{recipesCount}</Text>
+                <Caption>Recipes</Caption>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Icon name="homemade" size={24} color={colors.success.emerald} />
+                <Text variant="h2">{homemadeCount}</Text>
+                <Caption>Homemade</Caption>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Icon name="recipe" size={24} color={colors.calm.ocean} />
-              <Text variant="h2">{recipesCount}</Text>
-              <Caption>Recipes</Caption>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Icon name="homemade" size={24} color={colors.success.emerald} />
-              <Text variant="h2">{homemadeCount}</Text>
-              <Caption>Homemade</Caption>
-            </View>
-          </View>
-        </Card>
+          </Card>
+        )}
 
         {/* Category Filter */}
-        <FlatList
-          horizontal
-          data={categories}
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterList}
-          contentContainerStyle={styles.filterContent}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => {
-            const isSelected = selectedCategory === item;
-            const categoryInfo = item === 'all'
-              ? { icon: 'all' as IconName, label: 'All' }
-              : BITE_CATEGORIES_INFO[item];
-            const count = biteCounts[item] || 0;
+        {bites.length > 0 && (
+          <FlatList
+            horizontal
+            data={categories}
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterList}
+            contentContainerStyle={styles.filterContent}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => {
+              const isSelected = selectedCategory === item;
+              const categoryInfo = item === 'all'
+                ? { icon: 'all' as IconName, label: 'All' }
+                : BITE_CATEGORIES_INFO[item];
+              const count = biteCounts[item] || 0;
 
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  isSelected && styles.filterChipSelected,
-                ]}
-                onPress={() => setSelectedCategory(item)}
-              >
-                <Icon
-                  name={categoryInfo?.icon || 'food'}
-                  size={16}
-                  color={isSelected ? colors.text.inverse : colors.text.secondary}
-                />
-                <Text
-                  variant="caption"
-                  color={isSelected ? colors.text.inverse : colors.text.secondary}
-                >
-                  {categoryInfo?.label || item}
-                </Text>
-                <View
+              return (
+                <TouchableOpacity
                   style={[
-                    styles.countBadge,
-                    isSelected && styles.countBadgeSelected,
+                    styles.filterChip,
+                    isSelected && styles.filterChipSelected,
                   ]}
+                  onPress={() => setSelectedCategory(item)}
                 >
+                  <Icon
+                    name={categoryInfo?.icon || 'food'}
+                    size={16}
+                    color={isSelected ? colors.text.inverse : colors.text.secondary}
+                  />
                   <Text
+                    variant="caption"
+                    color={isSelected ? colors.text.inverse : colors.text.secondary}
+                  >
+                    {categoryInfo?.label || item}
+                  </Text>
+                  <View
                     style={[
-                      styles.countText,
-                      isSelected && styles.countTextSelected,
+                      styles.countBadge,
+                      isSelected && styles.countBadgeSelected,
                     ]}
                   >
-                    {count}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-        />
+                    <Text
+                      style={[
+                        styles.countText,
+                        isSelected && styles.countTextSelected,
+                      ]}
+                    >
+                      {count}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
 
         {/* Bites List/Grid */}
         {sortedBites.length > 0 ? (

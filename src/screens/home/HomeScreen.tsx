@@ -23,7 +23,7 @@ import Animated, {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { Text, Heading } from '../../components/ui/Text';
+import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { LevelProgress, StreakProgress } from '../../components/ui/ProgressBar';
@@ -421,22 +421,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </View>
             </TouchableOpacity>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.stampsScroll}
-          >
-            {(['city', 'park', 'beach', 'landmark', 'restaurant'] as StampType[]).map(
-              (type) => (
-                <StampMini
-                  key={type}
-                  type={type}
-                  count={stampCounts[type]}
-                  onPress={() => navigation.navigate('Stamps')}
+          {stamps.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.stampsScroll}
+            >
+              {(['city', 'park', 'beach', 'landmark', 'restaurant'] as StampType[]).map(
+                (type) => (
+                  <StampMini
+                    key={type}
+                    type={type}
+                    count={stampCounts[type]}
+                    onPress={() => navigation.navigate('Stamps')}
+                  />
+                )
+              )}
+            </ScrollView>
+          ) : (
+            <Card style={styles.welcomeCard}>
+              <View style={styles.welcomeContent}>
+                <Icon name="stamp" size={40} color={colors.primary.wisteriaDark} />
+                <Text variant="h3" align="center">Start Your Collection</Text>
+                <Caption align="center">Visit a place nearby and collect your first stamp!</Caption>
+                <Button
+                  title="Collect a Stamp"
+                  onPress={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
+                  variant="primary"
+                  size="sm"
                 />
-              )
-            )}
-          </ScrollView>
+              </View>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <View style={styles.sectionHeader}>
@@ -572,6 +588,8 @@ const styles = StyleSheet.create({
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   stampsScroll: { paddingVertical: spacing.sm, marginBottom: spacing.xl },
+  welcomeCard: { marginBottom: spacing.xl },
+  welcomeContent: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

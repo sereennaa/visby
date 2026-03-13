@@ -120,8 +120,8 @@ export const authService = {
       name: `${username}'s Visby`,
       createdAt: new Date(),
       appearance: DEFAULT_VISBY_APPEARANCE,
-      equipped: {},
-      ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack'],
+      equipped: { hat: 'viking_helmet', accessory: 'sword' },
+      ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet', 'sword'],
       currentMood: 'happy',
     };
 
