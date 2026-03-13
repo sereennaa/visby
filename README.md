@@ -1,10 +1,16 @@
 # 🧭 Visby
 
-A gamified travel and learning app where your customizable Viking explorer collects stamps, discovers food, and learns about cultures around the world.
+A gamified travel and learning app for kids: your customizable Viking explorer (Visby) collects stamps, discovers food, and learns about cultures. **Visit countries and buy houses**—then walk through them like Club Penguin, and learn fun facts while you're there!
 
 ![Visby Banner](./assets/banner.png)
 
 ## ✨ Features
+
+### 🌍 Visit Countries & Buy Houses (Club Penguin style)
+- **Pay Aura to visit** - Spend Aura to travel to a country (Japan, France, Mexico, Italy, UK, Brazil, and more)
+- **Buy a house** - Save up Aura to buy a house in a country; then visit anytime for free
+- **Walk through your spot** - Move your Visby around a room in that country (left/right walk controls)
+- **Learn while you're there** - Tap fun-fact bubbles to read kid-friendly facts about culture, food, language, and nature
 
 ### 🗺️ Explore & Collect
 - **Stamps** - Collect location-based stamps from cities, parks, beaches, landmarks, and more
@@ -149,6 +155,13 @@ visby/
 - [x] Basic navigation
 - [x] Home screen
 - [x] Visby character
+
+### Phase 1.5: Visit World & Houses ✅
+- [x] Country list (visit cost / buy house with Aura)
+- [x] Pay Aura to visit a country
+- [x] Buy house in a country (visit free after)
+- [x] Walk-through room (move Visby left/right)
+- [x] Learn facts while in the country (kid-friendly)
 
 ### Phase 2: Collections
 - [ ] Stamp collection flow

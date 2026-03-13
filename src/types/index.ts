@@ -482,7 +482,9 @@ export type AuraTransactionType =
   | 'daily_bonus'
   | 'streak_bonus'
   | 'fast_travel'
-  | 'achievement';
+  | 'achievement'
+  | 'country_visit'
+  | 'house_purchase';
 
 export interface Level {
   level: number;
@@ -490,6 +492,58 @@ export interface Level {
   title: string;
   perks: string[];
   unlockedCosmetics: string[];
+}
+
+// ===================================
+// COUNTRIES, HOUSES & WALK-THROUGH (Club Penguin style)
+// ===================================
+
+export interface Country {
+  id: string;
+  name: string;
+  countryCode: string;
+  flagEmoji: string;
+  /** Aura cost to visit (one-time per visit) */
+  visitCostAura: number;
+  /** Aura cost to buy a house here (then visit free) */
+  housePriceAura: number;
+  /** Short kid-friendly description */
+  description: string;
+  /** Background / room style for walk-through */
+  roomTheme: 'traditional' | 'modern' | 'nature' | 'city' | 'coastal' | 'mountain';
+  /** Hex or theme key for room accent */
+  accentColor: string;
+  imageUrl?: string;
+  /** Learning facts shown while in the room */
+  facts: CountryFact[];
+}
+
+export interface CountryFact {
+  id: string;
+  countryId: string;
+  title: string;
+  content: string;
+  /** Optional emoji or icon for kids */
+  icon: string;
+  category: 'culture' | 'food' | 'language' | 'nature' | 'history' | 'fun';
+}
+
+export interface UserHouse {
+  id: string;
+  userId: string;
+  countryId: string;
+  purchasedAt: Date;
+  /** Custom name kid gave their house */
+  houseName?: string;
+  /** Last time they visited this room */
+  lastVisitedAt?: Date;
+}
+
+/** Avatar position in the walk-through room (percentage 0-100) */
+export interface RoomAvatarPosition {
+  x: number;
+  y: number;
+  direction: 'left' | 'right';
 }
 
 // ===================================
@@ -564,10 +618,11 @@ export type RootStackParamList = {
   
   // Learning
   Learn: undefined;
+  LessonCategory: { categoryId: string };
   LessonList: { category: LessonCategory };
   Lesson: { lessonId: string };
-  Quiz: { lessonId: string };
-  Flashcards: { category: string };
+  Quiz: undefined;
+  Flashcards: undefined;
   
   // Profile
   Profile: undefined;
@@ -579,7 +634,11 @@ export type RootStackParamList = {
   UserProfile: { userId: string };
   PostDetail: { postId: string };
   Postcards: undefined;
-};
+
+  // Countries & Houses (visit, buy house, walk through like Club Penguin)
+  CountryWorld: undefined;
+  CountryRoom: { countryId: string };
+}
 
 export type BottomTabParamList = {
   HomeTab: undefined;

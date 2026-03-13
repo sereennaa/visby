@@ -303,6 +303,54 @@ CREATE INDEX idx_cosmetics_type ON cosmetics(type);
 CREATE INDEX idx_cosmetics_rarity ON cosmetics(rarity);
 ```
 
+### countries (reference / static)
+Countries kids can visit and buy houses in (Club Penguin–style). Can be seeded from app constants or stored in DB.
+
+```sql
+CREATE TABLE countries (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  country_code TEXT NOT NULL,
+  flag_emoji TEXT NOT NULL,
+  visit_cost_aura INTEGER NOT NULL,
+  house_price_aura INTEGER NOT NULL,
+  description TEXT,
+  room_theme TEXT NOT NULL,
+  accent_color TEXT,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE country_facts (
+  id TEXT PRIMARY KEY,
+  country_id TEXT REFERENCES countries(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  category TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0
+);
+
+CREATE INDEX idx_country_facts_country ON country_facts(country_id);
+```
+
+### user_houses
+Houses a kid has bought in a country (then they can visit for free).
+
+```sql
+CREATE TABLE user_houses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  country_id TEXT NOT NULL,
+  house_name TEXT,
+  purchased_at TIMESTAMPTZ DEFAULT NOW(),
+  last_visited_at TIMESTAMPTZ,
+  UNIQUE(user_id, country_id)
+);
+
+CREATE INDEX idx_user_houses_user ON user_houses(user_id);
+```
+
 ### aura_transactions
 Track all Aura (XP) changes.
 
@@ -311,7 +359,7 @@ CREATE TABLE aura_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   amount INTEGER NOT NULL,
-  type TEXT NOT NULL, -- stamp_collect, bite_collect, quiz_complete, etc.
+  type TEXT NOT NULL, -- stamp_collect, bite_collect, quiz_complete, country_visit, house_purchase, etc.
   description TEXT,
   reference_id TEXT, -- ID of related stamp, bite, lesson, etc.
   created_at TIMESTAMPTZ DEFAULT NOW()

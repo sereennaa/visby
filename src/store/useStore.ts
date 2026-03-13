@@ -1,6 +1,6 @@
 // Zustand Store - Global State Management
 import { create } from 'zustand';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse } from '../types';
 
 interface AppStore {
   // Auth State
@@ -21,6 +21,9 @@ interface AppStore {
   
   // Location
   currentLocation: LocationData | null;
+
+  // Houses (countries kid has bought a house in)
+  userHouses: UserHouse[];
   
   // Actions - Auth
   setUser: (user: User | null) => void;
@@ -42,7 +45,12 @@ interface AppStore {
   
   // Actions - Progression
   addAura: (amount: number) => void;
+  spendAura: (amount: number) => boolean;
   incrementStreak: () => void;
+
+  // Actions - Houses
+  setUserHouses: (houses: UserHouse[]) => void;
+  addUserHouse: (house: UserHouse) => void;
   
   // Actions - Learning
   setLessonProgress: (progress: UserLessonProgress[]) => void;
@@ -63,7 +71,8 @@ export const useStore = create<AppStore>((set, get) => ({
   badges: [],
   lessonProgress: [],
   currentLocation: null,
-  
+  userHouses: [],
+
   // Auth Actions
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   setLoading: (isLoading) => set({ isLoading }),
@@ -75,6 +84,7 @@ export const useStore = create<AppStore>((set, get) => ({
     bites: [],
     badges: [],
     lessonProgress: [],
+    userHouses: [],
   }),
   
   // Visby Actions
@@ -123,6 +133,17 @@ export const useStore = create<AppStore>((set, get) => ({
       });
     }
   },
+  spendAura: (amount) => {
+    const { user } = get();
+    if (!user || user.aura < amount) return false;
+    set({
+      user: {
+        ...user,
+        aura: user.aura - amount,
+      },
+    });
+    return true;
+  },
   incrementStreak: () => {
     const { user } = get();
     if (user) {
@@ -159,6 +180,10 @@ export const useStore = create<AppStore>((set, get) => ({
   
   // Location Actions
   setLocation: (currentLocation) => set({ currentLocation }),
+
+  // Houses Actions
+  setUserHouses: (userHouses) => set({ userHouses }),
+  addUserHouse: (house) => set((state) => ({ userHouses: [...state.userHouses, house] })),
 }));
 
 export default useStore;

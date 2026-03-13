@@ -41,7 +41,7 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
     : bites.filter(b => b.category === selectedCategory);
 
   const sortedBites = [...filteredBites].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime()
   );
 
   const totalRatings = bites.reduce((sum, b) => sum + b.rating, 0);

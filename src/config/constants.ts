@@ -1,5 +1,6 @@
 // Visby App Constants
 import { IconName } from '../components/ui/Icon';
+import type { Country } from '../types';
 
 // ===================================
 // AURA & PROGRESSION
@@ -125,6 +126,121 @@ export const BITE_CATEGORIES_INFO: Record<string, BiteCategoryInfo> = {
   salad: { label: 'Salad', icon: 'salad' },
   bread: { label: 'Bread', icon: 'bread' },
 };
+
+// ===================================
+// COUNTRIES – Visit, buy a house, walk through & learn (Club Penguin style)
+// ===================================
+
+export const COUNTRIES: Country[] = [
+  {
+    id: 'jp',
+    name: 'Japan',
+    countryCode: 'JP',
+    flagEmoji: '🇯🇵',
+    visitCostAura: 80,
+    housePriceAura: 500,
+    description: 'Land of cherry blossoms, sushi, and friendly bowing!',
+    roomTheme: 'traditional',
+    accentColor: '#E8B4B8',
+    facts: [
+      { id: 'jp1', countryId: 'jp', title: 'Bowing hello', content: 'In Japan people bow to say hello instead of shaking hands. The deeper the bow, the more respect!', icon: '🙇', category: 'culture' },
+      { id: 'jp2', countryId: 'jp', title: 'Yummy sushi', content: 'Sushi started in Japan over 1,000 years ago. The word "sushi" means "sour rice."', icon: '🍣', category: 'food' },
+      { id: 'jp3', countryId: 'jp', title: 'Say konnichiwa', content: '"Konnichiwa" means "hello" in Japanese. Try saying it: cone-nee-chee-wah!', icon: '👋', category: 'language' },
+      { id: 'jp4', countryId: 'jp', title: 'Cherry blossoms', content: 'In spring, pink cherry blossoms bloom everywhere. Families have picnics under the trees!', icon: '🌸', category: 'nature' },
+      { id: 'jp5', countryId: 'jp', title: 'Take off your shoes', content: 'In Japanese homes and some restaurants you take off your shoes at the door. Slippers wait for you!', icon: '👟', category: 'culture' },
+    ],
+  },
+  {
+    id: 'fr',
+    name: 'France',
+    countryCode: 'FR',
+    flagEmoji: '🇫🇷',
+    visitCostAura: 75,
+    housePriceAura: 450,
+    description: 'Home of the Eiffel Tower, croissants, and saying "Ooh la la!"',
+    roomTheme: 'city',
+    accentColor: '#A8D4E6',
+    facts: [
+      { id: 'fr1', countryId: 'fr', title: 'Bonjour!', content: '"Bonjour" means "hello" in French. Say it with a smile: bon-ZHOOR!', icon: '🥐', category: 'language' },
+      { id: 'fr2', countryId: 'fr', title: 'Croissants for breakfast', content: 'French people love fresh croissants in the morning. They are flaky and buttery!', icon: '🥐', category: 'food' },
+      { id: 'fr3', countryId: 'fr', title: 'The Eiffel Tower', content: 'The Eiffel Tower in Paris is one of the most famous landmarks in the world. It has 1,665 steps!', icon: '🗼', category: 'fun' },
+      { id: 'fr4', countryId: 'fr', title: 'Cheese please', content: 'France has over 1,000 types of cheese. Saying "fromage" (fro-MAHJ) means "cheese"!', icon: '🧀', category: 'food' },
+      { id: 'fr5', countryId: 'fr', title: 'Kiss on the cheek', content: 'Friends in France often greet each other with a light kiss on each cheek. It\'s called "la bise"!', icon: '😊', category: 'culture' },
+    ],
+  },
+  {
+    id: 'mx',
+    name: 'Mexico',
+    countryCode: 'MX',
+    flagEmoji: '🇲🇽',
+    visitCostAura: 60,
+    housePriceAura: 350,
+    description: 'Colorful markets, tacos, and the home of chocolate!',
+    roomTheme: 'coastal',
+    accentColor: '#86EFAC',
+    facts: [
+      { id: 'mx1', countryId: 'mx', title: '¡Hola!', content: '"Hola" means "hello" in Spanish. Mexico has the most Spanish speakers in the world!', icon: '🌮', category: 'language' },
+      { id: 'mx2', countryId: 'mx', title: 'Chocolate started here', content: 'Chocolate was first made in Mexico thousands of years ago. The Aztecs loved it!', icon: '🍫', category: 'history' },
+      { id: 'mx3', countryId: 'mx', title: 'Tacos any time', content: 'Tacos are a favorite food. You can put meat, beans, salsa, and lime in a soft or crunchy shell!', icon: '🌮', category: 'food' },
+      { id: 'mx4', countryId: 'mx', title: 'Day of the Dead', content: 'Día de los Muertos is a happy celebration to remember loved ones. There are flowers, music, and treats!', icon: '💀', category: 'culture' },
+      { id: 'mx5', countryId: 'mx', title: 'Beautiful butterflies', content: 'Millions of monarch butterflies fly to Mexico every winter. They rest in the trees like orange clouds!', icon: '🦋', category: 'nature' },
+    ],
+  },
+  {
+    id: 'it',
+    name: 'Italy',
+    countryCode: 'IT',
+    flagEmoji: '🇮🇹',
+    visitCostAura: 85,
+    housePriceAura: 520,
+    description: 'Pizza, pasta, gelato, and ancient ruins!',
+    roomTheme: 'traditional',
+    accentColor: '#FDE047',
+    facts: [
+      { id: 'it1', countryId: 'it', title: 'Ciao!', content: '"Ciao" means both "hello" and "goodbye" in Italian. Say it: CHOW!', icon: '👋', category: 'language' },
+      { id: 'it2', countryId: 'it', title: 'Pizza was born here', content: 'Pizza started in Naples, Italy. The first pizza was made over 200 years ago!', icon: '🍕', category: 'food' },
+      { id: 'it3', countryId: 'it', title: 'Leaning Tower', content: 'The Leaning Tower of Pisa really leans! It started leaning while it was being built 800 years ago.', icon: '🗼', category: 'fun' },
+      { id: 'it4', countryId: 'it', title: 'Gelato', content: 'Italian gelato is like ice cream but creamier and often made fresh every day. Yum!', icon: '🍦', category: 'food' },
+      { id: 'it5', countryId: 'it', title: 'Romans and gladiators', content: 'Ancient Rome was in Italy. Gladiators fought in big arenas. Today we can visit the old ruins!', icon: '🏛️', category: 'history' },
+    ],
+  },
+  {
+    id: 'gb',
+    name: 'United Kingdom',
+    countryCode: 'GB',
+    flagEmoji: '🇬🇧',
+    visitCostAura: 70,
+    housePriceAura: 400,
+    description: 'Tea time, castles, and the home of Harry Potter!',
+    roomTheme: 'modern',
+    accentColor: '#C4B5FD',
+    facts: [
+      { id: 'gb1', countryId: 'gb', title: 'Tea time', content: 'In the UK many people have "tea" in the afternoon with sandwiches, scones, and of course tea!', icon: '☕', category: 'culture' },
+      { id: 'gb2', countryId: 'gb', title: 'Cheerio!', content: '"Cheerio" is a friendly way to say goodbye in Britain. "Hello" is hello there too!', icon: '🇬🇧', category: 'language' },
+      { id: 'gb3', countryId: 'gb', title: 'Castles everywhere', content: 'The UK has lots of old castles. Kings and queens used to live in them!', icon: '🏰', category: 'history' },
+      { id: 'gb4', countryId: 'gb', title: 'Fish and chips', content: 'A classic British meal is fish and chips – fried fish with thick fries. Often wrapped in paper!', icon: '🐟', category: 'food' },
+      { id: 'gb5', countryId: 'gb', title: 'Double-decker buses', content: 'London is famous for red double-decker buses. You can sit on the top and see the whole street!', icon: '🚌', category: 'fun' },
+    ],
+  },
+  {
+    id: 'br',
+    name: 'Brazil',
+    countryCode: 'BR',
+    flagEmoji: '🇧🇷',
+    visitCostAura: 65,
+    housePriceAura: 380,
+    description: 'Rainforests, carnival, and the Amazon!',
+    roomTheme: 'nature',
+    accentColor: '#FECDD3',
+    facts: [
+      { id: 'br1', countryId: 'br', title: 'Olá!', content: '"Olá" means "hello" in Portuguese. Brazil is the biggest country in South America!', icon: '🌎', category: 'language' },
+      { id: 'br2', countryId: 'br', title: 'The Amazon', content: 'The Amazon rainforest is in Brazil. It has more types of plants and animals than almost anywhere on Earth!', icon: '🌳', category: 'nature' },
+      { id: 'br3', countryId: 'br', title: 'Carnival', content: 'Carnival is a huge party with music, dancing, and colorful costumes. It happens every year!', icon: '🎭', category: 'culture' },
+      { id: 'br4', countryId: 'br', title: 'Yummy fruits', content: 'Brazil has amazing fruits like açaí, passion fruit, and guava. Try açaí bowls – they\'re like a smoothie!', icon: '🍇', category: 'food' },
+      { id: 'br5', countryId: 'br', title: 'Soccer passion', content: 'Brazilians love soccer (they call it "futebol"). Brazil has won the World Cup more than any other country!', icon: '⚽', category: 'fun' },
+    ],
+  },
+];
 
 // ===================================
 // BADGES

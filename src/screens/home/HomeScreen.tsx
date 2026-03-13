@@ -74,8 +74,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Refresh data from Supabase
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      if (user?.id) {
+        const { stampsService } = await import('../../services/stamps');
+        const { bitesService } = await import('../../services/bites');
+        const [freshStamps, freshBites] = await Promise.all([
+          stampsService.getUserStamps(user.id),
+          bitesService.getUserBites(user.id),
+        ]);
+        useStore.getState().setStamps(freshStamps);
+        useStore.getState().setBites(freshBites);
+      }
+    } catch (e) {
+      console.error('Refresh error:', e);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const getGreeting = () => {
@@ -136,6 +150,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   ];
 
   const actionItems: { icon: IconName; label: string; colors: [string, string]; onPress: () => void }[] = [
+    { icon: 'globe', label: 'Visit World', colors: [colors.reward.peachLight, colors.base.cream], onPress: () => navigation.navigate('CountryWorld') },
     { icon: 'stamp', label: 'Collect Stamp', colors: [colors.primary.wisteriaFaded, colors.base.cream], onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
     { icon: 'bowl', label: 'Log Food', colors: [colors.reward.peachLight, colors.base.cream], onPress: () => navigation.navigate('AddBite') },
     { icon: 'book', label: 'Learn', colors: [colors.calm.skyLight, colors.base.cream], onPress: () => navigation.navigate('Learn') },

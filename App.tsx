@@ -20,11 +20,13 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { useStore } from './src/store/useStore';
 import { supabase, isSupabaseConfigured } from './src/config/supabase';
 import { authService } from './src/services/auth';
+import { stampsService } from './src/services/stamps';
+import { bitesService } from './src/services/bites';
 import { colors } from './src/theme/colors';
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const { setUser, setVisby, setLoading, isLoading } = useStore();
+  const { setUser, setVisby, setStamps, setBites, setLoading, isLoading } = useStore();
 
   // Load custom fonts
   useEffect(() => {
@@ -68,6 +70,18 @@ export default function App() {
           
           if (profile) setUser(profile);
           if (visby) setVisby(visby);
+
+          // Load user collections
+          try {
+            const [userStamps, userBites] = await Promise.all([
+              stampsService.getUserStamps(session.user.id),
+              bitesService.getUserBites(session.user.id),
+            ]);
+            setStamps(userStamps);
+            setBites(userBites);
+          } catch (e) {
+            console.error('Error loading collections:', e);
+          }
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -78,12 +92,10 @@ export default function App() {
 
     checkSession();
 
-    // Skip auth listener if Supabase isn't configured
     if (!isSupabaseConfigured) {
       return;
     }
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
@@ -94,6 +106,17 @@ export default function App() {
           const visby = await authService.getVisby(session.user.id);
           if (profile) setUser(profile);
           if (visby) setVisby(visby);
+
+          try {
+            const [userStamps, userBites] = await Promise.all([
+              stampsService.getUserStamps(session.user.id),
+              bitesService.getUserBites(session.user.id),
+            ]);
+            setStamps(userStamps);
+            setBites(userBites);
+          } catch (e) {
+            console.error('Error loading collections:', e);
+          }
         }
       }
     );

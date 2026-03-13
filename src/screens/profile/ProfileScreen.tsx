@@ -96,8 +96,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const menuItems: { icon: IconName; label: string; screen: string }[] = [
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
-    { icon: 'shirt', label: 'Wardrobe', screen: 'Wardrobe' },
-    { icon: 'mailSend', label: 'Postcards', screen: 'Postcards' },
+    { icon: 'shirt', label: 'Wardrobe', screen: 'Avatar' },
     { icon: 'settings', label: 'Settings', screen: 'Settings' },
   ];
 

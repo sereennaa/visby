@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { Icon, IconName } from '../components/ui/Icon';
 import { RootStackParamList, MainTabParamList } from '../types';
+import { useStore } from '../store/useStore';
 
 // Auth Screens
 import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
@@ -21,6 +22,30 @@ import { StampsScreen } from '../screens/collections/StampsScreen';
 import { BitesScreen } from '../screens/collections/BitesScreen';
 import { LearnScreen } from '../screens/learn/LearnScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
+import { CountryWorldScreen, CountryRoomScreen } from '../screens/world';
+
+// Detail Screens
+import { StampDetailScreen } from '../screens/details/StampDetailScreen';
+import { BiteDetailScreen } from '../screens/details/BiteDetailScreen';
+import { LocationDetailScreen } from '../screens/details/LocationDetailScreen';
+
+// Action Screens
+import { CollectStampScreen } from '../screens/actions/CollectStampScreen';
+import { AddBiteScreen } from '../screens/actions/AddBiteScreen';
+
+// Profile Screens
+import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
+
+// Feature Screens
+import { AvatarScreen } from '../screens/avatar/AvatarScreen';
+import { BadgesScreen } from '../screens/badges/BadgesScreen';
+import { SettingsScreen } from '../screens/settings/SettingsScreen';
+
+// Learn Screens
+import { LessonCategoryScreen } from '../screens/learn/LessonCategoryScreen';
+import { LessonScreen } from '../screens/learn/LessonScreen';
+import { QuizScreen } from '../screens/learn/QuizScreen';
+import { FlashcardsScreen } from '../screens/learn/FlashcardsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -145,8 +170,7 @@ const MainTabs = () => {
 };
 
 export const AppNavigator = () => {
-  // In a real app, you'd check auth state here
-  const isAuthenticated = false;
+  const { isAuthenticated } = useStore();
 
   return (
     <NavigationContainer>
@@ -167,16 +191,30 @@ export const AppNavigator = () => {
         {/* Main App */}
         <Stack.Screen name="Main" component={MainTabs} />
 
-        {/* Detail Screens (would add more as needed) */}
-        {/* <Stack.Screen name="StampDetail" component={StampDetailScreen} /> */}
-        {/* <Stack.Screen name="BiteDetail" component={BiteDetailScreen} /> */}
-        {/* <Stack.Screen name="CollectStamp" component={CollectStampScreen} /> */}
-        {/* <Stack.Screen name="AddBite" component={AddBiteScreen} /> */}
-        {/* <Stack.Screen name="Avatar" component={AvatarScreen} /> */}
-        {/* <Stack.Screen name="Lesson" component={LessonScreen} /> */}
-        {/* <Stack.Screen name="Quiz" component={QuizScreen} /> */}
-        {/* <Stack.Screen name="Flashcards" component={FlashcardsScreen} /> */}
-        {/* <Stack.Screen name="Settings" component={SettingsScreen} /> */}
+        {/* Countries & Houses - visit, buy house, walk through (Club Penguin style) */}
+        <Stack.Screen name="CountryWorld" component={CountryWorldScreen} />
+        <Stack.Screen name="CountryRoom" component={CountryRoomScreen} />
+
+        {/* Detail Screens */}
+        <Stack.Screen name="StampDetail" component={StampDetailScreen} />
+        <Stack.Screen name="BiteDetail" component={BiteDetailScreen} />
+        <Stack.Screen name="LocationDetail" component={LocationDetailScreen} />
+
+        {/* Action Screens */}
+        <Stack.Screen name="CollectStamp" component={CollectStampScreen} />
+        <Stack.Screen name="AddBite" component={AddBiteScreen} />
+
+        {/* Feature Screens */}
+        <Stack.Screen name="Avatar" component={AvatarScreen} />
+        <Stack.Screen name="Badges" component={BadgesScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+
+        {/* Learn Screens */}
+        <Stack.Screen name="LessonCategory" component={LessonCategoryScreen} />
+        <Stack.Screen name="Lesson" component={LessonScreen} />
+        <Stack.Screen name="Quiz" component={QuizScreen} />
+        <Stack.Screen name="Flashcards" component={FlashcardsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
