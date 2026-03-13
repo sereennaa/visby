@@ -3,11 +3,11 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
@@ -17,32 +17,28 @@ import { Icon } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
-
-const FLASHCARDS = [
-  { id: 'f1', front: 'Bonjour', back: 'Hello (French)', emoji: '🇫🇷' },
-  { id: 'f2', front: 'Konnichiwa', back: 'Hello (Japanese)', emoji: '🇯🇵' },
-  { id: 'f3', front: 'Hola', back: 'Hello (Spanish)', emoji: '🇲🇽' },
-  { id: 'f4', front: 'Ciao', back: 'Hello/Goodbye (Italian)', emoji: '🇮🇹' },
-  { id: 'f5', front: 'Sushi', back: 'Vinegared rice with toppings (Japan)', emoji: '🍣' },
-  { id: 'f6', front: 'Croissant', back: 'Buttery crescent roll (France)', emoji: '🥐' },
-  { id: 'f7', front: 'Taco', back: 'Filled tortilla (Mexico)', emoji: '🌮' },
-  { id: 'f8', front: 'Olá', back: 'Hello (Portuguese/Brazil)', emoji: '🇧🇷' },
-];
+import { getFlashcardDeck, getAllFlashcardsMixed, FlashcardItem, FLASHCARD_DECKS } from '../../config/learningContent';
 
 type FlashcardsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
+  route: RouteProp<{ Flashcards: { deckId?: string } }, 'Flashcards'>;
 };
 
-export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }) => {
+export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, route }) => {
   const { addAura } = useStore();
+  const deckId = route.params?.deckId;
+  const deckMeta = deckId ? FLASHCARD_DECKS.find(d => d.id === deckId) : undefined;
+  const [cards] = useState<FlashcardItem[]>(() =>
+    deckId ? getFlashcardDeck(deckId) : getAllFlashcardsMixed(12)
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [knewCount, setKnewCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
 
-  const card = FLASHCARDS[currentIndex];
-  const progress = ((currentIndex + (isFinished ? 1 : 0)) / FLASHCARDS.length) * 100;
-  const isLastCard = currentIndex === FLASHCARDS.length - 1;
+  const card = cards[currentIndex];
+  const progress = ((currentIndex + (isFinished ? 1 : 0)) / cards.length) * 100;
+  const isLastCard = currentIndex === cards.length - 1;
 
   const advanceCard = (knew: boolean) => {
     if (knew) setKnewCount(prev => prev + 1);
@@ -64,7 +60,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }
   };
 
   if (isFinished) {
-    const stillLearning = FLASHCARDS.length - knewCount;
+    const stillLearning = cards.length - knewCount;
 
     return (
       <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.container}>
@@ -73,7 +69,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }
             <Card style={styles.resultsCard}>
               <View style={styles.resultsContent}>
                 <Text variant="heroTitle" align="center" style={styles.resultsEmoji}>
-                  {knewCount === FLASHCARDS.length ? '🌟' : knewCount > FLASHCARDS.length / 2 ? '💪' : '📚'}
+                  {knewCount === cards.length ? '🌟' : knewCount > cards.length / 2 ? '💪' : '📚'}
                 </Text>
                 <Heading level={1} style={styles.resultsTitle}>Practice Complete!</Heading>
                 <View style={styles.statsRow}>
@@ -93,12 +89,12 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }
                   <Text variant="body" color={colors.text.secondary}>Aura earned</Text>
                 </View>
                 <ProgressBar
-                  progress={Math.round((knewCount / FLASHCARDS.length) * 100)}
+                  progress={Math.round((knewCount / cards.length) * 100)}
                   variant="aura"
                   height={10}
                 />
                 <Caption style={styles.progressCaption}>
-                  {Math.round((knewCount / FLASHCARDS.length) * 100)}% mastered
+                  {Math.round((knewCount / cards.length) * 100)}% mastered
                 </Caption>
               </View>
             </Card>
@@ -106,6 +102,16 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }
               <Button
                 title="Practice Again"
                 onPress={handleRestart}
+                variant="secondary"
+                size="lg"
+                fullWidth
+              />
+              <Button
+                title="Try Another Deck"
+                onPress={() => {
+                  navigation.goBack();
+                  navigation.navigate('Flashcards' as any);
+                }}
                 variant="secondary"
                 size="lg"
                 fullWidth
@@ -132,7 +138,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Heading level={2}>Flashcards</Heading>
+          <Heading level={2}>{deckMeta ? deckMeta.title : 'Flashcards'}</Heading>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -140,7 +146,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation }
         <View style={styles.progressContainer}>
           <ProgressBar progress={progress} variant="default" height={8} />
           <Caption style={styles.progressLabel}>
-            {currentIndex + 1} of {FLASHCARDS.length}
+            {currentIndex + 1} of {cards.length}
           </Caption>
         </View>
 

@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
@@ -17,21 +17,21 @@ import { Icon } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
-
-const QUIZ_QUESTIONS = [
-  { id: 'q1', question: 'What does "Bonjour" mean?', options: ['Goodbye', 'Hello', 'Thank you', 'Please'], correct: 1 },
-  { id: 'q2', question: 'Which country is famous for sushi?', options: ['Italy', 'Mexico', 'Japan', 'Brazil'], correct: 2 },
-  { id: 'q3', question: 'What is the Eiffel Tower located in?', options: ['London', 'Paris', 'Rome', 'Tokyo'], correct: 1 },
-  { id: 'q4', question: 'Which language do they speak in Brazil?', options: ['Spanish', 'French', 'Portuguese', 'English'], correct: 2 },
-  { id: 'q5', question: 'What is "Ciao" in Italian?', options: ['Only hello', 'Only goodbye', 'Hello and goodbye', 'Thank you'], correct: 2 },
-];
+import { getQuizByCategory, getRandomQuiz, QuizQuestion } from '../../config/learningContent';
 
 type QuizScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
+  route: RouteProp<{ Quiz: { category?: string } }, 'Quiz'>;
 };
 
-export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation }) => {
+export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => {
+  const category = route.params?.category;
   const { addAura } = useStore();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const questions = useMemo<QuizQuestion[]>(
+    () => category ? getQuizByCategory(category, 10) : getRandomQuiz(10),
+    [category, refreshKey],
+  );
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [score, setScore] = useState(0);
@@ -44,9 +44,9 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation }) => {
     };
   }, []);
 
-  const question = QUIZ_QUESTIONS[currentQuestion];
-  const progress = ((currentQuestion + (isFinished ? 1 : 0)) / QUIZ_QUESTIONS.length) * 100;
-  const isLastQuestion = currentQuestion === QUIZ_QUESTIONS.length - 1;
+  const question = questions[currentQuestion];
+  const progress = ((currentQuestion + (isFinished ? 1 : 0)) / questions.length) * 100;
+  const isLastQuestion = currentQuestion === questions.length - 1;
 
   const handleSelectOption = (index: number) => {
     if (selectedOption !== null) return;
@@ -90,7 +90,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation }) => {
 
   if (isFinished) {
     const auraEarned = score * 20;
-    const percentage = Math.round((score / QUIZ_QUESTIONS.length) * 100);
+    const percentage = Math.round((score / questions.length) * 100);
 
     return (
       <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.container}>
@@ -104,7 +104,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation }) => {
                 <Heading level={1} style={styles.resultsTitle}>Quiz Complete!</Heading>
                 <View style={styles.scoreRow}>
                   <Text variant="h2" color={colors.primary.wisteriaDark}>
-                    {score}/{QUIZ_QUESTIONS.length}
+                    {score}/{questions.length}
                   </Text>
                   <Caption>correct answers</Caption>
                 </View>
@@ -119,9 +119,22 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation }) => {
               </View>
             </Card>
             <Button
+              title="Try Another Quiz"
+              onPress={() => {
+                setCurrentQuestion(0);
+                setSelectedOption(null);
+                setScore(0);
+                setIsFinished(false);
+                setRefreshKey(k => k + 1);
+              }}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
+            <Button
               title="Back to Learning"
               onPress={() => navigation.goBack()}
-              variant="primary"
+              variant="secondary"
               size="lg"
               fullWidth
             />
@@ -147,7 +160,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation }) => {
         <View style={styles.progressContainer}>
           <ProgressBar progress={progress} variant="level" height={8} />
           <Caption style={styles.progressLabel}>
-            Question {currentQuestion + 1} of {QUIZ_QUESTIONS.length}
+            Question {currentQuestion + 1} of {questions.length}
           </Caption>
         </View>
 

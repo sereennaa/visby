@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,69 +17,13 @@ import { Icon } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
-
-const LESSON_CONTENT: Record<string, { title: string; slides: Array<{ text: string; emoji: string }> }> = {
-  lang1: {
-    title: 'Greetings & Hello',
-    slides: [
-      { text: 'Hello! In many languages, the greeting changes based on the time of day.', emoji: '👋' },
-      { text: '"Bonjour" means good day in French. Use it in the morning and afternoon!', emoji: '🇫🇷' },
-      { text: '"Konnichiwa" is hello in Japanese. It literally means "this day is..."', emoji: '🇯🇵' },
-      { text: '"Hola" is hello in Spanish. Simple and friendly!', emoji: '🇲🇽' },
-      { text: 'Great job! You learned 3 new greetings. Try using them today!', emoji: '⭐' },
-    ],
-  },
-  lang2: {
-    title: 'Ordering Food',
-    slides: [
-      { text: 'Hungry? Let\'s learn how to order food around the world!', emoji: '🍽️' },
-      { text: 'In France, say "Je voudrais..." (I would like...) to be polite.', emoji: '🇫🇷' },
-      { text: 'In Japan, point at the menu and say "Kore o kudasai" (This one, please).', emoji: '🇯🇵' },
-      { text: '"La cuenta, por favor" means "The check, please" in Spanish.', emoji: '🇪🇸' },
-    ],
-  },
-  lang3: {
-    title: 'Asking for Directions',
-    slides: [
-      { text: 'Lost? No worries — let\'s learn to ask for directions!', emoji: '🗺️' },
-      { text: '"Où est...?" means "Where is...?" in French.', emoji: '🇫🇷' },
-      { text: '"Sumimasen, ... wa doko desu ka?" means "Excuse me, where is...?" in Japanese.', emoji: '🇯🇵' },
-      { text: 'Pointing at a map is universal — and always helpful!', emoji: '📍' },
-    ],
-  },
-  slang1: {
-    title: 'Common Expressions',
-    slides: [
-      { text: 'Every language has fun everyday expressions!', emoji: '💬' },
-      { text: '"C\'est la vie" — That\'s life! A classic French expression.', emoji: '🇫🇷' },
-      { text: '"No worries" is Australian for "it\'s all good, mate!"', emoji: '🇦🇺' },
-    ],
-  },
-  cult1: {
-    title: 'Festival Traditions',
-    slides: [
-      { text: 'Festivals are celebrations of culture, food, and togetherness!', emoji: '🎉' },
-      { text: 'Diwali, the Festival of Lights, is celebrated across India.', emoji: '🪔' },
-      { text: 'Carnival in Brazil features samba, costumes, and parades!', emoji: '🎭' },
-      { text: 'Hanami in Japan is the tradition of enjoying cherry blossoms.', emoji: '🌸' },
-      { text: 'Every festival tells a unique story about its people.', emoji: '🌍' },
-    ],
-  },
-  hist1: {
-    title: 'Ancient Origins',
-    slides: [
-      { text: 'History helps us understand where we came from!', emoji: '📜' },
-      { text: 'The Pyramids of Giza are over 4,500 years old.', emoji: '🏛️' },
-      { text: 'The Great Wall of China stretches over 13,000 miles!', emoji: '🇨🇳' },
-    ],
-  },
-};
+import { LESSON_CONTENT } from '../../config/learningContent';
 
 const DEFAULT_CONTENT = {
   title: 'Lesson',
   slides: [
-    { text: 'Welcome to this lesson! New content is on the way.', emoji: '📚' },
-    { text: 'Check back soon for more exciting learning material!', emoji: '✨' },
+    { text: 'Welcome! New content is on the way.', emoji: '📚' },
+    { text: 'Check back soon for more exciting material!', emoji: '✨' },
   ],
 };
 
@@ -95,6 +38,7 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
   const { addAura } = useStore();
 
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isFinished, setIsFinished] = useState(false);
   const isLastSlide = currentSlide === lesson.slides.length - 1;
   const progress = ((currentSlide + 1) / lesson.slides.length) * 100;
   const slide = lesson.slides[currentSlide];
@@ -102,13 +46,43 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
   const handleNext = () => {
     if (isLastSlide) {
       addAura(50);
-      Alert.alert('Lesson Complete!', '+50 Aura ✨', [
-        { text: 'Awesome!', onPress: () => navigation.goBack() },
-      ]);
+      setIsFinished(true);
     } else {
       setCurrentSlide(prev => prev + 1);
     }
   };
+
+  if (isFinished) {
+    return (
+      <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.resultsContainer}>
+            <Card style={styles.resultsCard}>
+              <View style={styles.resultsContent}>
+                <Text variant="heroTitle" align="center" style={styles.resultsEmoji}>
+                  🎉
+                </Text>
+                <Heading level={1} style={styles.resultsTitle}>Lesson Complete!</Heading>
+                <View style={styles.scoreDivider} />
+                <View style={styles.auraRow}>
+                  <Icon name="sparkles" size={24} color={colors.reward.gold} />
+                  <Text variant="h2" color={colors.reward.amber}>+50</Text>
+                  <Text variant="body" color={colors.text.secondary}>Aura earned</Text>
+                </View>
+              </View>
+            </Card>
+            <Button
+              title="Back to Learning"
+              onPress={() => navigation.goBack()}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={[colors.primary.wisteriaFaded, colors.base.cream]} style={styles.container}>
@@ -218,6 +192,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
+  },
+  resultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.screenPadding,
+    gap: spacing.lg,
+  },
+  resultsCard: {
+    paddingVertical: spacing.xxxl,
+  },
+  resultsContent: {
+    alignItems: 'center',
+  },
+  resultsEmoji: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  resultsTitle: {
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  scoreDivider: {
+    width: 80,
+    height: 2,
+    backgroundColor: colors.primary.wisteriaLight,
+    marginBottom: spacing.md,
+  },
+  auraRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
 });
 

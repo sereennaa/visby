@@ -107,12 +107,12 @@ const LESSON_CATEGORIES: LessonCategory[] = [
 
 // Sample lessons
 const SAMPLE_LESSONS: Lesson[] = [
-  { id: '1', title: 'Greetings & Hello', category: 'language', duration: '5 min', xpReward: 25, completed: false, locked: false },
-  { id: '2', title: 'Ordering Food', category: 'language', duration: '8 min', xpReward: 30, completed: false, locked: false },
-  { id: '3', title: 'Common Expressions', category: 'slang', duration: '6 min', xpReward: 25, completed: false, locked: false },
-  { id: '4', title: 'Table Manners', category: 'etiquette', duration: '7 min', xpReward: 30, completed: false, locked: false },
-  { id: '5', title: 'Festival Traditions', category: 'culture', duration: '10 min', xpReward: 40, completed: false, locked: false },
-  { id: '6', title: 'Ancient Origins', category: 'history', duration: '12 min', xpReward: 50, completed: false, locked: true },
+  { id: 'lang1', title: 'Greetings & Hello', category: 'language', duration: '5 min', xpReward: 25, completed: false, locked: false },
+  { id: 'lang2', title: 'Ordering Food', category: 'language', duration: '8 min', xpReward: 30, completed: false, locked: false },
+  { id: 'slang1', title: 'Common Expressions', category: 'slang', duration: '6 min', xpReward: 25, completed: false, locked: false },
+  { id: 'etiq1', title: 'Table Manners', category: 'etiquette', duration: '7 min', xpReward: 30, completed: false, locked: false },
+  { id: 'cult1', title: 'Festival Traditions', category: 'culture', duration: '10 min', xpReward: 40, completed: false, locked: false },
+  { id: 'hist1', title: 'Ancient Origins', category: 'history', duration: '12 min', xpReward: 50, completed: false, locked: true },
 ];
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
