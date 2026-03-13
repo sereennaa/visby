@@ -32,6 +32,10 @@ export interface User {
   countriesVisited: number;
   citiesVisited: number;
   
+  // Daily learning tracking
+  lessonsCompletedToday?: number;
+  lastLessonDate?: string;
+
   // Avatar Reference
   visbyId: string;
   
@@ -468,7 +472,7 @@ export interface CountryFact {
   countryId: string;
   title: string;
   content: string;
-  /** Optional emoji or icon for kids */
+  /** Icon name for display */
   icon: string;
   category: 'culture' | 'food' | 'language' | 'nature' | 'history' | 'fun';
 }
@@ -551,8 +555,8 @@ export type RootStackParamList = {
   Learn: undefined;
   LessonCategory: { categoryId: string };
   Lesson: { lessonId: string };
-  Quiz: undefined;
-  Flashcards: undefined;
+  Quiz: { category?: string } | undefined;
+  Flashcards: { deckId?: string } | undefined;
   
   // Profile
   Profile: undefined;
@@ -568,14 +572,6 @@ export type RootStackParamList = {
   AuraStore: undefined;
   Membership: undefined;
 }
-
-export type BottomTabParamList = {
-  HomeTab: undefined;
-  MapTab: undefined;
-  CollectionTab: undefined;
-  LearnTab: undefined;
-  ProfileTab: undefined;
-};
 
 export type MainTabParamList = {
   Home: undefined;

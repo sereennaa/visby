@@ -80,7 +80,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     const cost = country.visitCostAura;
     if (aura < cost) {
       showInfo(
-        'Not enough Aura ✨',
+        'Not enough Aura',
         `You need ${cost} Aura to visit ${country.name}. Earn more by completing quizzes, reading facts, and keeping your streak!`
       );
       return;
@@ -107,7 +107,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     const cost = country.housePriceAura;
     if (aura < cost) {
       showInfo(
-        'Not enough Aura ✨',
+        'Not enough Aura',
         `You need ${cost} Aura to buy a house in ${country.name}. Then you can visit anytime for free!`
       );
       return;
@@ -158,7 +158,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Heading level={1}>Visit the World 🌍</Heading>
+            <Heading level={1}>Visit the World</Heading>
             <Caption>Pay Aura to visit a country, or buy a house to visit anytime!</Caption>
             <View style={styles.statsRow}>
               <View style={styles.auraRow}>
@@ -167,7 +167,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
               </View>
               {streak > 0 && (
                 <View style={styles.streakRow}>
-                  <Text style={styles.streakText}>🔥 {streak}-day streak</Text>
+                  <Text style={styles.streakText}>{streak}-day streak</Text>
                   <View style={styles.multiplierBadge}>
                     <Text style={styles.multiplierText}>{multiplier.toFixed(1)}x</Text>
                   </View>
@@ -176,7 +176,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
             </View>
             {userHouses.length > 0 && (
               <View style={styles.housesOwnedRow}>
-                <Text style={styles.housesOwnedText}>🏠 {userHouses.length} house{userHouses.length !== 1 ? 's' : ''} owned</Text>
+                <Text style={styles.housesOwnedText}>{userHouses.length} house{userHouses.length !== 1 ? 's' : ''} owned</Text>
               </View>
             )}
           </View>
@@ -197,7 +197,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                   <View style={styles.countryInfo}>
                     <View style={styles.countryNameRow}>
                       <Text variant="h2">{country.name}</Text>
-                      {owned && <Text style={styles.ownedBadge}>🏠 Owned</Text>}
+                      {owned && <Text style={styles.ownedBadge}>Owned</Text>}
                     </View>
                     {owned && (() => {
                       const house = userHouses.find((h) => h.countryId === country.id);
@@ -207,9 +207,9 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                     })()}
                     <Caption numberOfLines={2}>{country.description}</Caption>
                     <View style={styles.countryMeta}>
-                      <Text style={styles.factCount}>📖 {country.facts.length} facts</Text>
-                      <Text style={styles.factCount}>📝 Quiz</Text>
-                      <Text style={styles.factCount}>🏠 4 rooms</Text>
+                      <Text style={styles.factCount}>{country.facts.length} facts</Text>
+                      <Text style={styles.factCount}>Quiz</Text>
+                      <Text style={styles.factCount}>4 rooms</Text>
                     </View>
                     <View style={styles.actions}>
                       {owned ? (
@@ -225,7 +225,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                           <Button
                             size="sm"
                             variant="primary"
-                            title={`Visit ${country.visitCostAura} ✨`}
+                            title={`Visit ${country.visitCostAura}`}
                             onPress={() => handleVisit(country.id)}
                             style={styles.visitBtn}
                           />
@@ -235,7 +235,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                           >
                             <Icon name="home" size={18} color={colors.primary.wisteriaDark} />
                             <Text variant="caption" color={colors.primary.wisteriaDark}>
-                              Buy house {country.housePriceAura} ✨
+                              Buy house {country.housePriceAura}
                             </Text>
                           </TouchableOpacity>
                         </>
@@ -286,7 +286,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
         <Pressable style={styles.modalOverlay}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.nameModalHeader}>
-              <Text style={styles.nameModalEmoji}>🏠</Text>
+              <Icon name="home" size={48} color={colors.text.primary} />
               <Heading level={3}>Name Your House!</Heading>
               <Caption>You bought a house in {nameModal.countryName}! Give it a name.</Caption>
             </View>
@@ -370,7 +370,6 @@ const styles = StyleSheet.create({
   modalBody: { marginTop: spacing.sm, marginBottom: spacing.lg },
   modalActions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
   nameModalHeader: { alignItems: 'center', marginBottom: spacing.md },
-  nameModalEmoji: { fontSize: 48, marginBottom: spacing.xs },
   nameInput: {
     fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.text.primary,
     borderWidth: 2, borderColor: colors.primary.wisteriaFaded,

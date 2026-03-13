@@ -101,7 +101,7 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
     addAura(25);
 
     Alert.alert(
-      'Bite Saved! +25 Aura ✨',
+      'Bite Saved! +25 Aura',
       `${foodName} has been added to your collection!`,
       [{ text: 'Yum!', onPress: () => navigation.goBack() }],
     );

@@ -5,8 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
-  ViewStyle,
-  TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';

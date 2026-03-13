@@ -96,7 +96,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
   const currentSize = sizeStyles[size];
   const rarityColors = getRarityColors(badge.rarity);
 
-  // Map emoji to icon name (for badges that still use emoji)
+  // Map badge to icon name
   const getIconForBadge = (): IconName => {
     // This would be the badge's icon property
     return 'trophy';

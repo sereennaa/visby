@@ -16,7 +16,7 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 interface Particle {
   id: number;
-  emoji: string;
+  color: string;
   startX: number;
   startY: number;
   size: number;
@@ -33,24 +33,24 @@ interface FloatingParticlesProps {
   speed?: 'slow' | 'normal' | 'fast';
 }
 
-const EMOJI_SETS = {
-  sparkle: ['✨', '⭐', '💫', '✧', '⋆'],
-  stars: ['⭐', '🌟', '💫', '✦', '☆'],
-  mixed: ['✨', '⭐', '🌸', '🦋', '💫', '🌙', '⋆', '✧'],
-  snow: ['❄️', '✧', '·', '⋆', '°'],
-  hearts: ['💜', '💛', '✨', '💫', '🤍'],
+const COLOR_SETS: Record<string, string[]> = {
+  sparkle: [colors.reward.gold, colors.reward.amber, '#FFE082', '#FFF59D', colors.primary.wisteriaLight],
+  stars: [colors.reward.gold, '#FFE082', colors.reward.amber, '#FFF59D', '#FFCC80'],
+  mixed: [colors.reward.gold, colors.primary.wisteriaLight, '#FECDD3', '#A5D6A7', '#FFE082', '#B3E5FC', '#E1BEE7', '#FFF59D'],
+  snow: ['#E3F2FD', '#BBDEFB', '#E0E0E0', '#F5F5F5', '#CFD8DC'],
+  hearts: [colors.primary.wisteriaLight, colors.reward.gold, '#E1BEE7', '#FFE082', '#F5F5F5'],
 };
 
 const SPEED_MULTIPLIER = { slow: 1.6, normal: 1, fast: 0.6 };
 
-const generateParticles = (count: number, variant: keyof typeof EMOJI_SETS): Particle[] => {
-  const emojis = EMOJI_SETS[variant];
+const generateParticles = (count: number, variant: keyof typeof COLOR_SETS): Particle[] => {
+  const particleColors = COLOR_SETS[variant];
   return Array.from({ length: count }, (_, i) => ({
     id: i,
-    emoji: emojis[i % emojis.length],
+    color: particleColors[i % particleColors.length],
     startX: Math.random() * SCREEN_W,
     startY: Math.random() * SCREEN_H,
-    size: 8 + Math.random() * 16,
+    size: 4 + Math.random() * 6,
     duration: 3000 + Math.random() * 4000,
     delay: Math.random() * 3000,
     driftX: -20 + Math.random() * 40,
@@ -113,7 +113,14 @@ const ParticleView: React.FC<{ particle: Particle; speedMult: number; baseOpacit
         style,
       ]}
     >
-      <Animated.Text style={{ fontSize: particle.size }}>{particle.emoji}</Animated.Text>
+      <View
+        style={{
+          width: particle.size,
+          height: particle.size,
+          borderRadius: particle.size / 2,
+          backgroundColor: particle.color,
+        }}
+      />
     </Animated.View>
   );
 };

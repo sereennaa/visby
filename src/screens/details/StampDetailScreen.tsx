@@ -147,7 +147,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
           {/* Share Button */}
           <Button
             title="Share"
-            onPress={() => Share.share({ message: `Check out this stamp I collected at ${stamp.locationName}! 🌍✨ #Visby` })}
+            onPress={() => Share.share({ message: `Check out this stamp I collected at ${stamp.locationName}! #Visby` })}
             variant="ghost"
             size="lg"
             icon={<Icon name="share" size={20} color={colors.primary.wisteriaDark} />}

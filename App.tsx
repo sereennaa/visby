@@ -18,6 +18,7 @@ import {
   Nunito_800ExtraBold,
 } from '@expo-google-fonts/nunito';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Icon } from './src/components/ui/Icon';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useStore } from './src/store/useStore';
 import { supabase, isSupabaseConfigured } from './src/config/supabase';
@@ -41,7 +42,7 @@ class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#FAF8FF' }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>😢</Text>
+          <Icon name="warning" size={48} color="#B8A5E0" />
           <Text style={{ fontSize: 22, fontWeight: '700', color: '#2A1A4A', textAlign: 'center', marginBottom: 8 }}>
             Oops! Something went wrong
           </Text>
@@ -169,7 +170,7 @@ export default function App() {
   if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingEmoji}>✨</Text>
+        <Icon name="sparkles" size={64} color={colors.reward.gold} />
         <Text style={styles.loadingText}>Visby</Text>
         <Text style={styles.loadingSubtext}>Loading adventure...</Text>
       </View>
@@ -198,8 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingEmoji: {
-    fontSize: 64,
+  loadingIcon: {
     marginBottom: 16,
   },
   loadingText: {

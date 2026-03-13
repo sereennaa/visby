@@ -204,9 +204,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
           </Text>
 
           <View style={styles.featurePills}>
-            {['🗺️ Explore', '👘 Dress Up', '🏠 Build', '📚 Learn'].map((feat, i) => (
+            {([
+              { icon: 'map', label: 'Explore' },
+              { icon: 'person', label: 'Dress Up' },
+              { icon: 'home', label: 'Build' },
+              { icon: 'book', label: 'Learn' },
+            ] as const).map((feat, i) => (
               <View key={i} style={styles.pill}>
-                <Text style={styles.pillText}>{feat}</Text>
+                <Icon name={feat.icon} size={12} color="rgba(255, 255, 255, 0.75)" />
+                <Text style={styles.pillText}>{feat.label}</Text>
               </View>
             ))}
           </View>
@@ -326,6 +332,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: spacing.radius.round,
     paddingHorizontal: spacing.md + 2,

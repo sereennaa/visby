@@ -91,7 +91,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             <View style={styles.header}>
               <View style={styles.iconCircle}>
-                <Text style={styles.headerEmoji}>👋</Text>
+                <Icon name="hand" size={30} color={colors.text.primary} />
               </View>
               <Text style={styles.title}>Welcome back!</Text>
               <Text style={styles.subtitle}>Continue your adventure</Text>
@@ -191,7 +191,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
-  headerEmoji: { fontSize: 30 },
   title: {
     fontFamily: 'Baloo2-Bold',
     fontSize: 32,

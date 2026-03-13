@@ -20,7 +20,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { COUNTRIES } from '../../config/constants';
 import { useStore } from '../../store/useStore';
@@ -214,17 +214,17 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </TouchableOpacity>
             <View style={styles.headerCenter}>
               <Text style={styles.flagTitle}>{country.flagEmoji} {country.name}</Text>
-              {isOwner && <Caption style={styles.ownerTag}>🏠 Your House</Caption>}
+              {isOwner && <Caption style={styles.ownerTag}>Your House</Caption>}
             </View>
             <View style={styles.auraChip}>
-              <Text style={styles.auraChipText}>✨ {aura}</Text>
+              <Text style={styles.auraChipText}>{aura}</Text>
             </View>
           </View>
 
           {/* Streak Banner */}
           {streak > 0 && (
             <View style={styles.streakBanner}>
-              <Text style={styles.streakText}>🔥 {streak}-day streak</Text>
+              <Text style={styles.streakText}>{streak}-day streak</Text>
               <View style={styles.multiplierBadge}>
                 <Text style={styles.multiplierText}>{multiplier.toFixed(1)}x</Text>
               </View>
@@ -241,7 +241,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   onPress={() => goToRoom(idx)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.roomTabIcon}>{room.icon}</Text>
+                  <Icon name={room.icon as IconName} size={18} color={colors.text.secondary} />
                   <Text style={idx === currentRoomIdx ? { ...styles.roomTabText, ...styles.roomTabTextActive } : styles.roomTabText}>
                     {room.name}
                   </Text>
@@ -255,7 +255,10 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             <View style={[styles.roomContainer, { backgroundColor: currentRoom.wallColor }]}>
               {/* Room name */}
               <View style={styles.roomNameRow}>
-                <Text style={styles.roomNameText}>{currentRoom.icon} {currentRoom.name}</Text>
+                <View style={styles.roomNameInner}>
+                  <Icon name={currentRoom.icon as IconName} size={16} color={colors.text.primary} />
+                  <Text style={styles.roomNameText}>{currentRoom.name}</Text>
+                </View>
                 {totalInteractive > 0 && (
                   <View style={styles.roomProgressChip}>
                     <Text style={styles.roomProgressText}>{roomInteracted}/{totalInteractive} discovered</Text>
@@ -278,13 +281,13 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                       activeOpacity={obj.interactive ? 0.7 : 1}
                       disabled={!obj.interactive}
                     >
-                      <Text style={styles.objectEmoji}>{obj.emoji}</Text>
+                      <Icon name={obj.icon as IconName} size={30} color={colors.text.primary} />
                       <Text style={wasInteracted ? { ...styles.objectLabel, ...styles.objectLabelDone } : styles.objectLabel}>{obj.label}</Text>
                       {obj.interactive && !wasInteracted && (
                         <View style={styles.interactiveDot} />
                       )}
                       {obj.interactive && wasInteracted && (
-                        <Text style={styles.objectCheck}>✓</Text>
+                        <Icon name="check" size={14} color="#50C878" />
                       )}
                     </TouchableOpacity>
                   );
@@ -319,7 +322,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               {currentRoomIdx > 0 && (
                 <TouchableOpacity style={styles.roomNavLeft} onPress={() => goToRoom(currentRoomIdx - 1)}>
                   <View style={styles.doorArrow}>
-                    <Text style={styles.doorArrowText}>🚪 ←</Text>
+                    <Text style={styles.doorArrowText}>←</Text>
                     <Text style={styles.doorLabel}>{rooms[currentRoomIdx - 1].name}</Text>
                   </View>
                 </TouchableOpacity>
@@ -327,7 +330,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               {currentRoomIdx < rooms.length - 1 && (
                 <TouchableOpacity style={styles.roomNavRight} onPress={() => goToRoom(currentRoomIdx + 1)}>
                   <View style={styles.doorArrow}>
-                    <Text style={styles.doorArrowText}>→ 🚪</Text>
+                    <Text style={styles.doorArrowText}>→</Text>
                     <Text style={styles.doorLabel}>{rooms[currentRoomIdx + 1].name}</Text>
                   </View>
                 </TouchableOpacity>
@@ -338,12 +341,12 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           {/* Quick Actions */}
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.actionCard} onPress={startQuiz}>
-              <Text style={styles.actionEmoji}>📝</Text>
+              <Icon name="quiz" size={28} color={colors.text.primary} />
               <Text style={styles.actionLabel}>Take Quiz</Text>
               <Text style={styles.actionSub}>+{QUIZ_AURA_PER_CORRECT}/correct</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard} onPress={() => { if (facts.length > 0) { setFactIndex(0); openFact(facts[0]); } }}>
-              <Text style={styles.actionEmoji}>📖</Text>
+              <Icon name="book" size={28} color={colors.text.primary} />
               <Text style={styles.actionLabel}>Read Facts</Text>
               <Text style={styles.actionSub}>{readFacts.size}/{facts.length} read</Text>
             </TouchableOpacity>
@@ -351,7 +354,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
           {/* Fun Facts scroll */}
           <View style={styles.factsSection}>
-            <Text style={styles.sectionTitle}>✨ Fun Facts about {country.name}</Text>
+            <Text style={styles.sectionTitle}>Fun Facts about {country.name}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.factsScroll}>
               {facts.map((fact, index) => {
                 const isRead = readFacts.has(fact.id);
@@ -361,9 +364,9 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     style={[styles.factChip, { borderColor: country.accentColor }, isRead && styles.factChipRead]}
                     onPress={() => { setFactIndex(index); openFact(fact); }}
                   >
-                    <Text style={styles.factChipIcon}>{fact.icon}</Text>
+                    <Icon name={fact.icon as any} size={18} color={colors.primary.wisteriaDark} />
                     <Text variant="caption" numberOfLines={1} style={isRead ? styles.factTextRead : undefined}>{fact.title}</Text>
-                    {isRead && <Text style={styles.checkMark}>✓</Text>}
+                    {isRead && <Icon name="check" size={14} color="#50C878" />}
                   </TouchableOpacity>
                 );
               })}
@@ -372,25 +375,25 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
           {/* Earning guide */}
           <View style={styles.guideSection}>
-            <Text style={styles.sectionTitle}>💰 Earn Aura Here</Text>
+            <Text style={styles.sectionTitle}>Earn Aura Here</Text>
             <View style={styles.guideGrid}>
               <View style={styles.guideItem}>
-                <Text style={styles.guideEmoji}>🏠</Text>
+                <Icon name="home" size={24} color={colors.text.primary} />
                 <Text style={styles.guideLabel}>Explore rooms</Text>
                 <Text style={styles.guideAmount}>+8 per object</Text>
               </View>
               <View style={styles.guideItem}>
-                <Text style={styles.guideEmoji}>📝</Text>
+                <Icon name="quiz" size={24} color={colors.text.primary} />
                 <Text style={styles.guideLabel}>Quiz</Text>
                 <Text style={styles.guideAmount}>+{QUIZ_AURA_PER_CORRECT}/correct</Text>
               </View>
               <View style={styles.guideItem}>
-                <Text style={styles.guideEmoji}>📖</Text>
+                <Icon name="book" size={24} color={colors.text.primary} />
                 <Text style={styles.guideLabel}>Read facts</Text>
                 <Text style={styles.guideAmount}>+{FACT_AURA_REWARD} each</Text>
               </View>
               <View style={styles.guideItem}>
-                <Text style={styles.guideEmoji}>🔥</Text>
+                <Icon name="flame" size={24} color={colors.text.primary} />
                 <Text style={styles.guideLabel}>Streak</Text>
                 <Text style={styles.guideAmount}>{multiplier.toFixed(1)}x boost</Text>
               </View>
@@ -406,7 +409,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             {activeObject && (
               <>
                 <View style={styles.modalIconRow}>
-                  <Text style={styles.modalIcon}>{activeObject.emoji}</Text>
+                  <Icon name={activeObject.icon as IconName} size={48} color={colors.text.primary} />
                 </View>
                 <Heading level={3}>{activeObject.learnTitle ?? activeObject.label}</Heading>
                 <Text variant="body" style={styles.modalBody}>
@@ -415,7 +418,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 {activeObject.auraReward && (
                   <View style={styles.auraEarnedRow}>
                     <Text style={styles.auraEarnedText}>
-                      ✨ +{Math.round(activeObject.auraReward * multiplier)} Aura earned!
+                      +{Math.round(activeObject.auraReward * multiplier)} Aura earned!
                     </Text>
                   </View>
                 )}
@@ -440,7 +443,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 <Heading level={3}>{learningFact.title}</Heading>
                 <Text variant="body" style={styles.modalBody}>{learningFact.content}</Text>
                 <View style={styles.auraEarnedRow}>
-                  <Text style={styles.auraEarnedText}>✨ +{FACT_AURA_REWARD} Aura</Text>
+                  <Text style={styles.auraEarnedText}>+{FACT_AURA_REWARD} Aura</Text>
                 </View>
                 <View style={styles.modalActions}>
                   {facts.length > 1 && (
@@ -499,13 +502,15 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               )
             ) : (
               <View style={styles.quizResults}>
-                <Text style={styles.quizResultEmoji}>
-                  {quizScore >= quizQuestions.length * 0.8 ? '🏆' : quizScore >= quizQuestions.length * 0.5 ? '⭐' : '📚'}
-                </Text>
+                <Icon
+                  name={quizScore >= quizQuestions.length * 0.8 ? 'trophy' : quizScore >= quizQuestions.length * 0.5 ? 'star' : 'book'}
+                  size={56}
+                  color={colors.reward.gold}
+                />
                 <Heading level={2}>Quiz Complete!</Heading>
                 <Text style={styles.quizResultScore}>{quizScore}/{quizQuestions.length} correct</Text>
                 <View style={styles.quizRewardRow}>
-                  <Text style={styles.quizRewardText}>✨ +{Math.round(quizScore * QUIZ_AURA_PER_CORRECT * multiplier)} Aura</Text>
+                  <Text style={styles.quizRewardText}>+{Math.round(quizScore * QUIZ_AURA_PER_CORRECT * multiplier)} Aura</Text>
                   {streak > 0 && <Text style={styles.quizRewardMultiplier}>({multiplier.toFixed(1)}x streak!)</Text>}
                 </View>
                 <View style={styles.quizResultActions}>
@@ -516,7 +521,10 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             )}
             {!quizFinished && (
               <TouchableOpacity style={styles.quizClose} onPress={() => setQuizActive(false)}>
-                <Text style={styles.quizCloseText}>✕ Close</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Icon name="close" size={16} color={colors.text.secondary} />
+                  <Text style={styles.quizCloseText}>Close</Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
@@ -571,7 +579,6 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary.wisteria, shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15, shadowRadius: 6, elevation: 3,
   },
-  roomTabIcon: { fontSize: 18 },
   roomTabText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.secondary },
   roomTabTextActive: { color: colors.primary.wisteriaDark, fontFamily: 'Nunito-Bold' },
 
@@ -585,6 +592,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.md, paddingTop: spacing.sm,
   },
+  roomNameInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   roomNameText: { fontFamily: 'Baloo2-SemiBold', fontSize: 16, color: colors.text.primary },
   roomProgressChip: {
     backgroundColor: 'rgba(76, 175, 80, 0.15)', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10,
@@ -599,7 +607,6 @@ const styles = StyleSheet.create({
     position: 'absolute', alignItems: 'center',
     transform: [{ translateX: -24 }, { translateY: -16 }],
   },
-  objectEmoji: { fontSize: 30 },
   objectLabel: { fontFamily: 'Nunito-Medium', fontSize: 9, color: colors.text.secondary, textAlign: 'center', maxWidth: 64 },
   objectLabelDone: { color: '#4CAF50' },
   interactiveDot: {
@@ -607,8 +614,6 @@ const styles = StyleSheet.create({
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: '#FFD700', borderWidth: 1.5, borderColor: '#FFFFFF',
   },
-  objectCheck: { fontSize: 10, color: '#4CAF50', fontWeight: '700', position: 'absolute', top: -4, right: -4 },
-
   // Avatar
   avatarContainer: {
     position: 'absolute', left: spacing.lg, bottom: 50,
@@ -649,7 +654,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 18,
     borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.2)',
   },
-  actionEmoji: { fontSize: 28, marginBottom: 4 },
   actionLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 14, color: colors.text.primary },
   actionSub: { fontFamily: 'Nunito-Medium', fontSize: 11, color: colors.text.muted },
 
@@ -664,9 +668,6 @@ const styles = StyleSheet.create({
   },
   factChipRead: { backgroundColor: 'rgba(200, 230, 200, 0.4)', borderStyle: 'dashed' as any },
   factTextRead: { color: colors.text.muted },
-  checkMark: { fontSize: 13, color: '#4CAF50', fontWeight: '700' },
-  factChipIcon: { fontSize: 18 },
-
   // Guide
   guideSection: {
     marginHorizontal: spacing.lg, marginTop: spacing.lg,
@@ -677,7 +678,6 @@ const styles = StyleSheet.create({
     width: '46%' as any, alignItems: 'center', padding: spacing.sm,
     backgroundColor: colors.base.cream, borderRadius: 14,
   },
-  guideEmoji: { fontSize: 24, marginBottom: 2 },
   guideLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.text.primary, textAlign: 'center' },
   guideAmount: { fontFamily: 'Nunito-Medium', fontSize: 11, color: colors.text.secondary, textAlign: 'center' },
 
@@ -722,7 +722,6 @@ const styles = StyleSheet.create({
   quizClose: { alignSelf: 'center', paddingVertical: spacing.md },
   quizCloseText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.muted },
   quizResults: { alignItems: 'center', paddingVertical: spacing.md },
-  quizResultEmoji: { fontSize: 56, marginBottom: spacing.sm },
   quizResultScore: { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.text.primary, marginVertical: spacing.sm },
   quizRewardRow: { alignItems: 'center', marginVertical: spacing.md },
   quizRewardText: { fontFamily: 'Baloo2-Bold', fontSize: 18, color: '#D4760A' },

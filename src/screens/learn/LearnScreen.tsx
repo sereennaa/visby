@@ -1,19 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
@@ -115,18 +109,19 @@ const SAMPLE_LESSONS: Lesson[] = [
   { id: 'hist1', title: 'Ancient Origins', category: 'history', duration: '12 min', xpReward: 50, completed: false, locked: true },
 ];
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
 export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
-  const { user, getLessonsCompletedToday } = useStore();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { getLessonsCompletedToday, lessonProgress } = useStore();
 
   const dailyGoal = 3;
   const lessonsToday = getLessonsCompletedToday();
   const dailyProgress = (lessonsToday / dailyGoal) * 100;
 
+  const getCompletedForCategory = (categoryId: string): number =>
+    lessonProgress.filter(p => p.lessonId.startsWith(categoryId) && p.completed).length;
+
   const renderCategoryCard = (category: LessonCategory) => {
-    const progress = category.completedCount / category.lessonsCount * 100;
+    const completed = getCompletedForCategory(category.id);
+    const progress = completed / category.lessonsCount * 100;
     
     return (
       <TouchableOpacity
@@ -148,7 +143,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             <Caption>{category.description}</Caption>
           </View>
           <View style={styles.categoryProgress}>
-            <Caption>{category.completedCount}/{category.lessonsCount}</Caption>
+            <Caption>{completed}/{category.lessonsCount}</Caption>
             <View style={[styles.progressDot, { backgroundColor: category.color }]} />
           </View>
         </LinearGradient>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,15 +29,9 @@ const TIER_BORDER_COLORS: Record<string, string> = {
   premium: colors.reward.gold,
 };
 
-const showComingSoon = () => {
-  Alert.alert(
-    'Coming Soon!',
-    'Membership purchases will be available when the app launches. Stay tuned! 🎉',
-  );
-};
-
 export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }) => {
   const [currentTier] = useState('free');
+  const [comingSoonVisible, setComingSoonVisible] = useState(false);
 
   const currentTierData = MEMBERSHIP_TIERS.find((t) => t.id === currentTier) || MEMBERSHIP_TIERS[0];
 
@@ -71,7 +65,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
           style={styles.tierCardGradient}
         >
           <View style={styles.tierHeader}>
-            <Text style={styles.tierEmoji}>{tier.emoji}</Text>
+            <Icon name={tier.icon} size={40} color={tier.color} />
             <View style={styles.tierNameBlock}>
               <Heading level={2}>{tier.name}</Heading>
               <Text
@@ -111,11 +105,11 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
             </View>
           ) : isLegend ? (
             <Button
-              title="Go Legend 👑"
+              title="Go Legend"
               variant="reward"
               size="lg"
               fullWidth
-              onPress={showComingSoon}
+              onPress={() => setComingSoonVisible(true)}
             />
           ) : (
             <Button
@@ -123,7 +117,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
               variant="primary"
               size="lg"
               fullWidth
-              onPress={showComingSoon}
+              onPress={() => setComingSoonVisible(true)}
             />
           )}
         </LinearGradient>
@@ -159,7 +153,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
             gradientColors={[colors.primary.wisteriaFaded, colors.primary.wisteriaLight]}
             style={styles.currentTierCard}
           >
-            <Text style={styles.currentTierEmoji}>{currentTierData.emoji}</Text>
+            <Icon name={currentTierData.icon} size={48} color={currentTierData.color} />
             <Heading level={2} align="center">
               You're on the {currentTierData.name} plan
             </Heading>
@@ -182,6 +176,25 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <Modal
+        visible={comingSoonVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setComingSoonVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setComingSoonVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Heading level={3}>Coming Soon!</Heading>
+            <Text variant="body" style={styles.modalBody}>
+              Membership purchases will be available when the app launches. Stay tuned!
+            </Text>
+            <View style={styles.modalActions}>
+              <Button size="sm" variant="primary" title="OK" onPress={() => setComingSoonVisible(false)} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -228,10 +241,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     paddingVertical: spacing.xl,
   },
-  currentTierEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
-  },
   currentTierCaption: {
     marginTop: spacing.xs,
   },
@@ -249,10 +258,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.lg,
-  },
-  tierEmoji: {
-    fontSize: 40,
-    marginRight: spacing.md,
   },
   tierNameBlock: {
     flex: 1,
@@ -307,6 +312,30 @@ const styles = StyleSheet.create({
   },
   bottomText: {
     lineHeight: 20,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: spacing.xl,
+    maxWidth: 360,
+    width: '100%',
+  },
+  modalBody: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'flex-end',
   },
 });
 

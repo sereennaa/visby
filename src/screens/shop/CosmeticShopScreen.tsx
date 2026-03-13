@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Dimensions, TextStyle } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Pressable, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +32,10 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
   const ownedCosmetics = visby?.ownedCosmetics ?? [];
   const equipped = visby?.equipped ?? {};
 
+  const [buyModalVisible, setBuyModalVisible] = useState(false);
+  const [buyModalItem, setBuyModalItem] = useState<ShopCosmetic | null>(null);
+  const [buyModalError, setBuyModalError] = useState<string | null>(null);
+
   const defaultAppearance = visby?.appearance ?? {
     skinTone: colors.visby.skin.light,
     hairColor: colors.visby.hair.brown,
@@ -51,34 +55,29 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
 
   const handleBuy = (cosmetic: ShopCosmetic) => {
     if (isOwned(cosmetic.id)) return;
+    setBuyModalItem(cosmetic);
+    setBuyModalError(null);
+    setBuyModalVisible(true);
+  };
 
-    Alert.alert(
-      'Buy Cosmetic',
-      `Buy ${cosmetic.name} for ${cosmetic.price} Aura?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Buy ✨',
-          onPress: () => {
-            const success = spendAura(cosmetic.price);
-            if (!success) {
-              Alert.alert('Not Enough Aura', 'Keep exploring to earn more Aura! ✨');
-              return;
-            }
-            const { visby: currentVisby } = useStore.getState();
-            if (currentVisby && !currentVisby.ownedCosmetics.includes(cosmetic.id)) {
-              useStore.setState({
-                visby: {
-                  ...currentVisby,
-                  ownedCosmetics: [...currentVisby.ownedCosmetics, cosmetic.id],
-                },
-              });
-            }
-            Alert.alert('Awesome! 🎉', `You got the ${cosmetic.name}!`);
-          },
+  const confirmBuy = () => {
+    if (!buyModalItem) return;
+    const success = spendAura(buyModalItem.price);
+    if (!success) {
+      setBuyModalError('Not enough Aura. Keep exploring to earn more!');
+      return;
+    }
+    const { visby: currentVisby } = useStore.getState();
+    if (currentVisby && !currentVisby.ownedCosmetics.includes(buyModalItem.id)) {
+      useStore.setState({
+        visby: {
+          ...currentVisby,
+          ownedCosmetics: [...currentVisby.ownedCosmetics, buyModalItem.id],
         },
-      ],
-    );
+      });
+    }
+    setBuyModalVisible(false);
+    setBuyModalItem(null);
   };
 
   const handleEquip = (cosmetic: ShopCosmetic) => {
@@ -107,7 +106,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
         activeOpacity={0.8}
       >
         <View style={styles.itemEmojiContainer}>
-          <Text style={styles.itemEmoji}>{item.emoji}</Text>
+          <Icon name={item.icon} size={28} color={colors.primary.wisteriaDark} />
         </View>
 
         <Text variant="bodySmall" style={styles.itemName} numberOfLines={1}>
@@ -127,11 +126,14 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
 
         <View style={styles.itemFooter}>
           {item.membersOnly && !owned ? (
-            <Text variant="caption" style={styles.membersLabel}>Members Only 👑</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Icon name="crown" size={14} color={colors.reward.gold} />
+              <Text variant="caption" style={styles.membersLabel}>Members Only</Text>
+            </View>
           ) : owned ? (
             currentlyEquipped ? (
               <Button
-                title="Equipped ✓"
+                title="Equipped"
                 size="sm"
                 variant="secondary"
                 onPress={() => handleEquip(item)}
@@ -149,7 +151,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
           ) : (
             <>
               <Text variant="caption" style={styles.priceText}>
-                {item.price === 0 ? 'Free' : `${item.price} ✨`}
+                {item.price === 0 ? 'Free' : `${item.price}`}
               </Text>
               <Button
                 title="Buy"
@@ -228,7 +230,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
                   variant="body"
                   style={[styles.tabText, active && styles.tabTextActive] as any}
                 >
-                  {ct.label} {ct.emoji}
+                  {ct.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -246,6 +248,38 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
           showsVerticalScrollIndicator={false}
         />
       </SafeAreaView>
+
+      <Modal
+        visible={buyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBuyModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setBuyModalVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            {buyModalError ? (
+              <>
+                <Heading level={3}>Not Enough Aura</Heading>
+                <Text variant="body" style={styles.modalBody}>{buyModalError}</Text>
+                <View style={styles.modalActions}>
+                  <Button size="sm" variant="primary" title="OK" onPress={() => setBuyModalVisible(false)} />
+                </View>
+              </>
+            ) : buyModalItem ? (
+              <>
+                <Heading level={3}>Buy {buyModalItem.name}?</Heading>
+                <Text variant="body" style={styles.modalBody}>
+                  Cost: {buyModalItem.price} Aura{'\n'}Your balance: {user?.aura ?? 0} Aura
+                </Text>
+                <View style={styles.modalActions}>
+                  <Button size="sm" variant="secondary" title="Cancel" onPress={() => setBuyModalVisible(false)} />
+                  <Button size="sm" variant="reward" title="Buy" onPress={confirmBuy} />
+                </View>
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -391,9 +425,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  itemEmoji: {
-    fontSize: 28,
-  },
   itemName: {
     fontWeight: '700',
     textAlign: 'center',
@@ -431,6 +462,30 @@ const styles = StyleSheet.create({
     color: colors.reward.gold,
     textAlign: 'center',
     marginBottom: spacing.xs,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: spacing.xl,
+    maxWidth: 360,
+    width: '100%',
+  },
+  modalBody: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'flex-end',
   },
 });
 

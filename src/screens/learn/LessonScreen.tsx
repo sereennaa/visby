@@ -18,12 +18,13 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { LESSON_CONTENT } from '../../config/learningContent';
+import { AURA_REWARDS } from '../../config/constants';
 
 const DEFAULT_CONTENT = {
   title: 'Lesson',
   slides: [
-    { text: 'Welcome! New content is on the way.', emoji: '📚' },
-    { text: 'Check back soon for more exciting material!', emoji: '✨' },
+    { text: 'Welcome! New content is on the way.', icon: 'book' },
+    { text: 'Check back soon for more exciting material!', icon: 'sparkles' },
   ],
 };
 
@@ -45,7 +46,7 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
 
   const handleNext = () => {
     if (isLastSlide) {
-      addAura(50);
+      addAura(AURA_REWARDS.LESSON_COMPLETE);
       updateLessonProgress(lessonId, { completed: true, completedAt: new Date() });
       completeLessonToday();
       setIsFinished(true);
@@ -61,14 +62,14 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
           <View style={styles.resultsContainer}>
             <Card style={styles.resultsCard}>
               <View style={styles.resultsContent}>
-                <Text variant="heroTitle" align="center" style={styles.resultsEmoji}>
-                  🎉
-                </Text>
+                <View style={styles.resultsIconWrap}>
+                  <Icon name="gift" size={64} color={colors.reward.gold} />
+                </View>
                 <Heading level={1} style={styles.resultsTitle}>Lesson Complete!</Heading>
                 <View style={styles.scoreDivider} />
                 <View style={styles.auraRow}>
                   <Icon name="sparkles" size={24} color={colors.reward.gold} />
-                  <Text variant="h2" color={colors.reward.amber}>+50</Text>
+                  <Text variant="h2" color={colors.reward.amber}>+{AURA_REWARDS.LESSON_COMPLETE}</Text>
                   <Text variant="body" color={colors.text.secondary}>Aura earned</Text>
                 </View>
               </View>
@@ -110,9 +111,9 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
         <View style={styles.slideContainer}>
           <Card style={styles.slideCard}>
             <View style={styles.slideContent}>
-              <Text variant="heroTitle" align="center" style={styles.emoji}>
-                {slide.emoji}
-              </Text>
+              <View style={styles.slideIconWrap}>
+                <Icon name={(slide.icon || 'book') as any} size={72} color={colors.primary.wisteriaDark} />
+              </View>
               <Heading level={2} style={styles.lessonTitle}>{lesson.title}</Heading>
               <Text variant="bodyLarge" align="center" style={styles.slideText}>
                 {slide.text}
@@ -179,9 +180,9 @@ const styles = StyleSheet.create({
   slideContent: {
     alignItems: 'center',
   },
-  emoji: {
-    fontSize: 72,
+  slideIconWrap: {
     marginBottom: spacing.xl,
+    alignItems: 'center',
   },
   lessonTitle: {
     textAlign: 'center',
@@ -207,9 +208,9 @@ const styles = StyleSheet.create({
   resultsContent: {
     alignItems: 'center',
   },
-  resultsEmoji: {
-    fontSize: 64,
+  resultsIconWrap: {
     marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   resultsTitle: {
     textAlign: 'center',

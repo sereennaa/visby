@@ -44,6 +44,7 @@ interface AppStore {
   setVisby: (visby: Visby | null) => void;
   updateVisbyAppearance: (appearance: Partial<Visby['appearance']>) => void;
   equipCosmetic: (slot: keyof Visby['equipped'], cosmeticId: string | undefined) => void;
+  setVisbyMood: (mood: Visby['currentMood']) => void;
   
   // Actions - Collections
   setStamps: (stamps: Stamp[]) => void;
@@ -134,6 +135,12 @@ export const useStore = create<AppStore>()(
               equipped: { ...visby.equipped, [slot]: cosmeticId },
             },
           });
+        }
+      },
+      setVisbyMood: (mood) => {
+        const { visby } = get();
+        if (visby) {
+          set({ visby: { ...visby, currentMood: mood } });
         }
       },
       
@@ -269,20 +276,17 @@ export const useStore = create<AppStore>()(
           set({
             user: {
               ...user,
-              lessonsCompletedToday: (user as any).lessonsCompletedToday
-                ? (user as any).lessonsCompletedToday + 1
-                : 1,
+              lessonsCompletedToday: (user.lessonsCompletedToday || 0) + 1,
               lastLessonDate: new Date().toDateString(),
-            } as any,
+            },
           });
         }
       },
       getLessonsCompletedToday: () => {
         const { user } = get();
         if (!user) return 0;
-        const u = user as any;
-        if (u.lastLessonDate === new Date().toDateString()) {
-          return u.lessonsCompletedToday || 0;
+        if (user.lastLessonDate === new Date().toDateString()) {
+          return user.lessonsCompletedToday || 0;
         }
         return 0;
       },

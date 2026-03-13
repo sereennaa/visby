@@ -79,7 +79,7 @@ export const bitesService = {
 
   // Get category info
   getCategoryInfo(category: BiteCategory) {
-    return BITE_CATEGORIES_INFO[category] || { label: category, emoji: '🍽️' };
+    return BITE_CATEGORIES_INFO[category] || { label: category, icon: 'food' };
   },
 
   // Check if cuisine is new for user

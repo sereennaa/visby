@@ -102,7 +102,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
     addAura(50);
 
     Alert.alert(
-      'Stamp Collected! +50 Aura ✨',
+      'Stamp Collected! +50 Aura',
       `You collected a ${STAMP_TYPES_INFO[selectedType]?.label || selectedType} stamp at ${locationName}!`,
       [{ text: 'Awesome!', onPress: () => navigation.goBack() }],
     );

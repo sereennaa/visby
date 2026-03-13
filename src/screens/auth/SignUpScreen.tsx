@@ -94,7 +94,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
             <View style={styles.header}>
               <View style={styles.iconCircle}>
-                <Text style={styles.headerEmoji}>🚀</Text>
+                <Icon name="rocket" size={30} color={colors.text.primary} />
               </View>
               <Text style={styles.title}>Join the adventure!</Text>
               <Text style={styles.subtitle}>Create your explorer profile</Text>
@@ -217,7 +217,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
-  headerEmoji: { fontSize: 30 },
   title: {
     fontFamily: 'Baloo2-Bold',
     fontSize: 30,

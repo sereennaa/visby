@@ -87,8 +87,7 @@ const MagicActionCard: React.FC<{
   gradient: [string, string];
   onPress: () => void;
   delay: number;
-  emoji?: string;
-}> = ({ icon, label, gradient, onPress, delay, emoji }) => {
+}> = ({ icon, label, gradient, onPress, delay }) => {
   const translateY = useSharedValue(30);
   const opacity = useSharedValue(0);
   const hoverGlow = useSharedValue(0);
@@ -127,11 +126,7 @@ const MagicActionCard: React.FC<{
           end={{ x: 1, y: 1 }}
           style={styles.actionGradient}
         >
-          {emoji ? (
-            <Text style={styles.actionEmoji}>{emoji}</Text>
-          ) : (
-            <Icon name={icon} size={28} color={colors.text.primary} />
-          )}
+          <Icon name={icon} size={28} color={colors.text.primary} />
           <Text variant="bodySmall" align="center" style={styles.actionLabel}>
             {label}
           </Text>
@@ -207,13 +202,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     return 'Goodnight';
   };
 
-  const getGreetingEmoji = () => {
+  const getGreetingIcon = (): IconName => {
     const hour = new Date().getHours();
-    if (hour < 6) return '🌙';
-    if (hour < 12) return '🌅';
-    if (hour < 17) return '☀️';
-    if (hour < 21) return '🌇';
-    return '✨';
+    if (hour < 6) return 'star';
+    if (hour < 12) return 'sparkles';
+    if (hour < 17) return 'star';
+    if (hour < 21) return 'sparkles';
+    return 'sparkles';
   };
 
   const getCurrentLevel = () => {
@@ -259,13 +254,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'globe', value: user?.countriesVisited || 0, label: 'Places', gradient: [colors.calm.skyLight, '#E6F5FF'] },
   ];
 
-  const actionItems: { icon: IconName; label: string; colors: [string, string]; onPress: () => void; emoji?: string }[] = [
-    { icon: 'globe', label: 'Visit World', colors: ['#FFF0DB', '#FFEACC'], onPress: () => navigation.navigate('CountryWorld'), emoji: '🌍' },
-    { icon: 'stamp', label: 'Collect Stamp', colors: ['#F3EAFF', '#EDE3FA'], onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }), emoji: '📍' },
-    { icon: 'bowl', label: 'Log Food', colors: ['#FFF5E6', '#FFEDD5'], onPress: () => navigation.navigate('AddBite'), emoji: '🍜' },
-    { icon: 'book', label: 'Learn', colors: ['#E6F5FF', '#D6ECFF'], onPress: () => navigation.navigate('Learn'), emoji: '📚' },
-    { icon: 'trophy', label: 'Badges', colors: ['#E8FFE8', '#D4F7D4'], onPress: () => navigation.navigate('Badges'), emoji: '🏆' },
-    { icon: 'shirt', label: 'Shop', colors: ['#FFE8F0', '#F3EAFF'], onPress: () => navigation.navigate('CosmeticShop'), emoji: '👘' },
+  const actionItems: { icon: IconName; label: string; colors: [string, string]; onPress: () => void }[] = [
+    { icon: 'globe', label: 'Visit World', colors: ['#FFF0DB', '#FFEACC'], onPress: () => navigation.navigate('CountryWorld') },
+    { icon: 'stamp', label: 'Collect Stamp', colors: ['#F3EAFF', '#EDE3FA'], onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
+    { icon: 'bowl', label: 'Log Food', colors: ['#FFF5E6', '#FFEDD5'], onPress: () => navigation.navigate('AddBite') },
+    { icon: 'book', label: 'Learn', colors: ['#E6F5FF', '#D6ECFF'], onPress: () => navigation.navigate('Learn') },
+    { icon: 'trophy', label: 'Badges', colors: ['#E8FFE8', '#D4F7D4'], onPress: () => navigation.navigate('Badges') },
+    { icon: 'shirt', label: 'Shop', colors: ['#FFE8F0', '#F3EAFF'], onPress: () => navigation.navigate('CosmeticShop') },
   ];
 
   return (
@@ -292,7 +287,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Animated.View style={[styles.header, headerStyle]}>
             <View style={styles.headerLeft}>
               <View style={styles.greetingRow}>
-                <Text style={styles.greetingEmoji}>{getGreetingEmoji()}</Text>
+                <Icon name={getGreetingIcon()} size={18} color={colors.text.secondary} />
                 <Text variant="body" color={colors.text.secondary}>
                   {getGreeting()}, {user?.username || 'Explorer'}!
                 </Text>
@@ -345,7 +340,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       style={styles.levelProgress}
                     />
                     <Text variant="caption" color={colors.text.muted}>
-                      Tap to customize ✨
+                      Tap to customize
                     </Text>
                   </View>
                 </View>
@@ -416,7 +411,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {/* Stamp Collection */}
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionEmoji}>📍</Text>
+              <Icon name="stamp" size={20} color={colors.text.primary} />
               <Heading level={2}>Your Stamps</Heading>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Stamps')}>
@@ -446,7 +441,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {/* Quick Actions */}
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionEmoji}>⚡</Text>
+              <Icon name="flash" size={20} color={colors.text.primary} />
               <Heading level={2}>Adventures</Heading>
             </View>
           </View>
@@ -459,7 +454,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 gradient={action.colors}
                 onPress={action.onPress}
                 delay={600 + index * 80}
-                emoji={action.emoji}
               />
             ))}
           </View>
@@ -490,7 +484,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  greetingEmoji: { fontSize: 18 },
   levelTitle: {
     color: colors.text.primary,
     marginTop: spacing.xxs,
@@ -577,7 +570,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sectionEmoji: { fontSize: 20 },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   stampsScroll: { paddingVertical: spacing.sm, marginBottom: spacing.xl },
   actionsGrid: {
@@ -597,7 +589,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: spacing.radius.xl,
   },
-  actionEmoji: { fontSize: 30 },
   actionLabel: {
     color: colors.text.primary,
     fontFamily: 'Nunito-SemiBold',

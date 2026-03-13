@@ -122,7 +122,7 @@ export const stampsService = {
 
   // Get stamp type info
   getTypeInfo(type: StampType) {
-    return STAMP_TYPES_INFO[type] || { label: type, emoji: '📍', color: '#9B89D0' };
+    return STAMP_TYPES_INFO[type] || { label: type, icon: 'stamp', color: '#9B89D0' };
   },
 
   // Count stamps by type

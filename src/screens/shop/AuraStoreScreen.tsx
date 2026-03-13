@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,7 +8,7 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { AURA_PACKS, AuraPack } from '../../config/cosmetics';
@@ -22,17 +22,21 @@ type AuraStoreScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
-const EARN_TIPS = [
-  { emoji: '📖', text: 'Complete lessons: +50 Aura' },
-  { emoji: '🧠', text: 'Pass a quiz: up to +100 Aura' },
-  { emoji: '📍', text: 'Collect a stamp: +50 Aura' },
-  { emoji: '🍜', text: 'Log food: +25 Aura' },
-  { emoji: '🌍', text: 'Visit a country: learn & earn!' },
+const EARN_TIPS: { icon: IconName; text: string }[] = [
+  { icon: 'book', text: 'Complete lessons: +50 Aura' },
+  { icon: 'quiz', text: 'Pass a quiz: up to +100 Aura' },
+  { icon: 'stamp', text: 'Collect a stamp: +50 Aura' },
+  { icon: 'food', text: 'Log food: +25 Aura' },
+  { icon: 'globe', text: 'Visit a country: learn & earn!' },
 ];
 
 export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) => {
   const { user, addAura } = useStore();
   const currentAura = user?.aura ?? 0;
+
+  const [buyModalVisible, setBuyModalVisible] = useState(false);
+  const [selectedPack, setSelectedPack] = useState<AuraPack | null>(null);
+  const [selectedTotalAmount, setSelectedTotalAmount] = useState(0);
 
   const parseBonusAmount = (pack: AuraPack): number => {
     if (!pack.bonus) return 0;
@@ -43,18 +47,15 @@ export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) 
   const handleBuy = (pack: AuraPack) => {
     const bonusAmount = parseBonusAmount(pack);
     const totalAmount = pack.amount + bonusAmount;
+    setSelectedPack(pack);
+    setSelectedTotalAmount(totalAmount);
+    setBuyModalVisible(true);
+  };
 
-    Alert.alert(
-      'Demo Purchase ✨',
-      `This is a demo! Granting ${totalAmount.toLocaleString()} Aura for free.\nIn the real app this would cost ${pack.priceLabel}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Claim Aura!',
-          onPress: () => addAura(totalAmount),
-        },
-      ],
-    );
+  const confirmBuy = () => {
+    addAura(selectedTotalAmount);
+    setBuyModalVisible(false);
+    setSelectedPack(null);
   };
 
   const renderPackCard = (pack: AuraPack) => {
@@ -89,9 +90,9 @@ export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) 
             pack.popular && styles.packCardPopular,
           ]}
         >
-          <Text style={styles.packEmoji}>{pack.emoji}</Text>
+          <Icon name={pack.icon} size={36} color={colors.reward.gold} />
           <Text variant="h2" align="center">
-            {pack.amount.toLocaleString()} ✨
+            {pack.amount.toLocaleString()}
           </Text>
           {bonusAmount > 0 && (
             <Text variant="caption" color={colors.success.emerald} style={styles.bonusText}>
@@ -142,9 +143,9 @@ export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) 
         >
           {/* Hero Section */}
           <View style={styles.heroSection}>
-            <Text style={styles.heroEmoji}>✨</Text>
+            <Icon name="sparkles" size={56} color={colors.reward.gold} />
             <Heading level={1} align="center">
-              Get More Aura ✨
+              Get More Aura
             </Heading>
             <Caption align="center" style={styles.heroSubtitle}>
               Aura lets you visit countries, buy houses, and shop for cosmetics
@@ -167,7 +168,7 @@ export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) 
             <View style={styles.earnList}>
               {EARN_TIPS.map((tip, i) => (
                 <View key={i} style={styles.earnRow}>
-                  <Text style={styles.earnEmoji}>{tip.emoji}</Text>
+                  <Icon name={tip.icon} size={22} color={colors.primary.wisteriaDark} />
                   <Text variant="body" style={styles.earnText}>{tip.text}</Text>
                 </View>
               ))}
@@ -196,6 +197,27 @@ export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) 
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
+
+      <Modal
+        visible={buyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBuyModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setBuyModalVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Heading level={3}>Demo Purchase</Heading>
+            <Text variant="body" style={styles.modalBody}>
+              This is a demo! Granting {selectedTotalAmount.toLocaleString()} Aura for free.
+              {'\n'}In the real app this would cost {selectedPack?.priceLabel}.
+            </Text>
+            <View style={styles.modalActions}>
+              <Button size="sm" variant="secondary" title="Cancel" onPress={() => setBuyModalVisible(false)} />
+              <Button size="sm" variant="reward" title="Get Aura" onPress={confirmBuy} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -256,10 +278,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     marginBottom: spacing.md,
   },
-  heroEmoji: {
-    fontSize: 56,
-    marginBottom: spacing.sm,
-  },
   heroSubtitle: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,
@@ -291,10 +309,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 5,
-  },
-  packEmoji: {
-    fontSize: 36,
-    marginBottom: spacing.xxs,
   },
   bonusText: {
     fontWeight: '700',
@@ -341,11 +355,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  earnEmoji: {
-    fontSize: 22,
-    width: 30,
-    textAlign: 'center',
-  },
   earnText: {
     flex: 1,
   },
@@ -367,6 +376,30 @@ const styles = StyleSheet.create({
   },
   membershipTextBlock: {
     flex: 1,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: spacing.xl,
+    maxWidth: 360,
+    width: '100%',
+  },
+  modalBody: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'flex-end',
   },
 });
 

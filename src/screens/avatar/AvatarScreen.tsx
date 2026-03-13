@@ -13,7 +13,7 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow } from '../../components/effects/Shimmer';
@@ -29,45 +29,45 @@ type AvatarScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
 };
 
-const MOODS: { mood: VisbyMood; emoji: string }[] = [
-  { mood: 'happy', emoji: '😊' },
-  { mood: 'excited', emoji: '🤩' },
-  { mood: 'curious', emoji: '🧐' },
-  { mood: 'sleepy', emoji: '😴' },
-  { mood: 'proud', emoji: '💪' },
-  { mood: 'adventurous', emoji: '🗺️' },
-  { mood: 'cozy', emoji: '☕' },
+const MOODS: { mood: VisbyMood; label: string }[] = [
+  { mood: 'happy', label: 'Happy' },
+  { mood: 'excited', label: 'Excited' },
+  { mood: 'curious', label: 'Curious' },
+  { mood: 'sleepy', label: 'Sleepy' },
+  { mood: 'proud', label: 'Proud' },
+  { mood: 'adventurous', label: 'Adventurous' },
+  { mood: 'cozy', label: 'Cozy' },
 ];
 
 const SKIN_TONES = ['#FFDAB9', '#F5C8A0', '#E8B89D', '#D4A574', '#A67C52', '#8B5A3C'];
 const HAIR_COLORS = ['#F7E07D', '#E8C55A', '#8B4513', '#A0522D', '#2F2F2F', '#D75C37', '#9B6FA6', '#6B9BC3', '#FFB6C1'];
 const EYE_COLORS = ['#4A90D9', '#6B9B6B', '#8B4513', '#2F2F2F', '#9B6FA6', '#40E0D0'];
 
-const HAIR_STYLES: { id: string; label: string; emoji: string }[] = [
-  { id: 'default', label: 'Viking', emoji: '⚔️' },
-  { id: 'short', label: 'Short', emoji: '✂️' },
-  { id: 'long', label: 'Long', emoji: '💇' },
-  { id: 'curly', label: 'Curly', emoji: '🌀' },
-  { id: 'braids', label: 'Braids', emoji: '🪢' },
-  { id: 'bun', label: 'Bun', emoji: '🍡' },
+const HAIR_STYLES: { id: string; label: string }[] = [
+  { id: 'default', label: 'Viking' },
+  { id: 'short', label: 'Short' },
+  { id: 'long', label: 'Long' },
+  { id: 'curly', label: 'Curly' },
+  { id: 'braids', label: 'Braids' },
+  { id: 'bun', label: 'Bun' },
 ];
 
-const EYE_SHAPES: { id: string; label: string; emoji: string }[] = [
-  { id: 'round', label: 'Round', emoji: '⭕' },
-  { id: 'almond', label: 'Almond', emoji: '🌙' },
-  { id: 'big', label: 'Big', emoji: '👀' },
-  { id: 'sleepy', label: 'Sleepy', emoji: '😌' },
-  { id: 'sparkle', label: 'Sparkle', emoji: '✨' },
+const EYE_SHAPES: { id: string; label: string }[] = [
+  { id: 'round', label: 'Round' },
+  { id: 'almond', label: 'Almond' },
+  { id: 'big', label: 'Big' },
+  { id: 'sleepy', label: 'Sleepy' },
+  { id: 'sparkle', label: 'Sparkle' },
 ];
 
-const WARDROBE_TABS: { type: CosmeticType; label: string; emoji: string }[] = [
-  { type: 'hat', label: 'Hats', emoji: '🎩' },
-  { type: 'outfit', label: 'Outfits', emoji: '👘' },
-  { type: 'accessory', label: 'Items', emoji: '⚔️' },
+const WARDROBE_TABS: { type: CosmeticType; label: string; icon: IconName }[] = [
+  { type: 'hat', label: 'Hats', icon: 'crown' },
+  { type: 'outfit', label: 'Outfits', icon: 'shirt' },
+  { type: 'accessory', label: 'Items', icon: 'viking' },
 ];
 
 export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
-  const { visby, updateVisbyAppearance, equipCosmetic } = useStore();
+  const { visby, updateVisbyAppearance, equipCosmetic, setVisbyMood } = useStore();
   const [selectedMood, setSelectedMood] = useState<VisbyMood>(visby?.currentMood || 'happy');
   const [wardrobeTab, setWardrobeTab] = useState<CosmeticType>('hat');
 
@@ -176,17 +176,16 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
             <Text variant="h3" style={styles.sectionTitle}>Mood</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.moodRow}>
-                {MOODS.map(({ mood, emoji }) => (
+                {MOODS.map(({ mood, label }) => (
                   <TouchableOpacity
                     key={mood}
-                    onPress={() => setSelectedMood(mood)}
+                    onPress={() => { setSelectedMood(mood); setVisbyMood(mood); }}
                     style={[
                       styles.moodButton,
                       selectedMood === mood && styles.moodButtonSelected,
                     ]}
                   >
-                    <Text style={styles.moodEmoji}>{emoji}</Text>
-                    <Caption>{mood}</Caption>
+                    <Caption>{label}</Caption>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -216,7 +215,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                   wardrobeTab === tab.type && styles.tabSelected,
                 ]}
               >
-                <Text style={styles.tabEmoji}>{tab.emoji}</Text>
+                <Icon name={tab.icon} size={16} color={wardrobeTab === tab.type ? colors.text.inverse : colors.text.secondary} />
                 <Text
                   variant="caption"
                   color={wardrobeTab === tab.type ? colors.text.inverse : colors.text.secondary}
@@ -238,7 +237,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                 ]}
                 onPress={() => equipCosmetic(wardrobeTab, undefined)}
               >
-                <Text style={styles.itemEmoji}>❌</Text>
+                <Icon name="close" size={24} color={colors.text.muted} />
                 <Caption>None</Caption>
               </TouchableOpacity>
               {ownedItems.map((item) => (
@@ -250,7 +249,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                   ]}
                   onPress={() => toggleEquip(item)}
                 >
-                  <Text style={styles.itemEmoji}>{item.emoji}</Text>
+                  <Icon name={item.icon} size={32} color={colors.primary.wisteriaDark} />
                   <Caption numberOfLines={1}>{item.name}</Caption>
                   <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[item.rarity] }]} />
                   {isEquipped(item.id, item.type) && (
@@ -308,7 +307,6 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                     appearance.hairStyle === style.id && styles.styleButtonSelected,
                   ]}
                 >
-                  <Text style={styles.styleEmoji}>{style.emoji}</Text>
                   <Caption>{style.label}</Caption>
                 </TouchableOpacity>
               ))}
@@ -336,7 +334,6 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                     appearance.eyeShape === shape.id && styles.styleButtonSelected,
                   ]}
                 >
-                  <Text style={styles.styleEmoji}>{shape.emoji}</Text>
                   <Caption>{shape.label}</Caption>
                 </TouchableOpacity>
               ))}
@@ -353,7 +350,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                 colors={[colors.reward.peachLight, colors.reward.peach]}
                 style={styles.quickLinkGradient}
               >
-                <Text style={{ fontSize: 24 }}>✨</Text>
+                <Icon name="sparkles" size={24} color={colors.reward.gold} />
                 <Text variant="caption">Get Aura</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -365,7 +362,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                 colors={[colors.primary.wisteriaFaded, colors.primary.wisteriaLight]}
                 style={styles.quickLinkGradient}
               >
-                <Text style={{ fontSize: 24 }}>👑</Text>
+                <Icon name="crown" size={24} color={colors.reward.gold} />
                 <Text variant="caption">Membership</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -410,7 +407,6 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.lg, borderWidth: 2, borderColor: colors.transparent,
   },
   moodButtonSelected: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
-  moodEmoji: { fontSize: 28, marginBottom: spacing.xs },
   wardrobeHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: spacing.md, marginTop: spacing.sm,
@@ -423,7 +419,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base.cream,
   },
   tabSelected: { backgroundColor: colors.primary.wisteriaDark },
-  tabEmoji: { fontSize: 16 },
   wardrobeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   wardrobeItem: {
     width: '30%', alignItems: 'center', paddingVertical: spacing.md,
@@ -431,7 +426,6 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: colors.transparent, position: 'relative',
   },
   wardrobeItemEquipped: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
-  itemEmoji: { fontSize: 32, marginBottom: spacing.xs },
   rarityDot: { width: 6, height: 6, borderRadius: 3, marginTop: spacing.xxs },
   equippedBadge: {
     position: 'absolute', top: 4, right: 4,
@@ -450,7 +444,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base.cream, minWidth: 64,
   },
   styleButtonSelected: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
-  styleEmoji: { fontSize: 22, marginBottom: 2 },
   quickLinks: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   quickLink: { flex: 1, borderRadius: spacing.radius.xl, overflow: 'hidden' },
   quickLinkGradient: { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs },

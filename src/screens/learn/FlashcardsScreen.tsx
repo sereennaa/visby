@@ -13,15 +13,16 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { getFlashcardDeck, getAllFlashcardsMixed, FlashcardItem, FLASHCARD_DECKS } from '../../config/learningContent';
+import { AURA_REWARDS } from '../../config/constants';
 
 type FlashcardsScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList>;
-  route: RouteProp<{ Flashcards: { deckId?: string } }, 'Flashcards'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Flashcards'>;
+  route: RouteProp<RootStackParamList, 'Flashcards'>;
 };
 
 export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, route }) => {
@@ -37,14 +38,33 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
   const [isFinished, setIsFinished] = useState(false);
 
   const card = cards[currentIndex];
-  const progress = ((currentIndex + (isFinished ? 1 : 0)) / cards.length) * 100;
-  const isLastCard = currentIndex === cards.length - 1;
+  const progress = cards.length > 0 ? ((currentIndex + (isFinished ? 1 : 0)) / cards.length) * 100 : 0;
+  const isLastCard = cards.length > 0 && currentIndex === cards.length - 1;
+
+  if (cards.length === 0) {
+    return (
+      <LinearGradient colors={[colors.calm.skyLight, colors.base.cream]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.resultsContainer}>
+            <Card style={styles.resultsCard}>
+              <View style={styles.resultsContent}>
+                <Icon name="flashcard" size={64} color={colors.text.muted} />
+                <Heading level={2} style={styles.resultsTitle}>No Cards Available</Heading>
+                <Caption>Check back later for new flashcards.</Caption>
+              </View>
+            </Card>
+            <Button title="Go Back" onPress={() => navigation.goBack()} variant="primary" size="lg" fullWidth />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   const advanceCard = (knew: boolean) => {
     if (knew) setKnewCount(prev => prev + 1);
 
     if (isLastCard) {
-      addAura(15);
+      addAura(AURA_REWARDS.FLASHCARD_SESSION);
       setIsFinished(true);
     } else {
       setCurrentIndex(prev => prev + 1);
@@ -68,9 +88,13 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
           <View style={styles.resultsContainer}>
             <Card style={styles.resultsCard}>
               <View style={styles.resultsContent}>
-                <Text variant="heroTitle" align="center" style={styles.resultsEmoji}>
-                  {knewCount === cards.length ? '🌟' : knewCount > cards.length / 2 ? '💪' : '📚'}
-                </Text>
+                <View style={styles.resultsIconWrap}>
+                  <Icon
+                    name={(knewCount === cards.length ? 'star' : knewCount > cards.length / 2 ? 'hand' : 'book') as IconName}
+                    size={64}
+                    color={knewCount === cards.length ? colors.reward.gold : knewCount > cards.length / 2 ? colors.primary.wisteriaDark : colors.calm.ocean}
+                  />
+                </View>
                 <Heading level={1} style={styles.resultsTitle}>Practice Complete!</Heading>
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
@@ -85,7 +109,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
                 </View>
                 <View style={styles.auraRow}>
                   <Icon name="sparkles" size={24} color={colors.reward.gold} />
-                  <Text variant="h2" color={colors.reward.amber}>+15</Text>
+                  <Text variant="h2" color={colors.reward.amber}>+{AURA_REWARDS.FLASHCARD_SESSION}</Text>
                   <Text variant="body" color={colors.text.secondary}>Aura earned</Text>
                 </View>
                 <ProgressBar
@@ -110,7 +134,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
                 title="Try Another Deck"
                 onPress={() => {
                   navigation.goBack();
-                  navigation.navigate('Flashcards' as any);
+                  navigation.navigate('Flashcards');
                 }}
                 variant="secondary"
                 size="lg"
@@ -165,9 +189,9 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
                 }
                 style={styles.flashcardGradient}
               >
-                <Text variant="heroTitle" align="center" style={styles.flashcardEmoji}>
-                  {card.emoji}
-                </Text>
+                <View style={styles.flashcardIconWrap}>
+                  <Icon name="flashcard" size={64} color={colors.primary.wisteriaDark} />
+                </View>
                 <Heading level={1} style={styles.flashcardText}>
                   {isFlipped ? card.back : card.front}
                 </Heading>
@@ -255,9 +279,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     minHeight: 300,
   },
-  flashcardEmoji: {
-    fontSize: 64,
+  flashcardIconWrap: {
     marginBottom: spacing.xl,
+    alignItems: 'center',
   },
   flashcardText: {
     textAlign: 'center',
@@ -314,9 +338,9 @@ const styles = StyleSheet.create({
   resultsContent: {
     alignItems: 'center',
   },
-  resultsEmoji: {
-    fontSize: 64,
+  resultsIconWrap: {
     marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   resultsTitle: {
     textAlign: 'center',

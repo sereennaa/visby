@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,15 +13,15 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { getQuizByCategory, getRandomQuiz, QuizQuestion } from '../../config/learningContent';
 
 type QuizScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList>;
-  route: RouteProp<{ Quiz: { category?: string } }, 'Quiz'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Quiz'>;
+  route: RouteProp<RootStackParamList, 'Quiz'>;
 };
 
 export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => {
@@ -46,8 +45,27 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
   }, []);
 
   const question = questions[currentQuestion];
-  const progress = ((currentQuestion + (isFinished ? 1 : 0)) / questions.length) * 100;
-  const isLastQuestion = currentQuestion === questions.length - 1;
+  const progress = questions.length > 0 ? ((currentQuestion + (isFinished ? 1 : 0)) / questions.length) * 100 : 0;
+  const isLastQuestion = questions.length > 0 && currentQuestion === questions.length - 1;
+
+  if (questions.length === 0) {
+    return (
+      <LinearGradient colors={[colors.primary.wisteriaFaded, colors.base.cream]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.resultsContainer}>
+            <Card style={styles.resultsCard}>
+              <View style={styles.resultsContent}>
+                <Icon name="quiz" size={64} color={colors.text.muted} />
+                <Heading level={2} style={styles.resultsTitle}>No Questions Available</Heading>
+                <Caption>Check back later for new quiz questions.</Caption>
+              </View>
+            </Card>
+            <Button title="Go Back" onPress={() => navigation.goBack()} variant="primary" size="lg" fullWidth />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   const handleSelectOption = (index: number) => {
     if (selectedOption !== null) return;
@@ -99,9 +117,13 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
           <View style={styles.resultsContainer}>
             <Card style={styles.resultsCard}>
               <View style={styles.resultsContent}>
-                <Text variant="heroTitle" align="center" style={styles.resultsEmoji}>
-                  {percentage >= 80 ? '🏆' : percentage >= 60 ? '⭐' : '💪'}
-                </Text>
+                <View style={styles.resultsIconWrap}>
+                  <Icon
+                    name={(percentage >= 80 ? 'trophy' : percentage >= 60 ? 'star' : 'hand') as IconName}
+                    size={64}
+                    color={percentage >= 80 ? colors.reward.gold : percentage >= 60 ? colors.reward.amber : colors.primary.wisteriaDark}
+                  />
+                </View>
                 <Heading level={1} style={styles.resultsTitle}>Quiz Complete!</Heading>
                 <View style={styles.scoreRow}>
                   <Text variant="h2" color={colors.primary.wisteriaDark}>
@@ -300,9 +322,9 @@ const styles = StyleSheet.create({
   resultsContent: {
     alignItems: 'center',
   },
-  resultsEmoji: {
-    fontSize: 64,
+  resultsIconWrap: {
     marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   resultsTitle: {
     textAlign: 'center',

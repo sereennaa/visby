@@ -219,8 +219,8 @@ export const AppNavigator = () => {
         {/* Learn Screens */}
         <Stack.Screen name="LessonCategory" component={LessonCategoryScreen} />
         <Stack.Screen name="Lesson" component={LessonScreen} />
-        <Stack.Screen name="Quiz" component={QuizScreen as any} />
-        <Stack.Screen name="Flashcards" component={FlashcardsScreen as any} />
+        <Stack.Screen name="Quiz" component={QuizScreen} />
+        <Stack.Screen name="Flashcards" component={FlashcardsScreen} />
 
         {/* Shop & Membership */}
         <Stack.Screen name="CosmeticShop" component={CosmeticShopScreen} />
