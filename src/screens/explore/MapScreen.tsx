@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,31 +24,46 @@ type MapScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Map'>;
 };
 
-// Simple location card component since we're not using a map API
 interface NearbyLocation {
   id: string;
   name: string;
   type: StampType;
-  distance: string;
+  distanceKm: number;
   description: string;
 }
 
-// Sample nearby locations (in production, these would come from a database)
 const SAMPLE_LOCATIONS: NearbyLocation[] = [
-  { id: '1', name: 'Central Park', type: 'park', distance: '0.5 km', description: 'Beautiful urban park with walking trails' },
-  { id: '2', name: 'City Museum', type: 'museum', distance: '1.2 km', description: 'Local history and art museum' },
-  { id: '3', name: 'Ocean Beach', type: 'beach', distance: '3.5 km', description: 'Sandy beach with great sunset views' },
-  { id: '4', name: 'Old Town Square', type: 'landmark', distance: '0.8 km', description: 'Historic town center' },
-  { id: '5', name: 'Mountain View Trail', type: 'mountain', distance: '15 km', description: 'Scenic hiking trail' },
-  { id: '6', name: 'Local Market', type: 'market', distance: '0.3 km', description: 'Fresh produce and local goods' },
-  { id: '7', name: 'Cozy Corner Café', type: 'cafe', distance: '0.2 km', description: 'Great coffee and pastries' },
-  { id: '8', name: 'Hidden Garden', type: 'hidden_gem', distance: '1.5 km', description: 'Secret garden with rare flowers' },
+  { id: '1',  name: 'Parc de la Ciutadella',    type: 'park',       distanceKm: 0.4,  description: 'Lush city park with a grand fountain and rowboats' },
+  { id: '2',  name: 'Museu Picasso',             type: 'museum',     distanceKm: 0.7,  description: 'World-class collection of early Picasso works' },
+  { id: '3',  name: 'Barceloneta Beach',         type: 'beach',      distanceKm: 1.1,  description: 'Golden sand beach along the Mediterranean' },
+  { id: '4',  name: 'Gothic Quarter',            type: 'landmark',   distanceKm: 0.3,  description: 'Medieval streets and hidden plazas' },
+  { id: '5',  name: 'Montserrat Trail',          type: 'mountain',   distanceKm: 42,   description: 'Dramatic serrated peaks with monastery views' },
+  { id: '6',  name: 'Mercat de la Boqueria',     type: 'market',     distanceKm: 0.5,  description: 'Vibrant market overflowing with fresh produce' },
+  { id: '7',  name: 'Café de l\'Acadèmia',       type: 'cafe',       distanceKm: 0.2,  description: 'Charming courtyard café with homemade cakes' },
+  { id: '8',  name: 'Bunkers del Carmel',         type: 'hidden_gem', distanceKm: 3.8,  description: 'Secret hilltop lookout with 360° city views' },
+  { id: '9',  name: 'Sagrada Família',            type: 'landmark',   distanceKm: 1.6,  description: "Gaudí's iconic basilica, still under construction" },
+  { id: '10', name: 'El Nacional',                type: 'restaurant', distanceKm: 0.6,  description: 'Multi-space restaurant in a restored warehouse' },
+  { id: '11', name: 'Jardins de Mossèn Costa',   type: 'park',       distanceKm: 2.5,  description: 'Hillside gardens with tulips and aquatic plants' },
+  { id: '12', name: 'Platja de la Nova Icària',   type: 'beach',      distanceKm: 1.8,  description: 'Calm family-friendly beach near the marina' },
+  { id: '13', name: 'Can Culleretes',             type: 'restaurant', distanceKm: 0.4,  description: "Barcelona's oldest restaurant, since 1786" },
+  { id: '14', name: 'MACBA',                      type: 'museum',     distanceKm: 0.9,  description: 'Contemporary art museum with a lively plaza' },
+  { id: '15', name: 'Santa Caterina Market',      type: 'market',     distanceKm: 0.6,  description: 'Colorful wavy-roofed market with local bites' },
+  { id: '16', name: 'Antiga Forn del Passeig',    type: 'cafe',       distanceKm: 1.0,  description: 'Century-old bakery with flaky ensaïmadas' },
+  { id: '17', name: 'Palau de la Música',         type: 'landmark',   distanceKm: 0.5,  description: 'Ornate Art Nouveau concert hall' },
+  { id: '18', name: 'El Jardí Secret',            type: 'hidden_gem', distanceKm: 1.3,  description: 'Walled garden tucked behind an old chapel' },
+  { id: '19', name: 'Tibidabo',                   type: 'mountain',   distanceKm: 8.5,  description: 'Hilltop amusement park with panoramic views' },
+  { id: '20', name: 'Fundació Joan Miró',         type: 'museum',     distanceKm: 2.2,  description: "Bright spaces showcasing Miró's playful art" },
+  { id: '21', name: 'La Paradeta',                type: 'restaurant', distanceKm: 0.8,  description: 'Pick-your-own seafood cooked to order' },
+  { id: '22', name: 'Parc del Laberint d\'Horta', type: 'park',       distanceKm: 6.0,  description: 'Oldest garden in the city with a hedge maze' },
+  { id: '23', name: 'Passatge de les Manufactures', type: 'hidden_gem', distanceKm: 0.9, description: 'Tiny alley of street art and vintage shops' },
+  { id: '24', name: 'Sant Pau Art Nouveau Site',  type: 'landmark',   distanceKm: 1.9,  description: 'UNESCO World Heritage hospital complex' },
 ];
 
 export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
   const { currentLocation, setLocation, stamps } = useStore();
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<StampType | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchLocation();
@@ -67,13 +83,43 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
     }
   };
 
+  const formatDistance = (km: number): string => {
+    if (km < 1) return `${Math.round(km * 1000)} m`;
+    return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+  };
+
+  const sortedLocations = useMemo(
+    () => [...SAMPLE_LOCATIONS].sort((a, b) => a.distanceKm - b.distanceKm),
+    [],
+  );
+
+  const nearbyLocations = useMemo(() => sortedLocations.slice(0, 3), [sortedLocations]);
+
   const filterTypes: (StampType | 'all')[] = [
-    'all', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'hidden_gem'
+    'all', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'market', 'mountain', 'hidden_gem',
   ];
 
-  const filteredLocations = selectedType === 'all'
-    ? SAMPLE_LOCATIONS
-    : SAMPLE_LOCATIONS.filter(loc => loc.type === selectedType);
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: SAMPLE_LOCATIONS.length };
+    for (const loc of SAMPLE_LOCATIONS) {
+      counts[loc.type] = (counts[loc.type] || 0) + 1;
+    }
+    return counts;
+  }, []);
+
+  const filteredLocations = useMemo(() => {
+    let results = sortedLocations;
+    if (selectedType !== 'all') {
+      results = results.filter(loc => loc.type === selectedType);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      results = results.filter(
+        loc => loc.name.toLowerCase().includes(q) || loc.description.toLowerCase().includes(q),
+      );
+    }
+    return results;
+  }, [selectedType, searchQuery, sortedLocations]);
 
   const isCollected = (locationId: string) => {
     return stamps.some(stamp => stamp.locationId === locationId);
@@ -109,7 +155,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
                 {typeInfo.label}
               </Text>
               <Text variant="caption" color={colors.text.muted}>
-                • {item.distance}
+                • {formatDistance(item.distanceKm)}
               </Text>
             </View>
           </View>
@@ -152,6 +198,24 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
           )}
         </Card>
 
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={18} color={colors.text.muted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search places..."
+            placeholderTextColor={colors.text.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="close" size={18} color={colors.text.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
           <FlatList
@@ -183,7 +247,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
                     variant="caption"
                     color={isSelected ? colors.text.inverse : colors.text.secondary}
                   >
-                    {typeInfo.label}
+                    {typeInfo.label} ({typeCounts[item] || 0})
                   </Text>
                 </TouchableOpacity>
               );
@@ -193,23 +257,81 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
 
         {/* Nearby Locations List */}
         <View style={styles.listContainer}>
-          <View style={styles.listHeader}>
-            <Text variant="h3">Nearby Places</Text>
-            <Caption>{filteredLocations.length} locations</Caption>
-          </View>
-
           <FlatList
             data={filteredLocations}
             renderItem={renderLocationCard}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+              <>
+                {/* Nearby Highlight (only when showing all, no search) */}
+                {selectedType === 'all' && !searchQuery.trim() && (
+                  <View style={styles.nearbySection}>
+                    <View style={styles.nearbySectionHeader}>
+                      <Text variant="h3">Closest to You</Text>
+                      <View style={styles.nearbyBadge}>
+                        <Icon name="location" size={12} color={colors.primary.wisteriaDark} />
+                        <Text variant="caption" color={colors.primary.wisteriaDark}>Nearby</Text>
+                      </View>
+                    </View>
+                    {nearbyLocations.map((loc) => {
+                      const info = STAMP_TYPES_INFO[loc.type];
+                      return (
+                        <TouchableOpacity
+                          key={loc.id}
+                          style={styles.nearbyCard}
+                          activeOpacity={0.7}
+                          onPress={() => navigation.navigate('LocationDetail', { locationId: loc.id })}
+                        >
+                          <View style={[styles.nearbyIcon, { backgroundColor: info.color + '25' }]}>
+                            <Icon name={info.icon} size={20} color={info.color} />
+                          </View>
+                          <View style={styles.nearbyInfo}>
+                            <Text variant="body" numberOfLines={1} style={styles.locationName}>{loc.name}</Text>
+                            <Caption numberOfLines={1}>{loc.description}</Caption>
+                          </View>
+                          <View style={styles.nearbyDistance}>
+                            <Text variant="caption" color={colors.primary.wisteriaDark} style={styles.nearbyDistanceText}>
+                              {formatDistance(loc.distanceKm)}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* All Places header */}
+                <View style={styles.listHeader}>
+                  <Text variant="h3">
+                    {selectedType === 'all' ? 'All Places' : (STAMP_TYPES_INFO[selectedType]?.label ?? selectedType)}
+                  </Text>
+                  <Caption>{filteredLocations.length} locations</Caption>
+                </View>
+              </>
+            }
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Icon name="search" size={48} color={colors.text.muted} />
-                <Text variant="body" align="center" color={colors.text.secondary} style={styles.emptyText}>
-                  No locations found for this filter
+                <Icon name="search" size={48} color={colors.text.light} />
+                <Text variant="h3" align="center" color={colors.text.secondary} style={styles.emptyTitle}>
+                  No places found
                 </Text>
+                <Text variant="body" align="center" color={colors.text.muted} style={styles.emptyText}>
+                  {searchQuery.trim()
+                    ? `Nothing matches "${searchQuery}". Try a different search or clear your filters.`
+                    : 'Try selecting a different category above.'}
+                </Text>
+                {(searchQuery.trim() || selectedType !== 'all') && (
+                  <TouchableOpacity
+                    style={styles.emptyResetButton}
+                    onPress={() => { setSearchQuery(''); setSelectedType('all'); }}
+                  >
+                    <Text variant="body" color={colors.primary.wisteriaDark}>
+                      Reset filters
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             }
           />
@@ -259,6 +381,23 @@ const styles = StyleSheet.create({
   },
   currentLocationInfo: {
     flex: 1,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: spacing.md,
+    backgroundColor: colors.base.parchment,
+    borderRadius: spacing.radius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text.primary,
+    paddingVertical: 0,
   },
   filterContainer: {
     marginBottom: spacing.md,
@@ -333,12 +472,68 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
     gap: spacing.xs,
   },
+  nearbySection: {
+    marginBottom: spacing.xl,
+  },
+  nearbySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  nearbyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    backgroundColor: colors.primary.wisteriaFaded,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: spacing.radius.round,
+  },
+  nearbyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary.wisteriaFaded,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.wisteria,
+  },
+  nearbyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: spacing.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  nearbyInfo: {
+    flex: 1,
+  },
+  nearbyDistance: {
+    marginLeft: spacing.sm,
+  },
+  nearbyDistanceText: {
+    fontFamily: 'Baloo2-Medium',
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    marginTop: spacing.lg,
   },
   emptyText: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
+  },
+  emptyResetButton: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary.wisteriaFaded,
+    borderRadius: spacing.radius.round,
   },
   floatingButton: {
     position: 'absolute',

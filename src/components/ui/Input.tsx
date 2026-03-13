@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
+  TextStyle,
   TouchableOpacity,
 } from 'react-native';
 import Animated, {
@@ -122,7 +123,7 @@ export const Input: React.FC<InputProps> = ({
       {(error || hint) && (
         <Text
           variant="caption"
-          style={[styles.helperText, error && styles.errorText]}
+          style={[styles.helperText, error && styles.errorText] as any}
         >
           {error || hint}
         </Text>

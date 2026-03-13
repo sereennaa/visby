@@ -5,6 +5,8 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -80,7 +82,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
           styles.badgeCard,
           earned && styles.badgeCardEarned,
           !earned && styles.badgeCardLocked,
-        ]}
+        ] as any}
       >
         <View style={[styles.iconContainer, earned && styles.iconContainerEarned]}>
           <Icon
@@ -98,7 +100,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
         <Text
           variant="body"
           align="center"
-          style={[styles.badgeName, !earned && styles.lockedText]}
+          style={[styles.badgeName, !earned && styles.lockedText] as any}
           numberOfLines={1}
         >
           {item.name}

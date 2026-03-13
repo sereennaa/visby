@@ -121,17 +121,17 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const cardStyle: ViewStyle = {
-    padding: getPadding(),
+    padding: getPadding() as number,
     borderRadius: getBorderRadius(),
     ...getVariantStyles(),
   };
 
   const content = variant === 'gradient' ? (
     <LinearGradient
-      colors={gradientColors || [colors.primary.wisteriaFaded, colors.base.cream]}
+      colors={(gradientColors || [colors.primary.wisteriaFaded, colors.base.cream]) as any}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.gradient, { borderRadius: getBorderRadius(), padding: getPadding() }]}
+      style={[styles.gradient, { borderRadius: getBorderRadius(), padding: getPadding() as number }]}
     >
       {children}
     </LinearGradient>

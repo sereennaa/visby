@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, Text as RNText } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import {
@@ -25,6 +25,41 @@ import { authService } from './src/services/auth';
 import { stampsService } from './src/services/stamps';
 import { bitesService } from './src/services/bites';
 import { colors } from './src/theme/colors';
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#FAF8FF' }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>😢</Text>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: '#2A1A4A', textAlign: 'center', marginBottom: 8 }}>
+            Oops! Something went wrong
+          </Text>
+          <Text style={{ fontSize: 15, color: '#8A7AA0', textAlign: 'center', marginBottom: 24 }}>
+            Don't worry, your progress is saved. Try restarting the app.
+          </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ hasError: false, error: null })}
+            style={{ backgroundColor: '#B8A5E0', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -134,9 +169,9 @@ export default function App() {
   if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <RNText style={styles.loadingEmoji}>✨</RNText>
-        <RNText style={styles.loadingText}>Visby</RNText>
-        <RNText style={styles.loadingSubtext}>Loading adventure...</RNText>
+        <Text style={styles.loadingEmoji}>✨</Text>
+        <Text style={styles.loadingText}>Visby</Text>
+        <Text style={styles.loadingSubtext}>Loading adventure...</Text>
       </View>
     );
   }
@@ -145,7 +180,9 @@ export default function App() {
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <AppNavigator />
+        <ErrorBoundary>
+          <AppNavigator />
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -47,7 +47,7 @@ export const Shimmer: React.FC<ShimmerProps> = ({
     <View style={[{ width, height, borderRadius, overflow: 'hidden' }, style]}>
       <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
         <LinearGradient
-          colors={colors}
+          colors={colors as any}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={{ width: width * 0.6, height: '100%' }}
@@ -124,7 +124,7 @@ export const MagicBorder: React.FC<MagicBorderProps> = ({
   return (
     <View style={[{ borderRadius, padding: borderWidth }, style]}>
       <LinearGradient
-        colors={colors}
+        colors={colors as any}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[

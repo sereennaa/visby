@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Dimensions, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -226,7 +226,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
               >
                 <Text
                   variant="body"
-                  style={[styles.tabText, active && styles.tabTextActive]}
+                  style={[styles.tabText, active && styles.tabTextActive] as any}
                 >
                   {ct.label} {ct.emoji}
                 </Text>

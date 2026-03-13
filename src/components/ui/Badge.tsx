@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -108,7 +108,7 @@ export const Badge: React.FC<BadgeProps> = ({
           style={[
             styles.text,
             { fontSize: currentSize.fontSize, color: getTextColor() },
-          ]}
+          ] as any}
         >
           {displayText}
         </Text>

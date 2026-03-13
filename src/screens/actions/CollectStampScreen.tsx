@@ -5,7 +5,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,13 +42,35 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   const [locationName, setLocationName] = useState('');
   const [selectedType, setSelectedType] = useState<StampType>('city');
   const [notes, setNotes] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const locationDisplay = currentLocation?.city && currentLocation?.country
     ? `${currentLocation.city}, ${currentLocation.country}`
     : 'Unknown Location';
 
-  const handlePhoto = () => {
-    Alert.alert('Coming soon', 'Photo capture will be available in a future update.');
+  const takePhoto = async () => {
+    const cameraResult = await ImagePicker.launchCameraAsync({
+      mediaTypes: 'images',
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+
+    if (!cameraResult.canceled) {
+      setPhotoUri(cameraResult.assets[0].uri);
+      return;
+    }
+
+    const libraryResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+
+    if (!libraryResult.canceled) {
+      setPhotoUri(libraryResult.assets[0].uri);
+    }
   };
 
   const handleCollect = () => {
@@ -67,6 +91,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
       latitude: currentLocation?.latitude || 0,
       longitude: currentLocation?.longitude || 0,
       collectedAt: new Date(),
+      photoUrl: photoUri || undefined,
       notes: notes || undefined,
       isFastTravel: false,
       isPublic: true,
@@ -174,12 +199,24 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           </View>
 
           {/* Photo */}
-          <TouchableOpacity onPress={handlePhoto} style={styles.photoButton}>
-            <Icon name="camera" size={24} color={colors.primary.wisteriaDark} />
-            <Text variant="body" color={colors.primary.wisteriaDark}>
-              Add a Photo
-            </Text>
-          </TouchableOpacity>
+          {photoUri ? (
+            <View style={styles.photoPreviewContainer}>
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              <TouchableOpacity
+                onPress={() => setPhotoUri(null)}
+                style={styles.photoRemoveButton}
+              >
+                <Icon name="close" size={16} color={colors.text.inverse} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={takePhoto} style={styles.photoButton}>
+              <Icon name="camera" size={24} color={colors.primary.wisteriaDark} />
+              <Text variant="body" color={colors.primary.wisteriaDark}>
+                Add a Photo
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Collect Button */}
           <View style={styles.submitSection}>
@@ -272,6 +309,28 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.primary.wisteriaDark,
     marginBottom: spacing.xl,
+  },
+  photoPreviewContainer: {
+    position: 'relative',
+    marginBottom: spacing.xl,
+    borderRadius: spacing.radius.lg,
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: spacing.radius.lg,
+  },
+  photoRemoveButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   submitSection: {
     marginTop: spacing.md,

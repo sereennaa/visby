@@ -71,23 +71,106 @@ function lighten(c: string, n: number): string {
 const CX = 75;
 const BY = 78;
 
-const renderHat = (hatId: string | undefined, hair: string, hairL: string) => {
-  switch (hatId) {
-    case 'viking_helmet':
+const renderHairStyle = (style: string, hair: string, hairL: string) => {
+  switch (style) {
+    case 'short':
       return (
         <G>
-          {/* Hair side tufts */}
+          <Path d="M 42 38 Q 50 46 46 52" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Path d="M 42 38 Q 49 44 46 49" stroke={hairL} strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 108 38 Q 100 46 104 52" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Path d="M 108 38 Q 101 44 104 49" stroke={hairL} strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 54 36 Q 52 42 53 47" stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" />
+          <Path d="M 96 36 Q 98 42 97 47" stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'long':
+      return (
+        <G>
+          <Path d="M 38 40 Q 24 60 22 85 Q 20 100 28 110" stroke={hair} strokeWidth={12} fill="none" strokeLinecap="round" />
+          <Path d="M 38 40 Q 26 62 24 82 Q 22 96 28 106" stroke={hairL} strokeWidth={6} fill="none" strokeLinecap="round" />
+          <Path d="M 112 40 Q 126 60 128 85 Q 130 100 122 110" stroke={hair} strokeWidth={12} fill="none" strokeLinecap="round" />
+          <Path d="M 112 40 Q 124 62 126 82 Q 128 96 122 106" stroke={hairL} strokeWidth={6} fill="none" strokeLinecap="round" />
+          <Path d="M 44 38 Q 50 48 47 56" stroke={hair} strokeWidth={8} fill="none" strokeLinecap="round" />
+          <Path d="M 106 38 Q 100 48 103 56" stroke={hair} strokeWidth={8} fill="none" strokeLinecap="round" />
+          <Path d="M 56 36 Q 54 44 55 50" stroke={hair} strokeWidth={6} fill="none" strokeLinecap="round" />
+          <Path d="M 94 36 Q 96 44 95 50" stroke={hair} strokeWidth={6} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'curly':
+      return (
+        <G>
+          <Path d="M 38 40 Q 26 50 28 64 Q 30 72 24 80" stroke={hair} strokeWidth={10} fill="none" strokeLinecap="round" />
+          <Circle cx={24} cy={80} r={7} fill={hair} />
+          <Circle cx={24} cy={79} r={4} fill={hairL} opacity={0.5} />
+          <Path d="M 112 40 Q 124 50 122 64 Q 120 72 126 80" stroke={hair} strokeWidth={10} fill="none" strokeLinecap="round" />
+          <Circle cx={126} cy={80} r={7} fill={hair} />
+          <Circle cx={126} cy={79} r={4} fill={hairL} opacity={0.5} />
+          <Path d="M 44 38 Q 50 48 46 56" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Circle cx={44} cy={56} r={5} fill={hair} />
+          <Path d="M 106 38 Q 100 48 104 56" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Circle cx={106} cy={56} r={5} fill={hair} />
+          <Circle cx={56} cy={42} r={4.5} fill={hair} />
+          <Circle cx={94} cy={42} r={4.5} fill={hair} />
+          <Circle cx={75} cy={38} r={5} fill={hair} />
+          <Circle cx={75} cy={37} r={3} fill={hairL} opacity={0.4} />
+        </G>
+      );
+    case 'braids':
+      return (
+        <G>
+          <Path d="M 38 40 Q 28 54 26 68" stroke={hair} strokeWidth={10} fill="none" strokeLinecap="round" />
+          <Path d="M 26 68 Q 24 76 22 84 Q 20 92 24 100" stroke={hair} strokeWidth={8} fill="none" strokeLinecap="round" />
+          <Path d="M 28 72 L 22 78 L 28 84 L 22 90 L 28 96" stroke={hairL} strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Circle cx={24} cy={102} r={5} fill={hair} />
+          <Path d="M 112 40 Q 122 54 124 68" stroke={hair} strokeWidth={10} fill="none" strokeLinecap="round" />
+          <Path d="M 124 68 Q 126 76 128 84 Q 130 92 126 100" stroke={hair} strokeWidth={8} fill="none" strokeLinecap="round" />
+          <Path d="M 122 72 L 128 78 L 122 84 L 128 90 L 122 96" stroke={hairL} strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Circle cx={126} cy={102} r={5} fill={hair} />
+          <Path d="M 44 38 Q 50 48 47 54" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Path d="M 106 38 Q 100 48 103 54" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Path d="M 56 36 Q 54 42 55 48" stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" />
+          <Path d="M 94 36 Q 96 42 95 48" stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'bun':
+      return (
+        <G>
+          <Circle cx={CX} cy={20} r={14} fill={hair} />
+          <Circle cx={CX} cy={18} r={10} fill={hairL} opacity={0.4} />
+          <Circle cx={72} cy={14} r={3} fill="#FFFFFF" opacity={0.2} />
+          <Path d="M 44 38 Q 50 48 47 54" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Path d="M 106 38 Q 100 48 103 54" stroke={hair} strokeWidth={7} fill="none" strokeLinecap="round" />
+          <Path d="M 38 40 Q 28 52 26 66 Q 24 74 30 80" stroke={hair} strokeWidth={9} fill="none" strokeLinecap="round" />
+          <Path d="M 112 40 Q 122 52 124 66 Q 126 74 120 80" stroke={hair} strokeWidth={9} fill="none" strokeLinecap="round" />
+          <Path d="M 56 36 Q 54 42 55 48" stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" />
+          <Path d="M 94 36 Q 96 42 95 48" stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'default':
+    default:
+      return (
+        <G>
           <Path d="M 38 42 Q 28 54 26 70 Q 24 80 30 86" stroke={hair} strokeWidth={11} fill="none" strokeLinecap="round" />
           <Path d="M 38 42 Q 30 56 28 68 Q 26 76 30 82" stroke={hairL} strokeWidth={5.5} fill="none" strokeLinecap="round" />
           <Path d="M 112 42 Q 122 54 124 70 Q 126 80 120 86" stroke={hair} strokeWidth={11} fill="none" strokeLinecap="round" />
           <Path d="M 112 42 Q 120 56 122 68 Q 124 76 120 82" stroke={hairL} strokeWidth={5.5} fill="none" strokeLinecap="round" />
-          {/* Hair bangs */}
           <Path d="M 44 40 Q 50 50 47 57" stroke={hair} strokeWidth={8} fill="none" strokeLinecap="round" />
           <Path d="M 44 40 Q 49 48 47 54" stroke={hairL} strokeWidth={3.5} fill="none" strokeLinecap="round" />
           <Path d="M 106 40 Q 100 50 103 57" stroke={hair} strokeWidth={8} fill="none" strokeLinecap="round" />
           <Path d="M 106 40 Q 101 48 103 54" stroke={hairL} strokeWidth={3.5} fill="none" strokeLinecap="round" />
           <Path d="M 56 38 Q 54 45 55 51" stroke={hair} strokeWidth={6} fill="none" strokeLinecap="round" />
           <Path d="M 94 38 Q 96 45 95 51" stroke={hair} strokeWidth={6} fill="none" strokeLinecap="round" />
+        </G>
+      );
+  }
+};
+
+const renderHat = (hatId: string | undefined, hair: string, hairL: string) => {
+  switch (hatId) {
+    case 'viking_helmet':
+      return (
+        <G>
           {/* Helmet dome */}
           <Path d="M 40 40 Q 42 10 75 3 Q 108 10 110 40 Z" fill="#A0A0B4" />
           <Path d="M 44 36 Q 46 16 75 10 Q 104 16 106 36" fill="#B5B5C8" />
@@ -278,57 +361,118 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
   const LX = 54, RX = 96;
   const ER = 13;
 
+  const eyeShape = appearance.eyeShape || 'round';
+
   const renderEyes = () => {
-    switch (mood) {
-      case 'sleepy':
+    if (mood === 'sleepy') {
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <Path key={i} d={`M ${cx - 9} ${EY} L ${cx + 9} ${EY}`}
+              stroke={eye} strokeWidth={3} strokeLinecap="round" />
+          ))}
+        </G>
+      );
+    }
+    if (mood === 'cozy') {
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <Path key={i} d={`M ${cx - 9} ${EY + 2} Q ${cx} ${EY - 8} ${cx + 9} ${EY + 2}`}
+              stroke={eye} strokeWidth={3} fill="none" strokeLinecap="round" />
+          ))}
+        </G>
+      );
+    }
+    if (mood === 'surprised') {
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <G key={i}>
+              <Circle cx={cx} cy={EY} r={ER + 2} fill="#FFFFFF" />
+              <Circle cx={cx} cy={EY + 1} r={ER - 2} fill={eye} />
+              <Circle cx={cx - 4} cy={EY - 5} r={5} fill="#FFFFFF" />
+              <Circle cx={cx + 3} cy={EY + 4} r={3} fill="#FFFFFF" opacity={0.6} />
+            </G>
+          ))}
+        </G>
+      );
+    }
+    if (mood === 'thinking') {
+      return (
+        <G>
+          <G>
+            <Circle cx={LX} cy={EY} r={ER} fill="#FFFFFF" />
+            <Circle cx={LX + 2} cy={EY + 1} r={ER - 4} fill={eye} />
+            <Circle cx={LX - 3} cy={EY - 4} r={4.5} fill="#FFFFFF" />
+            <Circle cx={LX + 3} cy={EY + 3} r={2.5} fill="#FFFFFF" opacity={0.5} />
+          </G>
+          <Path d={`M ${RX - 9} ${EY + 1} Q ${RX} ${EY - 7} ${RX + 9} ${EY - 1}`}
+            stroke={eye} strokeWidth={3} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    }
+
+    switch (eyeShape) {
+      case 'almond':
         return (
           <G>
             {[LX, RX].map((cx, i) => (
-              <Path key={i} d={`M ${cx - 9} ${EY} L ${cx + 9} ${EY}`}
-                stroke={eye} strokeWidth={3} strokeLinecap="round" />
+              <G key={i}>
+                <Path d={`M ${cx - 11} ${EY} Q ${cx} ${EY - 14} ${cx + 11} ${EY} Q ${cx} ${EY + 10} ${cx - 11} ${EY}`} fill="#FFFFFF" />
+                <Ellipse cx={cx} cy={EY + 1} rx={6} ry={7} fill={eye} />
+                <Circle cx={cx - 3} cy={EY - 3} r={3.5} fill="#FFFFFF" />
+                <Circle cx={cx + 2} cy={EY + 3} r={2} fill="#FFFFFF" opacity={0.5} />
+              </G>
             ))}
           </G>
         );
-      case 'cozy':
-        return (
-          <G>
-            {[LX, RX].map((cx, i) => (
-              <Path key={i} d={`M ${cx - 9} ${EY + 2} Q ${cx} ${EY - 8} ${cx + 9} ${EY + 2}`}
-                stroke={eye} strokeWidth={3} fill="none" strokeLinecap="round" />
-            ))}
-          </G>
-        );
-      case 'surprised':
+      case 'big':
         return (
           <G>
             {[LX, RX].map((cx, i) => (
               <G key={i}>
                 <Circle cx={cx} cy={EY} r={ER + 2} fill="#FFFFFF" />
-                <Circle cx={cx} cy={EY + 1} r={ER - 2} fill={eye} />
-                <Circle cx={cx - 4} cy={EY - 5} r={5} fill="#FFFFFF" />
-                <Circle cx={cx + 3} cy={EY + 4} r={3} fill="#FFFFFF" opacity={0.6} />
+                <Circle cx={cx} cy={EY + 1} r={ER - 3} fill={eye} />
+                <Circle cx={cx - 5} cy={EY - 5} r={6} fill="#FFFFFF" />
+                <Circle cx={cx + 4} cy={EY + 4} r={3.5} fill="#FFFFFF" opacity={0.6} />
+                <Circle cx={cx - 2} cy={EY - 7} r={2} fill="#FFFFFF" opacity={0.4} />
               </G>
             ))}
           </G>
         );
-      case 'thinking':
+      case 'sleepy':
         return (
           <G>
-            <G>
-              <Circle cx={LX} cy={EY} r={ER} fill="#FFFFFF" />
-              <Circle cx={LX + 2} cy={EY + 1} r={ER - 4} fill={eye} />
-              <Circle cx={LX - 3} cy={EY - 4} r={4.5} fill="#FFFFFF" />
-              <Circle cx={LX + 3} cy={EY + 3} r={2.5} fill="#FFFFFF" opacity={0.5} />
-            </G>
-            <Path d={`M ${RX - 9} ${EY + 1} Q ${RX} ${EY - 7} ${RX + 9} ${EY - 1}`}
-              stroke={eye} strokeWidth={3} fill="none" strokeLinecap="round" />
+            {[LX, RX].map((cx, i) => (
+              <G key={i}>
+                <Circle cx={cx} cy={EY + 2} r={ER - 1} fill="#FFFFFF" />
+                <Path d={`M ${cx - 13} ${EY - 4} L ${cx + 13} ${EY - 4}`} stroke={darken(eye, 20)} strokeWidth={3} strokeLinecap="round" />
+                <Ellipse cx={cx} cy={EY + 3} rx={ER - 5} ry={ER - 6} fill={eye} />
+                <Circle cx={cx - 3} cy={EY} r={3} fill="#FFFFFF" />
+              </G>
+            ))}
           </G>
         );
-      case 'happy':
-      case 'excited':
-      case 'proud':
-      case 'curious':
-      case 'adventurous':
+      case 'sparkle':
+        return (
+          <G>
+            {[LX, RX].map((cx, i) => (
+              <G key={i}>
+                <Circle cx={cx} cy={EY} r={ER} fill="#FFFFFF" />
+                <Circle cx={cx} cy={EY + 1.5} r={ER - 4} fill={eye} />
+                <Circle cx={cx - 4} cy={EY - 4} r={5} fill="#FFFFFF" />
+                <Circle cx={cx + 3.5} cy={EY + 4} r={2.5} fill="#FFFFFF" opacity={0.55} />
+                {/* Star sparkles */}
+                <Path d={`M ${cx + 5} ${EY - 7} L ${cx + 6} ${EY - 10} L ${cx + 7} ${EY - 7} L ${cx + 10} ${EY - 6} L ${cx + 7} ${EY - 5} L ${cx + 6} ${EY - 2} L ${cx + 5} ${EY - 5} L ${cx + 2} ${EY - 6} Z`}
+                  fill="#FFD700" opacity={0.9} />
+                <Path d={`M ${cx - 8} ${EY + 5} L ${cx - 7} ${EY + 3} L ${cx - 6} ${EY + 5} L ${cx - 4} ${EY + 6} L ${cx - 6} ${EY + 7} L ${cx - 7} ${EY + 9} L ${cx - 8} ${EY + 7} L ${cx - 10} ${EY + 6} Z`}
+                  fill="#FFD700" opacity={0.6} />
+              </G>
+            ))}
+          </G>
+        );
+      case 'round':
       default:
         return (
           <G>
@@ -465,7 +609,10 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
         <Circle cx={118} cy={56} r={5} fill={skinL} />
         <Circle cx={118} cy={56} r={3} fill="#FFACA0" opacity={0.3} />
 
-        {/* Hat (includes hair for viking helmet) */}
+        {/* Hair */}
+        {renderHairStyle(appearance.hairStyle || 'default', hair, hairL)}
+
+        {/* Hat (rendered on top of hair) */}
         {renderHat(equipped?.hat, hair, hairL)}
 
         {/* Blush cheeks */}
