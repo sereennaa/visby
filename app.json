@@ -1,30 +1,56 @@
 {
   "expo": {
-    "name": "visby",
+    "name": "Visby",
     "slug": "visby",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "visby",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FAF9F6"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.visby.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Visby needs your location to collect stamps and discover nearby places.",
+        "NSPhotoLibraryUsageDescription": "Visby needs access to your photos to add pictures to stamps and food logs.",
+        "NSCameraUsageDescription": "Visby needs camera access to take photos for your collection."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FAF9F6"
       },
+      "package": "com.visby.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-location",
+      "expo-image-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Visby needs access to your photos to add pictures to your collection."
+        }
+      ]
+    ]
   }
 }
