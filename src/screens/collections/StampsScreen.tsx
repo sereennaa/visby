@@ -152,7 +152,7 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
                     style={[
                       styles.countText,
                       isSelected && styles.countTextSelected,
-                    ] as any}
+                    ]}
                   >
                     {count}
                   </Text>

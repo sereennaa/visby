@@ -4,7 +4,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -164,7 +163,7 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
                     style={[
                       styles.countText,
                       isSelected && styles.countTextSelected,
-                    ] as any}
+                    ]}
                   >
                     {count}
                   </Text>

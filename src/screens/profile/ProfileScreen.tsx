@@ -47,7 +47,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         routes: [{ name: 'Welcome' }],
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      if (__DEV__) console.error('Logout error:', error);
     }
   };
 
@@ -204,7 +204,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 key={index}
                 style={styles.menuItem}
-                onPress={() => (navigation as any).navigate(item.screen)}
+                onPress={() => navigation.navigate(item.screen as never)}
               >
                 <Icon name={item.icon} size={20} color={colors.text.secondary} />
                 <Text variant="body" style={styles.menuLabel}>

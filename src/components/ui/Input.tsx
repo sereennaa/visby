@@ -123,7 +123,7 @@ export const Input: React.FC<InputProps> = ({
       {(error || hint) && (
         <Text
           variant="caption"
-          style={[styles.helperText, error && styles.errorText] as any}
+          style={[styles.helperText, error && styles.errorText]}
         >
           {error || hint}
         </Text>

@@ -84,7 +84,7 @@ export default function App() {
         });
         setFontsLoaded(true);
       } catch (error) {
-        console.error('Error loading fonts:', error);
+        if (__DEV__) console.error('Error loading fonts:', error);
         setFontsLoaded(true); // Continue anyway with system fonts
       }
     }
@@ -96,7 +96,6 @@ export default function App() {
     async function checkSession() {
       // Skip auth check if Supabase isn't configured (demo mode)
       if (!isSupabaseConfigured) {
-        console.log('Supabase not configured - running in demo mode');
         setLoading(false);
         return;
       }
@@ -120,11 +119,11 @@ export default function App() {
             setStamps(userStamps);
             setBites(userBites);
           } catch (e) {
-            console.error('Error loading collections:', e);
+            if (__DEV__) console.error('Error loading collections:', e);
           }
         }
       } catch (error) {
-        console.error('Session check error:', error);
+        if (__DEV__) console.error('Session check error:', error);
       } finally {
         setLoading(false);
       }
@@ -155,7 +154,7 @@ export default function App() {
             setStamps(userStamps);
             setBites(userBites);
           } catch (e) {
-            console.error('Error loading collections:', e);
+            if (__DEV__) console.error('Error loading collections:', e);
           }
         }
       }

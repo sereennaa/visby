@@ -108,7 +108,7 @@ export const Badge: React.FC<BadgeProps> = ({
           style={[
             styles.text,
             { fontSize: currentSize.fontSize, color: getTextColor() },
-          ] as any}
+          ]}
         >
           {displayText}
         </Text>

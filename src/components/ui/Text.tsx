@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, TextStyle, StyleSheet } from 'react-native';
+import { Text as RNText, TextStyle, StyleProp, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
 import { typography, textStyles } from '../../theme/typography';
 
@@ -18,7 +18,7 @@ interface TextProps {
     | 'caption';
   color?: string;
   align?: 'left' | 'center' | 'right';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }
 

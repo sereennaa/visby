@@ -77,7 +77,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
         setLocation(location);
       }
     } catch (error) {
-      console.error('Location error:', error);
+      if (__DEV__) console.error('Location error:', error);
     } finally {
       setLoading(false);
     }

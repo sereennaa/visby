@@ -229,7 +229,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
               >
                 <Text
                   variant="body"
-                  style={[styles.tabText, active && styles.tabTextActive] as any}
+                  style={[styles.tabText, active && styles.tabTextActive]}
                 >
                   {ct.label}
                 </Text>

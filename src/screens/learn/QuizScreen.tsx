@@ -206,7 +206,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
                 disabled={selectedOption !== null}
                 activeOpacity={0.8}
               >
-                <Card style={[styles.optionCard, getOptionStyle(index)] as any}>
+                <Card style={[styles.optionCard, getOptionStyle(index)]}>
                   <View style={styles.optionContent}>
                     <View style={[
                       styles.optionLetter,

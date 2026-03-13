@@ -58,7 +58,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
           styles.badgeCard,
           earned && styles.badgeCardEarned,
           !earned && styles.badgeCardLocked,
-        ] as any}
+        ]}
       >
         <View style={[styles.iconContainer, earned && styles.iconContainerEarned]}>
           <Icon
@@ -76,7 +76,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
         <Text
           variant="body"
           align="center"
-          style={[styles.badgeName, !earned && styles.lockedText] as any}
+          style={[styles.badgeName, !earned && styles.lockedText]}
           numberOfLines={1}
         >
           {item.name}

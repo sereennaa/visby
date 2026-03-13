@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   ViewStyle,
+  StyleProp,
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,7 +28,7 @@ interface CardProps {
   onPress?: () => void;
   padding?: keyof typeof spacing | number;
   borderRadius?: keyof typeof spacing.radius | number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -128,7 +129,7 @@ export const Card: React.FC<CardProps> = ({
 
   const content = variant === 'gradient' ? (
     <LinearGradient
-      colors={(gradientColors || [colors.primary.wisteriaFaded, colors.base.cream]) as any}
+      colors={(gradientColors ?? [colors.primary.wisteriaFaded, colors.base.cream]) as [string, string]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.gradient, { borderRadius: getBorderRadius(), padding: getPadding() as number }]}

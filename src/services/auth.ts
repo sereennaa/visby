@@ -182,7 +182,7 @@ export const authService = {
       .single();
 
     if (error) {
-      console.error('Error fetching user profile:', error);
+      if (__DEV__) console.error('Error fetching user profile:', error);
       return null;
     }
     return data;
@@ -203,7 +203,7 @@ export const authService = {
       .single();
 
     if (error) {
-      console.error('Error fetching visby:', error);
+      if (__DEV__) console.error('Error fetching visby:', error);
       return null;
     }
     return data;

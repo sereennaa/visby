@@ -187,7 +187,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         useStore.getState().setBites(freshBites);
       }
     } catch (e) {
-      console.error('Refresh error:', e);
+      if (__DEV__) console.error('Refresh error:', e);
     } finally {
       setRefreshing(false);
     }

@@ -19,7 +19,6 @@ export const locationService = {
     try {
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
-        console.log('Location permission not granted');
         return null;
       }
 
@@ -41,7 +40,7 @@ export const locationService = {
         accuracy: location.coords.accuracy || undefined,
       };
     } catch (error) {
-      console.error('Error getting location:', error);
+      if (__DEV__) console.error('Error getting location:', error);
       return null;
     }
   },
@@ -77,7 +76,7 @@ export const locationService = {
         countryCode: address?.country_code?.toUpperCase(),
       };
     } catch (error) {
-      console.error('Reverse geocoding error:', error);
+      if (__DEV__) console.error('Reverse geocoding error:', error);
       return null;
     }
   },
@@ -111,7 +110,7 @@ export const locationService = {
         }
       );
     } catch (error) {
-      console.error('Watch location error:', error);
+      if (__DEV__) console.error('Watch location error:', error);
       return null;
     }
   },

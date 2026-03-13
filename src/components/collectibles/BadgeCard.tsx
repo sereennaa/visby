@@ -149,7 +149,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
               style={[
                 styles.name,
                 !isEarned && styles.lockedText,
-              ] as any}
+              ]}
             >
               {badge.name}
             </Text>
@@ -225,7 +225,7 @@ export const BadgeRow: React.FC<{
       
       <View style={styles.rowInfo}>
         <View style={styles.rowHeader}>
-          <Text variant="body" style={[!isEarned && styles.lockedText] as any}>
+          <Text variant="body" style={[!isEarned && styles.lockedText]}>
             {badge.name}
           </Text>
           <View
@@ -238,14 +238,14 @@ export const BadgeRow: React.FC<{
               style={[
                 styles.rarityText,
                 { color: rarityColors[badge.rarity] },
-              ] as any}
+              ]}
             >
               {badge.rarity.toUpperCase()}
             </Text>
           </View>
         </View>
         
-        <Caption style={[!isEarned && styles.lockedText] as any}>
+        <Caption style={[!isEarned && styles.lockedText]}>
           {badge.description}
         </Caption>
 

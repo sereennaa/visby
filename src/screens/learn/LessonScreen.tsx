@@ -13,7 +13,7 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
@@ -113,7 +113,7 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
           <Card style={styles.slideCard}>
             <View style={styles.slideContent}>
               <View style={styles.slideIconWrap}>
-                <Icon name={(slide.icon || 'book') as any} size={72} color={colors.primary.wisteriaDark} />
+                <Icon name={(slide.icon || 'book') as IconName} size={72} color={colors.primary.wisteriaDark} />
               </View>
               <Heading level={2} style={styles.lessonTitle}>{lesson.title}</Heading>
               <Text variant="bodyLarge" align="center" style={styles.slideText}>
