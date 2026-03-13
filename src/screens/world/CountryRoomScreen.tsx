@@ -26,6 +26,7 @@ import { COUNTRIES } from '../../config/constants';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import type { CountryFact } from '../../types';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AVATAR_SIZE = 80;
@@ -112,6 +113,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
         locations={[0, 0.5, 1]}
       />
 
+      <FloatingParticles count={8} variant="sparkle" opacity={0.25} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -133,6 +135,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           <Animated.View style={[styles.avatarContainer, avatarStyle]}>
             <VisbyCharacter
               appearance={defaultAppearance}
+              equipped={visby?.equipped}
               mood="curious"
               size={AVATAR_SIZE}
               animated

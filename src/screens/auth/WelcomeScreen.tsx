@@ -8,6 +8,9 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
+  withRepeat,
+  Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +20,8 @@ import { Button } from '../../components/ui/Button';
 import { Text } from '../../components/ui/Text';
 import { Icon } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { PulseGlow } from '../../components/effects/Shimmer';
 import { RootStackParamList } from '../../types';
 
 const { width, height } = Dimensions.get('window');
@@ -25,41 +30,87 @@ type WelcomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Welcome'>;
 };
 
+const AuroraWave: React.FC<{ delay: number; color: string; yOffset: number }> = ({ delay, color, yOffset }) => {
+  const wave = useSharedValue(0);
+
+  useEffect(() => {
+    wave.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.sine) }),
+          withTiming(0, { duration: 6000, easing: Easing.inOut(Easing.sine) }),
+        ),
+        -1,
+        true,
+      ),
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(wave.value, [0, 1], [-width * 0.3, width * 0.3]) },
+      { scaleY: interpolate(wave.value, [0, 0.5, 1], [0.8, 1.2, 0.8]) },
+    ],
+    opacity: interpolate(wave.value, [0, 0.5, 1], [0.15, 0.35, 0.15]),
+  }));
+
+  return (
+    <Animated.View style={[styles.auroraWave, { top: yOffset }, style]}>
+      <LinearGradient
+        colors={['transparent', color, 'transparent']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.auroraGradient}
+      />
+    </Animated.View>
+  );
+};
+
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   const logoScale = useSharedValue(0);
   const logoOpacity = useSharedValue(0);
-  const visbyTranslate = useSharedValue(50);
+  const visbyTranslate = useSharedValue(60);
   const visbyOpacity = useSharedValue(0);
+  const visbyFloat = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
-  const contentTranslate = useSharedValue(30);
-  const sparkle1 = useSharedValue(0);
-  const sparkle2 = useSharedValue(0);
-  const sparkle3 = useSharedValue(0);
+  const contentTranslate = useSharedValue(40);
+  const ringScale = useSharedValue(0.5);
+  const ringOpacity = useSharedValue(0);
+  const taglineLetters = useSharedValue(0);
 
   useEffect(() => {
-    // Staggered entrance animations
-    logoScale.value = withDelay(300, withSpring(1, { damping: 12 }));
-    logoOpacity.value = withDelay(300, withTiming(1, { duration: 400 }));
+    // Ring pulse behind character
+    ringScale.value = withDelay(400, withSpring(1, { damping: 8, stiffness: 60 }));
+    ringOpacity.value = withDelay(400, withTiming(1, { duration: 800 }));
 
-    visbyTranslate.value = withDelay(600, withSpring(0, { damping: 15 }));
-    visbyOpacity.value = withDelay(600, withTiming(1, { duration: 500 }));
+    // Logo entrance with bounce
+    logoScale.value = withDelay(200, withSpring(1, { damping: 10, stiffness: 80 }));
+    logoOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
 
-    contentTranslate.value = withDelay(900, withSpring(0, { damping: 15 }));
-    contentOpacity.value = withDelay(900, withTiming(1, { duration: 500 }));
+    // Character flies in from below
+    visbyTranslate.value = withDelay(500, withSpring(0, { damping: 12, stiffness: 70 }));
+    visbyOpacity.value = withDelay(500, withTiming(1, { duration: 600 }));
 
-    // Sparkle animations
-    sparkle1.value = withDelay(1200, withSequence(
-      withTiming(1, { duration: 300 }),
-      withTiming(0.5, { duration: 500 })
-    ));
-    sparkle2.value = withDelay(1400, withSequence(
-      withTiming(1, { duration: 300 }),
-      withTiming(0.5, { duration: 500 })
-    ));
-    sparkle3.value = withDelay(1600, withSequence(
-      withTiming(1, { duration: 300 }),
-      withTiming(0.5, { duration: 500 })
-    ));
+    // Gentle float loop for character
+    visbyFloat.value = withDelay(
+      1100,
+      withRepeat(
+        withSequence(
+          withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        true,
+      ),
+    );
+
+    // Content slides up
+    contentTranslate.value = withDelay(800, withSpring(0, { damping: 14 }));
+    contentOpacity.value = withDelay(800, withTiming(1, { duration: 600 }));
+
+    // Tagline typewriter-ish
+    taglineLetters.value = withDelay(1200, withTiming(1, { duration: 1000, easing: Easing.out(Easing.ease) }));
   }, []);
 
   const logoStyle = useAnimatedStyle(() => ({
@@ -67,8 +118,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
     opacity: logoOpacity.value,
   }));
 
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: interpolate(ringOpacity.value, [0, 1], [0, 0.25]),
+  }));
+
   const visbyStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: visbyTranslate.value }],
+    transform: [
+      { translateY: visbyTranslate.value + visbyFloat.value },
+    ],
     opacity: visbyOpacity.value,
   }));
 
@@ -77,109 +135,139 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
     opacity: contentOpacity.value,
   }));
 
-  const sparkle1Style = useAnimatedStyle(() => ({
-    opacity: sparkle1.value,
-    transform: [{ scale: sparkle1.value }],
+  const taglineStyle = useAnimatedStyle(() => ({
+    opacity: taglineLetters.value,
+    transform: [{ translateY: interpolate(taglineLetters.value, [0, 1], [8, 0]) }],
   }));
-
-  const sparkle2Style = useAnimatedStyle(() => ({
-    opacity: sparkle2.value,
-    transform: [{ scale: sparkle2.value }],
-  }));
-
-  const sparkle3Style = useAnimatedStyle(() => ({
-    opacity: sparkle3.value,
-    transform: [{ scale: sparkle3.value }],
-  }));
-
-  const defaultAppearance = {
-    skinTone: colors.visby.skin.light,
-    hairColor: colors.visby.hair.brown,
-    hairStyle: 'default',
-    eyeColor: '#4A90D9',
-    eyeShape: 'round',
-  };
 
   return (
-    <LinearGradient
-      colors={[colors.primary.wisteriaFaded, colors.base.cream, colors.calm.skyLight]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        {/* Background decorations */}
-        <View style={styles.decorations}>
-          <Animated.View style={[styles.sparkle, styles.sparkle1, sparkle1Style]}>
-            <Icon name="sparkles" size={24} color={colors.reward.gold} />
-          </Animated.View>
-          <Animated.View style={[styles.sparkle, styles.sparkle2, sparkle2Style]}>
-            <Icon name="star" size={24} color={colors.reward.gold} />
-          </Animated.View>
-          <Animated.View style={[styles.sparkle, styles.sparkle3, sparkle3Style]}>
-            <Icon name="star" size={20} color={colors.reward.goldSoft} />
-          </Animated.View>
-        </View>
+    <View style={styles.container}>
+      {/* Deep magical gradient background */}
+      <LinearGradient
+        colors={['#1A1035', '#2D1B69', '#1A1035']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
 
+      {/* Colored overlay for warmth */}
+      <LinearGradient
+        colors={[
+          'rgba(199, 184, 234, 0.15)',
+          'rgba(127, 189, 232, 0.1)',
+          'rgba(255, 182, 193, 0.08)',
+          'transparent',
+        ]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
+      {/* Aurora waves */}
+      <AuroraWave delay={0} color="rgba(199, 184, 234, 0.4)" yOffset={height * 0.08} />
+      <AuroraWave delay={2000} color="rgba(127, 189, 232, 0.3)" yOffset={height * 0.15} />
+      <AuroraWave delay={4000} color="rgba(255, 182, 193, 0.25)" yOffset={height * 0.22} />
+
+      {/* Floating particles */}
+      <FloatingParticles count={20} variant="stars" opacity={0.6} speed="slow" />
+
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         {/* Logo */}
         <Animated.View style={[styles.logoContainer, logoStyle]}>
           <Text style={styles.logoText}>Visby</Text>
-          <Text style={styles.tagline}>Explore • Collect • Learn</Text>
+          <Animated.View style={taglineStyle}>
+            <Text style={styles.tagline}>Explore · Collect · Wonder</Text>
+          </Animated.View>
         </Animated.View>
 
-        {/* Visby Character */}
-        <Animated.View style={[styles.visbyContainer, visbyStyle]}>
-          <VisbyCharacter
-            appearance={defaultAppearance}
-            mood="excited"
-            size={200}
-            animated={true}
-          />
-        </Animated.View>
+        {/* Character with glow ring */}
+        <View style={styles.characterSection}>
+          <Animated.View style={[styles.glowRing, ringStyle]}>
+            <LinearGradient
+              colors={[
+                'rgba(199, 184, 234, 0.3)',
+                'rgba(255, 215, 0, 0.15)',
+                'rgba(127, 189, 232, 0.2)',
+                'transparent',
+              ]}
+              style={styles.ringGradient}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+            />
+          </Animated.View>
+          <Animated.View style={visbyStyle}>
+            <PulseGlow
+              color="rgba(199, 184, 234, 0.6)"
+              intensity={30}
+              speed={3000}
+            >
+              <VisbyCharacter
+                appearance={{
+                  skinTone: colors.visby.skin.light,
+                  hairColor: colors.visby.hair.blonde,
+                  hairStyle: 'default',
+                  eyeColor: '#4A90D9',
+                  eyeShape: 'round',
+                }}
+                equipped={{ hat: 'viking_helmet' }}
+                mood="excited"
+                size={220}
+                animated={true}
+              />
+            </PulseGlow>
+          </Animated.View>
+        </View>
 
         {/* Welcome Content */}
         <Animated.View style={[styles.content, contentStyle]}>
-          <View style={styles.welcomeTitleRow}>
-            <Text variant="h2" align="center" style={styles.welcomeTitle}>
-              Your adventure awaits!
-            </Text>
-            <Icon name="map" size={24} color={colors.primary.wisteriaDark} style={styles.titleIcon} />
-          </View>
-          <Text variant="body" align="center" style={styles.welcomeText}>
-            Collect stamps from real places, discover amazing food,
-            and learn about cultures around the world.
+          <Text variant="h1" align="center" style={styles.welcomeTitle}>
+            Your adventure awaits
           </Text>
+          <Text variant="body" align="center" style={styles.welcomeText}>
+            Collect stamps, discover food, dress your Viking,
+            buy houses around the world, and learn about cultures everywhere you go.
+          </Text>
+
+          {/* Feature pills */}
+          <View style={styles.featurePills}>
+            {['🗺️ Explore', '👘 Dress Up', '🏠 Build', '📚 Learn'].map((feat, i) => (
+              <View key={i} style={styles.pill}>
+                <Text style={styles.pillText}>{feat}</Text>
+              </View>
+            ))}
+          </View>
 
           <View style={styles.buttons}>
             <Button
-              title="Start Journey"
+              title="Begin Your Journey ✨"
               onPress={() => navigation.navigate('SignUp')}
               variant="primary"
               size="lg"
               fullWidth
             />
             <Button
-              title="I have an account"
+              title="I already have an account"
               onPress={() => navigation.navigate('Login')}
               variant="ghost"
               size="md"
               fullWidth
               style={styles.loginButton}
+              textStyle={styles.loginText}
             />
           </View>
         </Animated.View>
 
-        {/* Bottom decoration */}
+        {/* Bottom */}
         <View style={styles.bottomDecoration}>
           <View style={styles.madeWithRow}>
             <Text style={styles.madeWith}>Made with </Text>
-            <Icon name="heart" size={14} color={colors.primary.wisteria} />
-            <Text style={styles.madeWith}> for explorers</Text>
+            <Icon name="heart" size={12} color={colors.primary.wisteria} />
+            <Text style={styles.madeWith}> for little explorers</Text>
           </View>
         </View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 };
 
@@ -192,88 +280,104 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
-    paddingTop: 60, // Account for status bar + extra space for logo
-    paddingBottom: spacing.lg,
+    paddingTop: 50,
+    paddingBottom: spacing.md,
   },
-  decorations: {
+  auroraWave: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: -width * 0.2,
+    width: width * 1.4,
+    height: 120,
   },
-  sparkle: {
-    position: 'absolute',
-  },
-  sparkle1: {
-    top: height * 0.12,
-    left: width * 0.12,
-  },
-  sparkle2: {
-    top: height * 0.16,
-    right: width * 0.12,
-  },
-  sparkle3: {
-    top: height * 0.28,
-    left: width * 0.78,
+  auroraGradient: {
+    flex: 1,
+    borderRadius: 60,
   },
   logoContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-    width: '100%',
+    paddingTop: spacing.md,
   },
   logoText: {
     fontFamily: 'Fredoka-Bold',
-    fontSize: 52,
-    color: colors.primary.wisteriaDark,
-    textShadowColor: colors.shadow.colored,
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+    fontSize: 58,
+    color: '#F0E8FF',
+    textShadowColor: 'rgba(199, 184, 234, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
+    letterSpacing: 2,
   },
   tagline: {
     fontFamily: 'Quicksand-Medium',
-    fontSize: 15,
-    color: colors.text.secondary,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
     marginTop: spacing.sm,
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
-  visbyContainer: {
+  characterSection: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+  },
+  glowRing: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    overflow: 'hidden',
+  },
+  ringGradient: {
+    flex: 1,
   },
   content: {
     width: '100%',
     alignItems: 'center',
   },
-  welcomeTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
   welcomeTitle: {
-    color: colors.text.primary,
-  },
-  titleIcon: {
-    marginLeft: spacing.sm,
+    color: '#FFFFFF',
+    marginBottom: spacing.sm,
+    textShadowColor: 'rgba(199, 184, 234, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
   welcomeText: {
-    color: colors.text.secondary,
+    color: 'rgba(255, 255, 255, 0.65)',
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+    lineHeight: 22,
+  },
+  featurePills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    lineHeight: 24,
+  },
+  pill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: spacing.radius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  pillText: {
+    fontFamily: 'Quicksand-Medium',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   buttons: {
     width: '100%',
     gap: spacing.md,
   },
   loginButton: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  loginText: {
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   bottomDecoration: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
   madeWithRow: {
     flexDirection: 'row',
@@ -281,8 +385,8 @@ const styles = StyleSheet.create({
   },
   madeWith: {
     fontFamily: 'Quicksand-Medium',
-    fontSize: 12,
-    color: colors.text.muted,
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.3)',
   },
 });
 

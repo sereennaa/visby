@@ -116,6 +116,16 @@ export const colors = {
     },
   },
 
+  // Magic / Whimsy
+  magic: {
+    aurora: '#C7B8EA',
+    stardust: 'rgba(255, 215, 0, 0.2)',
+    moonbeam: 'rgba(199, 184, 234, 0.15)',
+    twilight: '#2D1B69',
+    nebula: '#1A1035',
+    shimmer: 'rgba(255, 255, 255, 0.15)',
+  },
+
   // Transparent
   transparent: 'transparent',
 };

@@ -638,6 +638,11 @@ export type RootStackParamList = {
   // Countries & Houses (visit, buy house, walk through like Club Penguin)
   CountryWorld: undefined;
   CountryRoom: { countryId: string };
+
+  // Shop & Membership
+  CosmeticShop: undefined;
+  AuraStore: undefined;
+  Membership: undefined;
 }
 
 export type BottomTabParamList = {
@@ -646,4 +651,13 @@ export type BottomTabParamList = {
   CollectionTab: undefined;
   LearnTab: undefined;
   ProfileTab: undefined;
+};
+
+export type MainTabParamList = {
+  Home: undefined;
+  Map: undefined;
+  Stamps: undefined;
+  Bites: undefined;
+  Learn: undefined;
+  Profile: undefined;
 };

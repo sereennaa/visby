@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,6 +10,11 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -17,7 +22,7 @@ import { theme } from '../../theme';
 
 interface CardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'gradient' | 'glow';
+  variant?: 'default' | 'elevated' | 'gradient' | 'glow' | 'magic';
   gradientColors?: string[];
   onPress?: () => void;
   padding?: keyof typeof spacing | number;
@@ -37,14 +42,39 @@ export const Card: React.FC<CardProps> = ({
   style,
 }) => {
   const scale = useSharedValue(1);
+  const magicGlow = useSharedValue(0);
+
+  useEffect(() => {
+    if (variant === 'magic') {
+      magicGlow.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sine) }),
+          withTiming(0, { duration: 2500, easing: Easing.inOut(Easing.sine) }),
+        ),
+        -1,
+        true,
+      );
+    }
+  }, [variant]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const magicStyle = useAnimatedStyle(() => {
+    if (variant !== 'magic') return {};
+    return {
+      shadowColor: '#C7B8EA',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: interpolate(magicGlow.value, [0, 1], [0.15, 0.5]),
+      shadowRadius: interpolate(magicGlow.value, [0, 1], [8, 24]),
+      elevation: interpolate(magicGlow.value, [0, 1], [3, 10]),
+    };
+  });
+
   const handlePressIn = () => {
     if (onPress) {
-      scale.value = withSpring(0.98, { damping: 15, stiffness: 400 });
+      scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
     }
   };
 
@@ -73,6 +103,12 @@ export const Card: React.FC<CardProps> = ({
         return {
           ...theme.shadows.glow,
           backgroundColor: colors.base.cream,
+        };
+      case 'magic':
+        return {
+          backgroundColor: colors.base.cream,
+          borderWidth: 1,
+          borderColor: 'rgba(199, 184, 234, 0.2)',
         };
       case 'gradient':
         return {};
@@ -110,7 +146,7 @@ export const Card: React.FC<CardProps> = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        style={[animatedStyle]}
+        style={[animatedStyle, variant === 'magic' && magicStyle]}
       >
         <View style={[styles.card, cardStyle, variant === 'gradient' && styles.gradientWrapper, style]}>
           {content}
@@ -120,9 +156,11 @@ export const Card: React.FC<CardProps> = ({
   }
 
   return (
-    <View style={[styles.card, cardStyle, variant === 'gradient' && styles.gradientWrapper, style]}>
-      {content}
-    </View>
+    <Animated.View style={variant === 'magic' ? magicStyle : undefined}>
+      <View style={[styles.card, cardStyle, variant === 'gradient' && styles.gradientWrapper, style]}>
+        {content}
+      </View>
+    </Animated.View>
   );
 };
 

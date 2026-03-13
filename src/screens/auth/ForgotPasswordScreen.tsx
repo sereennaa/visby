@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  ScrollView,
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,10 +53,10 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
     try {
       await authService.resetPassword(email);
       setSent(true);
-    } catch (error: any) {
+    } catch (err: any) {
       Alert.alert(
         'Error',
-        error.message || 'Failed to send reset email. Please try again.',
+        err.message || 'Failed to send reset email. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -113,7 +114,11 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          <View style={styles.content}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Back button */}
             <TouchableOpacity
               onPress={() => navigation.goBack()}
@@ -171,7 +176,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
@@ -189,7 +194,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxl,
   },

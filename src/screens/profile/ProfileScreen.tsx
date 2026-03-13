@@ -22,6 +22,7 @@ import { useStore } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
 import { RootStackParamList } from '../../types';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 type ProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'>;
@@ -75,7 +76,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const nextLevel = getNextLevel();
   const currentAura = user?.aura || 0;
   const progressAura = currentAura - currentLevel.aura;
-  const requiredAura = nextLevel.aura - currentLevel.aura;
+  const requiredAura = Math.max(1, nextLevel.aura - currentLevel.aura);
 
   const defaultAppearance = visby?.appearance || {
     skinTone: colors.visby.skin.light,
@@ -94,9 +95,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { icon: 'flame', label: 'Best Streak', value: user?.longestStreak || 0 },
   ];
 
-  const menuItems: { icon: IconName; label: string; screen: string }[] = [
+  const menuItems: { icon: IconName; label: string; screen: keyof RootStackParamList }[] = [
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
-    { icon: 'shirt', label: 'Wardrobe', screen: 'Avatar' },
+    { icon: 'shirt', label: 'Wardrobe & Avatar', screen: 'Avatar' },
+    { icon: 'sparkles', label: 'Cosmetic Shop', screen: 'CosmeticShop' },
+    { icon: 'trophy', label: 'Membership', screen: 'Membership' },
     { icon: 'settings', label: 'Settings', screen: 'Settings' },
   ];
 
@@ -105,6 +108,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       colors={[colors.base.cream, colors.primary.wisteriaFaded]}
       style={styles.container}
     >
+      <FloatingParticles count={5} variant="sparkle" opacity={0.2} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
@@ -132,6 +136,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               >
                 <VisbyCharacter
                   appearance={defaultAppearance}
+                  equipped={visby?.equipped}
                   mood="happy"
                   size={100}
                   animated={true}
@@ -205,7 +210,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 key={index}
                 style={styles.menuItem}
-                onPress={() => navigation.navigate(item.screen as any)}
+                onPress={() => (navigation as any).navigate(item.screen)}
               >
                 <Icon name={item.icon} size={20} color={colors.text.secondary} />
                 <Text variant="body" style={styles.menuLabel}>

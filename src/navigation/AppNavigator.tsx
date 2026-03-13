@@ -41,6 +41,11 @@ import { AvatarScreen } from '../screens/avatar/AvatarScreen';
 import { BadgesScreen } from '../screens/badges/BadgesScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
+// Shop Screens
+import { CosmeticShopScreen } from '../screens/shop/CosmeticShopScreen';
+import { MembershipScreen } from '../screens/shop/MembershipScreen';
+import { AuraStoreScreen } from '../screens/shop/AuraStoreScreen';
+
 // Learn Screens
 import { LessonCategoryScreen } from '../screens/learn/LessonCategoryScreen';
 import { LessonScreen } from '../screens/learn/LessonScreen';
@@ -59,6 +64,7 @@ interface TabIconProps {
 const TabIcon: React.FC<TabIconProps> = ({ focused, iconName, iconNameOutline }) => {
   return (
     <View style={[styles.tabIcon, focused && styles.tabIconFocused]}>
+      {focused && <View style={styles.focusGlow} />}
       <Icon
         name={focused ? iconName : iconNameOutline}
         size={24}
@@ -215,6 +221,11 @@ export const AppNavigator = () => {
         <Stack.Screen name="Lesson" component={LessonScreen} />
         <Stack.Screen name="Quiz" component={QuizScreen} />
         <Stack.Screen name="Flashcards" component={FlashcardsScreen} />
+
+        {/* Shop & Membership */}
+        <Stack.Screen name="CosmeticShop" component={CosmeticShopScreen} />
+        <Stack.Screen name="AuraStore" component={AuraStoreScreen} />
+        <Stack.Screen name="Membership" component={MembershipScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -222,36 +233,50 @@ export const AppNavigator = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.base.cream,
+    backgroundColor: colors.base.warmWhite,
     borderTopWidth: 0,
-    height: 85,
+    height: 88,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: -4 },
+    paddingBottom: spacing.lg + 4,
+    shadowColor: 'rgba(199, 184, 234, 0.25)',
+    shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   tabBarLabel: {
     fontFamily: 'Quicksand-Medium',
     fontSize: 10,
-    marginTop: spacing.xxs,
+    marginTop: 2,
+    letterSpacing: 0.3,
   },
   tabIcon: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xxs,
+    position: 'relative',
   },
-  tabIconFocused: {
-    // Additional styles for focused state
+  tabIconFocused: {},
+  focusGlow: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(199, 184, 234, 0.15)',
+    top: -4,
   },
   focusIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.primary.wisteria,
-    marginTop: spacing.xxs,
+    marginTop: 3,
+    shadowColor: colors.primary.wisteria,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
   },
 });
 

@@ -62,18 +62,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       const { user: authUser } = await authService.signIn(email, password);
       
       if (authUser) {
-        // Get user profile and visby
-        const profile = await authService.getUserProfile(authUser.id);
-        const visby = await authService.getVisby(authUser.id);
-        
-        if (profile) {
-          setUser(profile);
+        const [profile, visby] = await Promise.all([
+          authService.getUserProfile(authUser.id),
+          authService.getVisby(authUser.id),
+        ]);
+
+        if (!profile) {
+          throw new Error('Could not load your profile. Please try again.');
         }
-        if (visby) {
-          setVisby(visby);
-        }
-        
-        // Navigate to main app
+
+        setUser(profile);
+        if (visby) setVisby(visby);
+
         navigation.reset({
           index: 0,
           routes: [{ name: 'Main' }],

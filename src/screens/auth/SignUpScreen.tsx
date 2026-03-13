@@ -85,20 +85,21 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     try {
       const { user, visby } = await authService.signUp(email, password, username);
 
-      setUser(user);
-      setVisby(visby);
+      if (user) setUser(user);
+      if (visby) setVisby(visby);
 
-      // Navigate to avatar customization or main app
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
-      });
-
-      // Show welcome message
       Alert.alert(
-        'Welcome to Visby!',
-        `Your explorer ${username} is ready for adventure! Start collecting stamps, discovering food, and learning about the world.`,
-        [{ text: "Let's Go!" }]
+        'Welcome to Visby! ✨',
+        `Your explorer ${username} is ready for adventure!`,
+        [{
+          text: "Let's Go!",
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Main' }],
+            });
+          },
+        }],
       );
     } catch (error: any) {
       Alert.alert(

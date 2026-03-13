@@ -46,6 +46,20 @@ export const theme = {
       shadowRadius: 20,
       elevation: 8,
     },
+    magic: {
+      shadowColor: 'rgba(199, 184, 234, 0.5)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 24,
+      elevation: 10,
+    },
+    dream: {
+      shadowColor: 'rgba(127, 189, 232, 0.3)',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 1,
+      shadowRadius: 28,
+      elevation: 12,
+    },
   },
   
   // Animation durations

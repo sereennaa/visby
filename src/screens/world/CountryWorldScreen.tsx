@@ -19,6 +19,7 @@ import { useStore } from '../../store/useStore';
 import { COUNTRIES } from '../../config/constants';
 import { RootStackParamList } from '../../types';
 import { UserHouse } from '../../types';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 type CountryWorldScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'CountryWorld'>;
@@ -93,7 +94,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
             if (spendAura(cost)) {
               const newHouse: UserHouse = {
                 id: `house_${Date.now()}`,
-                userId: user!.id,
+                userId: user?.id || '',
                 countryId,
                 purchasedAt: new Date(),
               };
@@ -114,6 +115,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       style={styles.container}
       locations={[0, 0.4, 1]}
     >
+      <FloatingParticles count={10} variant="mixed" opacity={0.3} speed="normal" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
