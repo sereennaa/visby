@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Share, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -61,17 +61,14 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
           showsVerticalScrollIndicator={false}
         >
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={28} color={colors.text.primary} />
           </TouchableOpacity>
 
           {/* Photo Area */}
           <View style={styles.photoContainer}>
             {stamp.photoUrl ? (
-              <View style={styles.photoPlaceholder}>
-                <Icon name="image" size={48} color={colors.text.muted} />
-                <Caption style={styles.photoCaption}>Photo</Caption>
-              </View>
+              <Image source={{ uri: stamp.photoUrl }} style={styles.photo} resizeMode="cover" />
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Icon name="camera" size={48} color={colors.text.muted} />
@@ -201,6 +198,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     borderRadius: spacing.radius.xl,
     overflow: 'hidden',
+  },
+  photo: {
+    height: 220,
+    borderRadius: spacing.radius.xl,
   },
   photoPlaceholder: {
     height: 220,

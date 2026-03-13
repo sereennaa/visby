@@ -1,6 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { User, Visby, VisbyAppearance } from '../types';
-import { colors } from '../theme/colors';
 
 const DEFAULT_VISBY_APPEARANCE: VisbyAppearance = {
   skinTone: '#FFBA6B',
@@ -207,25 +206,6 @@ export const authService = {
       return null;
     }
     return data;
-  },
-
-  async updateProfile(userId: string, updates: Partial<User>) {
-    if (!isSupabaseConfigured) {
-      for (const entry of demoUsers.values()) {
-        if (entry.user.id === userId) {
-          Object.assign(entry.user, updates, { lastActive: new Date() });
-          return;
-        }
-      }
-      return;
-    }
-
-    const { error } = await supabase
-      .from('users')
-      .update({ ...updates, lastActive: new Date() })
-      .eq('id', userId);
-
-    if (error) throw error;
   },
 
   async updateVisby(visbyId: string, updates: Partial<Visby>) {

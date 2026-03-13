@@ -119,7 +119,7 @@ const MagicActionCard: React.FC<{
 
   return (
     <Animated.View style={[styles.actionCard, style]}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={label}>
         <LinearGradient
           colors={gradient}
           start={{ x: 0, y: 0 }}
@@ -299,6 +299,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               onPress={() => navigation.navigate('AuraStore')}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="View Aura Store"
             >
               <PulseGlow color="rgba(255, 215, 0, 0.4)" intensity={12} speed={3000}>
                 <AuraBadge amount={currentAura} />
@@ -311,6 +313,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => navigation.navigate('Avatar')}
+              accessibilityRole="button"
+              accessibilityLabel="Customize your Visby"
             >
               <LinearGradient
                 colors={['#F3EAFF', '#FFF8F0', '#EAF5FF']}
@@ -414,7 +418,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Icon name="stamp" size={20} color={colors.text.primary} />
               <Heading level={2}>Your Stamps</Heading>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Stamps')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Stamps')} accessibilityRole="button" accessibilityLabel="See all stamps">
               <View style={styles.seeAllRow}>
                 <Text variant="body" color={colors.primary.wisteriaDark}>See All</Text>
                 <Icon name="chevronRight" size={16} color={colors.primary.wisteriaDark} />

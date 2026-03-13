@@ -101,6 +101,7 @@ export const Input: React.FC<InputProps> = ({
           placeholderTextColor={colors.text.muted}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          accessibilityLabel={props.accessibilityLabel || label}
           // Disable iOS strong password autofill that causes yellow background
           textContentType={props.textContentType || 'none'}
           autoComplete={props.autoComplete || 'off'}
@@ -114,6 +115,7 @@ export const Input: React.FC<InputProps> = ({
             onPress={onRightIconPress}
             style={styles.rightIcon}
             disabled={!onRightIconPress}
+            accessibilityRole={onRightIconPress ? 'button' : undefined}
           >
             <Icon name={rightIcon} size={20} color={colors.text.muted} />
           </TouchableOpacity>

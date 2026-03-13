@@ -11,18 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { STAMP_TYPES_INFO } from '../../config/constants';
+import { SAMPLE_LOCATIONS } from '../../config/locations';
 import { RootStackParamList } from '../../types';
-
-const SAMPLE_LOCATIONS = [
-  { id: '1', name: 'Central Park', type: 'park', distance: '0.5 km', description: 'Beautiful urban park with walking trails' },
-  { id: '2', name: 'City Museum', type: 'museum', distance: '1.2 km', description: 'Local history and art museum' },
-  { id: '3', name: 'Ocean Beach', type: 'beach', distance: '3.5 km', description: 'Sandy beach with great sunset views' },
-  { id: '4', name: 'Old Town Square', type: 'landmark', distance: '0.8 km', description: 'Historic town center' },
-  { id: '5', name: 'Mountain View Trail', type: 'mountain', distance: '15 km', description: 'Scenic hiking trail' },
-  { id: '6', name: 'Local Market', type: 'market', distance: '0.3 km', description: 'Fresh produce and local goods' },
-  { id: '7', name: 'Cozy Corner Café', type: 'cafe', distance: '0.2 km', description: 'Great coffee and pastries' },
-  { id: '8', name: 'Hidden Garden', type: 'hidden_gem', distance: '1.5 km', description: 'Secret garden with rare flowers' },
-];
 
 type LocationDetailScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'LocationDetail'>;
@@ -66,7 +56,7 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
           showsVerticalScrollIndicator={false}
         >
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={28} color={colors.text.primary} />
           </TouchableOpacity>
 
@@ -104,12 +94,12 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
                 <Icon name="location" size={24} color={colors.primary.wisteriaDark} />
                 <View>
                   <Text variant="h3">Distance</Text>
-                  <Caption>{location.distance} away</Caption>
+                  <Caption>{location.distanceKm < 1 ? `${(location.distanceKm * 1000).toFixed(0)} m` : `${location.distanceKm} km`} away</Caption>
                 </View>
               </View>
               <View style={styles.distanceBadge}>
                 <Text variant="h2" color={colors.primary.wisteriaDark}>
-                  {location.distance}
+                  {location.distanceKm < 1 ? `${(location.distanceKm * 1000).toFixed(0)} m` : `${location.distanceKm} km`}
                 </Text>
               </View>
             </View>

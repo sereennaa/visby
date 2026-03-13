@@ -120,6 +120,9 @@ export const Button: React.FC<ButtonProps> = ({
       onPressOut={handlePressOut}
       disabled={disabled || loading}
       activeOpacity={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading }}
       style={[animatedStyle, fullWidth && styles.fullWidth, style]}
     >
       <LinearGradient

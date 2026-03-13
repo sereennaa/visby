@@ -173,7 +173,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Heading level={2}>Quiz Time!</Heading>

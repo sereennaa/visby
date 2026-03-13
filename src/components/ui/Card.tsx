@@ -147,6 +147,7 @@ export const Card: React.FC<CardProps> = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
+        accessibilityRole="button"
         style={[animatedStyle, variant === 'magic' && magicStyle]}
       >
         <View style={[styles.card, cardStyle, variant === 'gradient' && styles.gradientWrapper, style]}>

@@ -93,7 +93,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Heading level={1}>Settings</Heading>
