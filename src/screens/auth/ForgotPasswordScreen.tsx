@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   backText: {
-    fontFamily: 'Quicksand-Medium',
+    fontFamily: 'Nunito-Medium',
     fontSize: 16,
     color: colors.text.secondary,
   },

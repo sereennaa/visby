@@ -179,13 +179,13 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.round,
   },
   levelText: {
-    fontFamily: 'Quicksand-Medium',
+    fontFamily: 'Nunito-Medium',
     fontSize: 10,
     color: colors.text.inverse,
     marginRight: 2,
   },
   levelNumber: {
-    fontFamily: 'Fredoka-Bold',
+    fontFamily: 'Baloo2-Bold',
     fontSize: 16,
     color: colors.text.inverse,
   },

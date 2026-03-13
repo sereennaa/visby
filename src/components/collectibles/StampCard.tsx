@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   locationName: {
-    fontFamily: 'Fredoka-SemiBold',
+    fontFamily: 'Baloo2-SemiBold',
     color: colors.text.primary,
     marginBottom: 2,
   },

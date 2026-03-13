@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   name: {
-    fontFamily: 'Fredoka-Medium',
+    fontFamily: 'Baloo2-Medium',
     color: colors.text.primary,
   },
   locked: {
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   newText: {
     fontSize: 8,
-    fontFamily: 'Fredoka-Bold',
+    fontFamily: 'Baloo2-Bold',
     color: colors.text.primary,
   },
   rarityDot: {
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   rarityText: {
     fontSize: 8,
-    fontFamily: 'Quicksand-Bold',
+    fontFamily: 'Nunito-Bold',
   },
   rowProgress: {
     flexDirection: 'row',

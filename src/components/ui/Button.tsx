@@ -6,6 +6,7 @@ import {
   ViewStyle,
   TextStyle,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -54,68 +55,60 @@ export const Button: React.FC<ButtonProps> = ({
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
+    scale.value = withSpring(0.95, { damping: 15, stiffness: 350 });
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
   };
 
   const handlePress = () => {
     if (!disabled && !loading) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
       onPress();
     }
   };
 
   const getGradientColors = (): [string, string] => {
-    if (disabled) return [colors.text.light, colors.text.muted];
+    if (disabled) return ['#D0D0DC', '#B8B8C8'];
     switch (variant) {
       case 'primary':
-        return [colors.primary.wisteria, colors.primary.wisteriaDark];
+        return ['#B8A5E0', '#9B80D0'];
       case 'secondary':
-        return [colors.calm.sky, colors.calm.skyDark];
+        return ['#E6F2FC', '#C8E4F8'];
       case 'reward':
-        return [colors.reward.peach, colors.reward.gold];
+        return ['#FFE0A8', '#FFD070'];
       case 'success':
-        return [colors.success.honeydew, colors.success.honeydewDark];
+        return ['#C8F0CA', '#A0E0A4'];
       case 'ghost':
         return [colors.transparent, colors.transparent];
       default:
-        return [colors.primary.wisteria, colors.primary.wisteriaDark];
+        return ['#B8A5E0', '#9B80D0'];
     }
   };
 
   const getTextColor = () => {
-    if (disabled) return colors.text.inverse;
+    if (disabled) return '#FFFFFF';
     switch (variant) {
       case 'ghost':
         return colors.primary.wisteriaDark;
+      case 'secondary':
+        return colors.calm.ocean;
       case 'reward':
-        return colors.text.primary;
+        return '#7A5A00';
       case 'success':
-        return colors.success.emerald;
+        return '#2A7A2A';
       default:
-        return colors.text.inverse;
+        return '#FFFFFF';
     }
   };
 
   const sizeStyles = {
-    sm: {
-      height: spacing.button.sm,
-      paddingHorizontal: spacing.md,
-      fontSize: typography.sizes.body.sm,
-    },
-    md: {
-      height: spacing.button.md,
-      paddingHorizontal: spacing.lg,
-      fontSize: typography.sizes.body.md,
-    },
-    lg: {
-      height: spacing.button.lg,
-      paddingHorizontal: spacing.xl,
-      fontSize: typography.sizes.body.lg,
-    },
+    sm: { height: spacing.button.sm, paddingHorizontal: spacing.lg, fontSize: 13 },
+    md: { height: spacing.button.md, paddingHorizontal: spacing.xl, fontSize: 15 },
+    lg: { height: spacing.button.lg, paddingHorizontal: spacing.xxl, fontSize: 17 },
   };
 
   const currentSize = sizeStyles[size];
@@ -127,11 +120,7 @@ export const Button: React.FC<ButtonProps> = ({
       onPressOut={handlePressOut}
       disabled={disabled || loading}
       activeOpacity={0.9}
-      style={[
-        animatedStyle,
-        fullWidth && styles.fullWidth,
-        style,
-      ]}
+      style={[animatedStyle, fullWidth && styles.fullWidth, style]}
     >
       <LinearGradient
         colors={getGradientColors()}
@@ -139,10 +128,7 @@ export const Button: React.FC<ButtonProps> = ({
         end={{ x: 1, y: 1 }}
         style={[
           styles.button,
-          {
-            height: currentSize.height,
-            paddingHorizontal: currentSize.paddingHorizontal,
-          },
+          { height: currentSize.height, paddingHorizontal: currentSize.paddingHorizontal },
           variant === 'ghost' && styles.ghostButton,
           disabled && styles.disabled,
         ]}
@@ -154,16 +140,7 @@ export const Button: React.FC<ButtonProps> = ({
             {icon && iconPosition === 'left' && (
               <Animated.View style={styles.iconLeft}>{icon}</Animated.View>
             )}
-            <Text
-              style={[
-                styles.text,
-                {
-                  fontSize: currentSize.fontSize,
-                  color: getTextColor(),
-                },
-                textStyle,
-              ]}
-            >
+            <Text style={[styles.text, { fontSize: currentSize.fontSize, color: getTextColor() }, textStyle]}>
               {title}
             </Text>
             {icon && iconPosition === 'right' && (
@@ -181,23 +158,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: spacing.radius.xl,
-    shadowColor: colors.shadow.colored,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: spacing.radius.round,
   },
   ghostButton: {
     backgroundColor: colors.transparent,
     borderWidth: 2,
     borderColor: colors.primary.wisteria,
-    shadowOpacity: 0,
-    elevation: 0,
   },
   text: {
-    fontFamily: typography.fonts.bodyBold,
-    letterSpacing: 0.5,
+    fontFamily: typography.fonts.headingMedium,
+    letterSpacing: 0.3,
   },
   disabled: {
     opacity: 0.6,

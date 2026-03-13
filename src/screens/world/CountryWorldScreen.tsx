@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl * 4 },
   header: { marginBottom: spacing.lg },
   auraRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.xs },
-  auraText: { fontFamily: 'Quicksand-SemiBold' },
+  auraText: { fontFamily: 'Nunito-SemiBold' },
   countryCard: { marginBottom: spacing.md },
   countryRow: { flexDirection: 'row', alignItems: 'flex-start' },
   flagCircle: {

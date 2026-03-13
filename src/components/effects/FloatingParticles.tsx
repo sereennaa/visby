@@ -72,8 +72,8 @@ const ParticleView: React.FC<{ particle: Particle; speedMult: number; baseOpacit
       particle.delay,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: dur, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: dur, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: dur, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
+          withTiming(0, { duration: dur, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
         ),
         -1,
         true,
@@ -83,8 +83,8 @@ const ParticleView: React.FC<{ particle: Particle; speedMult: number; baseOpacit
       particle.delay + 500,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sine) }),
-          withTiming(0.2, { duration: 1200, easing: Easing.inOut(Easing.sine) }),
+          withTiming(1, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+          withTiming(0.2, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
         ),
         -1,
         true,
@@ -128,7 +128,7 @@ export const FloatingParticles: React.FC<FloatingParticlesProps> = ({
   const speedMult = SPEED_MULTIPLIER[speed];
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={[styles.container, { pointerEvents: 'none' }]}>
       {particles.map((p) => (
         <ParticleView key={p.id} particle={p} speedMult={speedMult} baseOpacity={opacity} />
       ))}

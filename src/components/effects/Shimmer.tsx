@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle, Dimensions } from 'react-native';
+import { View, StyleSheet, ViewStyle, Dimensions, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -33,7 +33,7 @@ export const Shimmer: React.FC<ShimmerProps> = ({
 
   useEffect(() => {
     translateX.value = withRepeat(
-      withTiming(width, { duration, easing: Easing.inOut(Easing.ease) }),
+      withTiming(width, { duration, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
       -1,
       false,
     );
@@ -76,19 +76,28 @@ export const PulseGlow: React.FC<PulseGlowProps> = ({
 
   useEffect(() => {
     glow.value = withRepeat(
-      withTiming(1, { duration: speed, easing: Easing.inOut(Easing.sine) }),
+      withTiming(1, { duration: speed, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
       -1,
       true,
     );
   }, [speed]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    shadowColor: color,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: interpolate(glow.value, [0, 1], [0.2, 0.7]),
-    shadowRadius: interpolate(glow.value, [0, 1], [intensity * 0.5, intensity]),
-    elevation: interpolate(glow.value, [0, 1], [2, 8]),
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    const radius = interpolate(glow.value, [0, 1], [intensity * 0.5, intensity]);
+    const opacity = interpolate(glow.value, [0, 1], [0.2, 0.7]);
+    if (Platform.OS === 'web') {
+      return {
+        boxShadow: `0 0 ${radius}px rgba(199, 184, 234, ${opacity})`,
+      } as any;
+    }
+    return {
+      shadowColor: color,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: opacity,
+      shadowRadius: radius,
+      elevation: interpolate(glow.value, [0, 1], [2, 8]),
+    };
+  });
 
   return (
     <Animated.View style={[animatedStyle, style]}>

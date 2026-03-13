@@ -48,8 +48,8 @@ export const Card: React.FC<CardProps> = ({
     if (variant === 'magic') {
       magicGlow.value = withRepeat(
         withSequence(
-          withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.sine) }),
-          withTiming(0, { duration: 2500, easing: Easing.inOut(Easing.sine) }),
+          withTiming(1, { duration: 2500, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+          withTiming(0, { duration: 2500, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
         ),
         -1,
         true,

@@ -4,17 +4,19 @@ import { View, StyleSheet, Text as RNText } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import {
-  Quicksand_400Regular,
-  Quicksand_500Medium,
-  Quicksand_600SemiBold,
-  Quicksand_700Bold,
-} from '@expo-google-fonts/quicksand';
+  Baloo2_400Regular,
+  Baloo2_500Medium,
+  Baloo2_600SemiBold,
+  Baloo2_700Bold,
+  Baloo2_800ExtraBold,
+} from '@expo-google-fonts/baloo-2';
 import {
-  Fredoka_400Regular,
-  Fredoka_500Medium,
-  Fredoka_600SemiBold,
-  Fredoka_700Bold,
-} from '@expo-google-fonts/fredoka';
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useStore } from './src/store/useStore';
@@ -33,14 +35,16 @@ export default function App() {
     async function loadFonts() {
       try {
         await Font.loadAsync({
-          'Quicksand-Regular': Quicksand_400Regular,
-          'Quicksand-Medium': Quicksand_500Medium,
-          'Quicksand-SemiBold': Quicksand_600SemiBold,
-          'Quicksand-Bold': Quicksand_700Bold,
-          'Fredoka-Regular': Fredoka_400Regular,
-          'Fredoka-Medium': Fredoka_500Medium,
-          'Fredoka-SemiBold': Fredoka_600SemiBold,
-          'Fredoka-Bold': Fredoka_700Bold,
+          'Baloo2-Regular': Baloo2_400Regular,
+          'Baloo2-Medium': Baloo2_500Medium,
+          'Baloo2-SemiBold': Baloo2_600SemiBold,
+          'Baloo2-Bold': Baloo2_700Bold,
+          'Baloo2-ExtraBold': Baloo2_800ExtraBold,
+          'Nunito-Regular': Nunito_400Regular,
+          'Nunito-Medium': Nunito_500Medium,
+          'Nunito-SemiBold': Nunito_600SemiBold,
+          'Nunito-Bold': Nunito_700Bold,
+          'Nunito-ExtraBold': Nunito_800ExtraBold,
         });
         setFontsLoaded(true);
       } catch (error) {

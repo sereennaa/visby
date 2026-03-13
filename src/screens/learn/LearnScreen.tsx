@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   categoryTitle: {
-    fontFamily: 'Fredoka-Medium',
+    fontFamily: 'Baloo2-Medium',
     marginBottom: 2,
   },
   categoryProgress: {
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   xpText: {
     color: colors.reward.amber,
-    fontFamily: 'Quicksand-Bold',
+    fontFamily: 'Nunito-Bold',
   },
 });
 

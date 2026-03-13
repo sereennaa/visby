@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: spacing.xs },
   headerCenter: { alignItems: 'center', flex: 1 },
   headerRight: { width: 40 },
-  flagTitle: { fontSize: 20, fontFamily: 'Fredoka-SemiBold', color: colors.text.primary },
+  flagTitle: { fontSize: 20, fontFamily: 'Baloo2-SemiBold', color: colors.text.primary },
   room: {
     flex: 1,
     minHeight: 220,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   roomEmoji: { fontSize: 48, marginBottom: spacing.xs },
-  roomLabel: { fontFamily: 'Quicksand-Medium', color: colors.text.secondary, fontSize: 14 },
+  roomLabel: { fontFamily: 'Nunito-Medium', color: colors.text.secondary, fontSize: 14 },
   avatarContainer: {
     position: 'absolute',
     left: spacing.lg,

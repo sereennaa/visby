@@ -1,22 +1,76 @@
-// Authentication Service using Supabase
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { User, Visby, VisbyAppearance } from '../types';
 import { colors } from '../theme/colors';
 
-// Default Visby appearance for new users
 const DEFAULT_VISBY_APPEARANCE: VisbyAppearance = {
-  skinTone: colors.visby.skin.light,
-  hairColor: colors.visby.hair.brown,
+  skinTone: '#FFBA6B',
+  hairColor: '#A67B5B',
   hairStyle: 'default',
-  eyeColor: '#4A90D9',
+  eyeColor: '#3A2010',
   eyeShape: 'round',
 };
 
+// In-memory store for demo mode
+let demoUsers: Map<string, { user: User; password: string; visby: Visby }> = new Map();
+
+function createDemoUser(email: string, password: string, username: string): { user: User; visby: Visby } {
+  const id = `demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const visbyId = `visby_${id}`;
+
+  const user: User = {
+    id,
+    email,
+    username,
+    displayName: username,
+    visbyId,
+    createdAt: new Date(),
+    lastActive: new Date(),
+    level: 1,
+    aura: 200,
+    totalAuraEarned: 200,
+    currentStreak: 0,
+    longestStreak: 0,
+    lastCheckIn: new Date(),
+    stampsCollected: 0,
+    bitesCollected: 0,
+    badgesEarned: 0,
+    countriesVisited: 0,
+    citiesVisited: 0,
+    settings: {
+      notifications: true,
+      locationTracking: true,
+      privateProfile: false,
+      language: 'en',
+      measurementUnit: 'metric',
+    },
+  };
+
+  const visby: Visby = {
+    id: visbyId,
+    userId: id,
+    name: `${username}'s Visby`,
+    createdAt: new Date(),
+    appearance: DEFAULT_VISBY_APPEARANCE,
+    equipped: { hat: 'viking_helmet' },
+    ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet'],
+    currentMood: 'happy',
+  };
+
+  demoUsers.set(email.toLowerCase(), { user, password, visby });
+  return { user, visby };
+}
+
 export const authService = {
-  // Sign up with email
   async signUp(email: string, password: string, username: string) {
     if (!isSupabaseConfigured) {
-      throw new Error('Supabase not configured. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+      // Demo mode: create user in memory
+      const existing = demoUsers.get(email.toLowerCase());
+      if (existing) {
+        throw new Error('An account with this email already exists.');
+      }
+      await new Promise((r) => setTimeout(r, 500));
+      return createDemoUser(email, password, username);
     }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -27,7 +81,6 @@ export const authService = {
     if (authError) throw authError;
     if (!authData.user) throw new Error('No user returned');
 
-    // Create user profile
     const newUser: Partial<User> = {
       id: authData.user.id,
       email,
@@ -61,7 +114,6 @@ export const authService = {
 
     if (profileError) throw profileError;
 
-    // Create default Visby avatar
     const newVisby: Partial<Visby> = {
       id: `visby_${authData.user.id}`,
       userId: authData.user.id,
@@ -82,10 +134,15 @@ export const authService = {
     return { user: newUser as User, visby: newVisby as Visby };
   },
 
-  // Sign in with email
   async signIn(email: string, password: string) {
     if (!isSupabaseConfigured) {
-      throw new Error('Supabase not configured. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+      // Demo mode: look up in-memory user
+      const entry = demoUsers.get(email.toLowerCase());
+      if (!entry || entry.password !== password) {
+        throw new Error('Invalid email or password.');
+      }
+      await new Promise((r) => setTimeout(r, 500));
+      return { user: entry.user, session: { user: entry.user } };
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -97,14 +154,12 @@ export const authService = {
     return data;
   },
 
-  // Sign out
   async signOut() {
     if (!isSupabaseConfigured) return;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
 
-  // Get current session
   async getSession() {
     if (!isSupabaseConfigured) return null;
     const { data, error } = await supabase.auth.getSession();
@@ -112,8 +167,14 @@ export const authService = {
     return data.session;
   },
 
-  // Get user profile
   async getUserProfile(userId: string): Promise<User | null> {
+    if (!isSupabaseConfigured) {
+      for (const entry of demoUsers.values()) {
+        if (entry.user.id === userId) return entry.user;
+      }
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -127,8 +188,14 @@ export const authService = {
     return data;
   },
 
-  // Get user's Visby
   async getVisby(userId: string): Promise<Visby | null> {
+    if (!isSupabaseConfigured) {
+      for (const entry of demoUsers.values()) {
+        if (entry.user.id === userId) return entry.visby;
+      }
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('visbies')
       .select('*')
@@ -142,8 +209,17 @@ export const authService = {
     return data;
   },
 
-  // Update user profile
   async updateProfile(userId: string, updates: Partial<User>) {
+    if (!isSupabaseConfigured) {
+      for (const entry of demoUsers.values()) {
+        if (entry.user.id === userId) {
+          Object.assign(entry.user, updates, { lastActive: new Date() });
+          return;
+        }
+      }
+      return;
+    }
+
     const { error } = await supabase
       .from('users')
       .update({ ...updates, lastActive: new Date() })
@@ -152,8 +228,17 @@ export const authService = {
     if (error) throw error;
   },
 
-  // Update Visby
   async updateVisby(visbyId: string, updates: Partial<Visby>) {
+    if (!isSupabaseConfigured) {
+      for (const entry of demoUsers.values()) {
+        if (entry.visby.id === visbyId) {
+          Object.assign(entry.visby, updates);
+          return;
+        }
+      }
+      return;
+    }
+
     const { error } = await supabase
       .from('visbies')
       .update(updates)
@@ -162,13 +247,15 @@ export const authService = {
     if (error) throw error;
   },
 
-  // Listen to auth state changes
   onAuthStateChange(callback: (event: string, session: any) => void) {
     return supabase.auth.onAuthStateChange(callback);
   },
 
-  // Password reset
   async resetPassword(email: string) {
+    if (!isSupabaseConfigured) {
+      await new Promise((r) => setTimeout(r, 500));
+      return;
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
   },

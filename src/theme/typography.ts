@@ -1,47 +1,40 @@
-// Visby Typography System
-// Friendly, playful fonts with cozy readability
-
 export const typography = {
   fonts: {
-    // Primary font - playful and friendly
-    heading: 'Fredoka-Bold',
-    headingMedium: 'Fredoka-SemiBold',
-    headingLight: 'Fredoka-Medium',
-    
-    // Body font - clean and readable
-    body: 'Quicksand-Medium',
-    bodyBold: 'Quicksand-Bold',
-    bodyLight: 'Quicksand-Regular',
-    
-    // System fallback
+    heading: 'Baloo2-Bold',
+    headingExtra: 'Baloo2-ExtraBold',
+    headingMedium: 'Baloo2-SemiBold',
+    headingLight: 'Baloo2-Medium',
+
+    body: 'Nunito-Medium',
+    bodyBold: 'Nunito-Bold',
+    bodyExtra: 'Nunito-ExtraBold',
+    bodyLight: 'Nunito-Regular',
+    bodySemiBold: 'Nunito-SemiBold',
+
     system: 'System',
   },
 
   sizes: {
-    // Display sizes (for big moments, rewards)
     display: {
       hero: 48,
       title: 36,
       subtitle: 28,
     },
-    
-    // Heading sizes
+
     heading: {
       h1: 24,
       h2: 20,
       h3: 18,
       h4: 16,
     },
-    
-    // Body sizes
+
     body: {
       lg: 16,
       md: 14,
       sm: 12,
       xs: 10,
     },
-    
-    // Special sizes
+
     label: 11,
     badge: 9,
     tiny: 8,
@@ -61,11 +54,9 @@ export const typography = {
   },
 };
 
-// Pre-built text styles
 export const textStyles = {
-  // Display styles
   heroTitle: {
-    fontFamily: typography.fonts.heading,
+    fontFamily: typography.fonts.headingExtra,
     fontSize: typography.sizes.display.hero,
     lineHeight: typography.sizes.display.hero * typography.lineHeights.tight,
   },
@@ -74,8 +65,7 @@ export const textStyles = {
     fontSize: typography.sizes.display.title,
     lineHeight: typography.sizes.display.title * typography.lineHeights.tight,
   },
-  
-  // Heading styles
+
   h1: {
     fontFamily: typography.fonts.heading,
     fontSize: typography.sizes.heading.h1,
@@ -91,8 +81,7 @@ export const textStyles = {
     fontSize: typography.sizes.heading.h3,
     lineHeight: typography.sizes.heading.h3 * typography.lineHeights.normal,
   },
-  
-  // Body styles
+
   bodyLarge: {
     fontFamily: typography.fonts.body,
     fontSize: typography.sizes.body.lg,
@@ -108,8 +97,7 @@ export const textStyles = {
     fontSize: typography.sizes.body.sm,
     lineHeight: typography.sizes.body.sm * typography.lineHeights.normal,
   },
-  
-  // Label & caption
+
   label: {
     fontFamily: typography.fonts.bodyBold,
     fontSize: typography.sizes.label,

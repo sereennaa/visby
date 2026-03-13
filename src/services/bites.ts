@@ -1,11 +1,12 @@
-// Bites Service - Food collectibles
-import { supabase } from '../config/supabase';
+import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { Bite, BiteCategory, Recipe } from '../types';
 import { AURA_REWARDS, BITE_CATEGORIES_INFO } from '../config/constants';
 
 export const bitesService = {
   // Get all bites for a user
   async getUserBites(userId: string): Promise<Bite[]> {
+    if (!isSupabaseConfigured) return [];
+
     const { data, error } = await supabase
       .from('bites')
       .select('*')
@@ -56,6 +57,8 @@ export const bitesService = {
       tags: options?.tags || [],
     };
 
+    if (!isSupabaseConfigured) return newBite as Bite;
+
     const { data, error } = await supabase
       .from('bites')
       .insert(newBite)
@@ -103,6 +106,7 @@ export const bitesService = {
 
   // Delete a bite
   async deleteBite(biteId: string) {
+    if (!isSupabaseConfigured) return;
     const { error } = await supabase
       .from('bites')
       .delete()
@@ -111,8 +115,8 @@ export const bitesService = {
     if (error) throw error;
   },
 
-  // Update bite
   async updateBite(biteId: string, updates: Partial<Bite>) {
+    if (!isSupabaseConfigured) return;
     const { error } = await supabase
       .from('bites')
       .update(updates)

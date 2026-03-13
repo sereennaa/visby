@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   homeCookedText: {
     fontSize: 10,
-    fontFamily: 'Quicksand-Bold',
+    fontFamily: 'Nunito-Bold',
     color: colors.success.emerald,
   },
   info: {
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   },
   recipeText: {
     fontSize: 11,
-    fontFamily: 'Quicksand-Medium',
+    fontFamily: 'Nunito-Medium',
     color: colors.calm.ocean,
   },
   // Compact styles
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   compactName: {
-    fontFamily: 'Fredoka-Medium',
+    fontFamily: 'Baloo2-Medium',
   },
   // Grid styles
   gridItem: {

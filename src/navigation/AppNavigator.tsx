@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
   },
   tabBarLabel: {
-    fontFamily: 'Quicksand-Medium',
+    fontFamily: 'Nunito-Medium',
     fontSize: 10,
     marginTop: 2,
     letterSpacing: 0.3,

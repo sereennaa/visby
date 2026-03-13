@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontSize: 10,
-    fontFamily: 'Quicksand-Bold',
+    fontFamily: 'Nunito-Bold',
     color: colors.text.muted,
   },
   countTextSelected: {

@@ -1,11 +1,12 @@
-// Stamps Service - Location-based collectibles
-import { supabase } from '../config/supabase';
+import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { Stamp, StampType, LocationData } from '../types';
 import { AURA_REWARDS, STAMP_TYPES_INFO } from '../config/constants';
 
 export const stampsService = {
   // Get all stamps for a user
   async getUserStamps(userId: string): Promise<Stamp[]> {
+    if (!isSupabaseConfigured) return [];
+
     const { data, error } = await supabase
       .from('stamps')
       .select('*')
@@ -25,7 +26,7 @@ export const stampsService = {
     photoUrl?: string,
     notes?: string
   ): Promise<Stamp> {
-    const newStamp: Partial<Stamp> = {
+    const newStamp: Stamp = {
       id: `stamp_${Date.now()}`,
       userId,
       type,
@@ -42,7 +43,9 @@ export const stampsService = {
       isFastTravel: false,
       isPublic: true,
       likes: 0,
-    };
+    } as Stamp;
+
+    if (!isSupabaseConfigured) return newStamp;
 
     const { data, error } = await supabase
       .from('stamps')
@@ -65,7 +68,7 @@ export const stampsService = {
     country: string,
     auraCost: number
   ): Promise<Stamp> {
-    const newStamp: Partial<Stamp> = {
+    const newStamp: Stamp = {
       id: `stamp_${Date.now()}`,
       userId,
       type,
@@ -81,7 +84,9 @@ export const stampsService = {
       auraSpent: auraCost,
       isPublic: false,
       likes: 0,
-    };
+    } as Stamp;
+
+    if (!isSupabaseConfigured) return newStamp;
 
     const { data, error } = await supabase
       .from('stamps')
@@ -137,6 +142,7 @@ export const stampsService = {
 
   // Delete a stamp
   async deleteStamp(stampId: string) {
+    if (!isSupabaseConfigured) return;
     const { error } = await supabase
       .from('stamps')
       .delete()
@@ -145,8 +151,8 @@ export const stampsService = {
     if (error) throw error;
   },
 
-  // Update stamp notes/photo
   async updateStamp(stampId: string, updates: Partial<Stamp>) {
+    if (!isSupabaseConfigured) return;
     const { error } = await supabase
       .from('stamps')
       .update(updates)

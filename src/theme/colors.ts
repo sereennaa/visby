@@ -1,89 +1,76 @@
-// Visby Color Palette
-// "wanderlust, sunshine, fresh air, golden hour, moonlight, safe, hopeful, magical"
-
 export const colors = {
-  // Primary Colors
   primary: {
-    wisteria: '#C7B8EA',
-    wisteriaLight: '#E1D8F5',
-    wisteriaDark: '#9B89D0',
-    wisteriaFaded: '#EDE8F7',
+    wisteria: '#B8A5E0',
+    wisteriaLight: '#DDD4F2',
+    wisteriaDark: '#8B6FC0',
+    wisteriaFaded: '#F0ECF9',
   },
 
-  // Success / Positive
   success: {
     honeydew: '#DFF5E1',
     honeydewDark: '#A8E6A3',
     mint: '#B8F0BC',
-    emerald: '#5CB85C',
+    emerald: '#48B048',
   },
 
-  // Navigation / Calm
   calm: {
-    sky: '#CFE9F7',
-    skyLight: '#E8F4FB',
-    skyDark: '#A3D4F0',
-    ocean: '#7FBDE8',
+    sky: '#C8E4F8',
+    skyLight: '#E6F2FC',
+    skyDark: '#90C8EE',
+    ocean: '#6BB0E0',
   },
 
-  // Base / Neutral
   base: {
-    cream: '#FAF9F6',
-    parchment: '#F5F3EE',
+    cream: '#FDFBF8',
+    parchment: '#F7F4EF',
     ivory: '#FFFEF8',
     warmWhite: '#FEFDFB',
   },
 
-  // Rewards / Highlights
   reward: {
-    peach: '#FFD8A8',
-    peachLight: '#FFEBCF',
-    peachDark: '#FFC780',
+    peach: '#FFD1A0',
+    peachLight: '#FFEAD0',
+    peachDark: '#FFC070',
     gold: '#FFD700',
     goldSoft: '#FFE57F',
     amber: '#FFBF00',
-    coral: '#FF9F80',
+    coral: '#FF9080',
   },
 
-  // Additional Accent Colors
   accent: {
-    coral: '#FF9F80',
-    lavender: '#E6E6FA',
-    blush: '#FFE4E1',
-    seafoam: '#C4EDD8',
-    buttercream: '#FFFACD',
-    rose: '#FFC8DD',
-    lilac: '#D4A5D8',
+    coral: '#FF9080',
+    lavender: '#E6E0FA',
+    blush: '#FFE0DE',
+    seafoam: '#C0EDDA',
+    buttercream: '#FFF8C8',
+    rose: '#FFC4D8',
+    lilac: '#D4A0D8',
   },
 
-  // Text Colors
   text: {
-    primary: '#3D3D3D',
-    secondary: '#6B6B6B',
-    muted: '#9B9B9B',
-    light: '#CACACA',
+    primary: '#2D2D3A',
+    secondary: '#6B6B80',
+    muted: '#9898AC',
+    light: '#C8C8D4',
     inverse: '#FFFFFF',
   },
 
-  // Shadow & Overlay
   shadow: {
-    light: 'rgba(0, 0, 0, 0.05)',
-    medium: 'rgba(0, 0, 0, 0.1)',
-    strong: 'rgba(0, 0, 0, 0.15)',
-    colored: 'rgba(199, 184, 234, 0.3)',
+    light: 'rgba(0, 0, 0, 0.04)',
+    medium: 'rgba(0, 0, 0, 0.08)',
+    strong: 'rgba(0, 0, 0, 0.12)',
+    colored: 'rgba(184, 165, 224, 0.25)',
   },
 
-  // Status Colors
   status: {
-    error: '#FF6B6B',
-    errorLight: '#FFE0E0',
-    warning: '#FFB74D',
-    warningLight: '#FFF3E0',
-    info: '#64B5F6',
-    infoLight: '#E3F2FD',
+    error: '#F06060',
+    errorLight: '#FFF0F0',
+    warning: '#FFAA40',
+    warningLight: '#FFF6E8',
+    info: '#60A8F0',
+    infoLight: '#EDF4FF',
   },
 
-  // Visby Avatar Colors
   visby: {
     skin: {
       light: '#FFDAB9',
@@ -116,17 +103,15 @@ export const colors = {
     },
   },
 
-  // Magic / Whimsy
   magic: {
-    aurora: '#C7B8EA',
-    stardust: 'rgba(255, 215, 0, 0.2)',
-    moonbeam: 'rgba(199, 184, 234, 0.15)',
-    twilight: '#2D1B69',
-    nebula: '#1A1035',
-    shimmer: 'rgba(255, 255, 255, 0.15)',
+    aurora: '#B8A5E0',
+    stardust: 'rgba(255, 215, 0, 0.18)',
+    moonbeam: 'rgba(184, 165, 224, 0.12)',
+    twilight: '#2A1860',
+    nebula: '#180E30',
+    shimmer: 'rgba(255, 255, 255, 0.12)',
   },
 
-  // Transparent
   transparent: 'transparent',
 };
 

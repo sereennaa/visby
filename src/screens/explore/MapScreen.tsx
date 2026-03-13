@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   locationName: {
-    fontFamily: 'Fredoka-Medium',
+    fontFamily: 'Baloo2-Medium',
     flex: 1,
   },
   collectedBadge: {
