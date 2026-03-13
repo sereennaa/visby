@@ -43,6 +43,23 @@ const SKIN_TONES = ['#FFDAB9', '#F5C8A0', '#E8B89D', '#D4A574', '#A67C52', '#8B5
 const HAIR_COLORS = ['#F7E07D', '#E8C55A', '#8B4513', '#A0522D', '#2F2F2F', '#D75C37', '#9B6FA6', '#6B9BC3', '#FFB6C1'];
 const EYE_COLORS = ['#4A90D9', '#6B9B6B', '#8B4513', '#2F2F2F', '#9B6FA6', '#40E0D0'];
 
+const HAIR_STYLES: { id: string; label: string; emoji: string }[] = [
+  { id: 'default', label: 'Viking', emoji: '⚔️' },
+  { id: 'short', label: 'Short', emoji: '✂️' },
+  { id: 'long', label: 'Long', emoji: '💇' },
+  { id: 'curly', label: 'Curly', emoji: '🌀' },
+  { id: 'braids', label: 'Braids', emoji: '🪢' },
+  { id: 'bun', label: 'Bun', emoji: '🍡' },
+];
+
+const EYE_SHAPES: { id: string; label: string; emoji: string }[] = [
+  { id: 'round', label: 'Round', emoji: '⭕' },
+  { id: 'almond', label: 'Almond', emoji: '🌙' },
+  { id: 'big', label: 'Big', emoji: '👀' },
+  { id: 'sleepy', label: 'Sleepy', emoji: '😌' },
+  { id: 'sparkle', label: 'Sparkle', emoji: '✨' },
+];
+
 const WARDROBE_TABS: { type: CosmeticType; label: string; emoji: string }[] = [
   { type: 'hat', label: 'Hats', emoji: '🎩' },
   { type: 'outfit', label: 'Outfits', emoji: '👘' },
@@ -280,12 +297,50 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
           </Card>
 
           <Card style={styles.section}>
+            <Text variant="h3" style={styles.sectionTitle}>Hair Style</Text>
+            <View style={styles.styleRow}>
+              {HAIR_STYLES.map((style) => (
+                <TouchableOpacity
+                  key={style.id}
+                  onPress={() => updateVisbyAppearance({ hairStyle: style.id })}
+                  style={[
+                    styles.styleButton,
+                    appearance.hairStyle === style.id && styles.styleButtonSelected,
+                  ]}
+                >
+                  <Text style={styles.styleEmoji}>{style.emoji}</Text>
+                  <Caption>{style.label}</Caption>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card>
+
+          <Card style={styles.section}>
             <Text variant="h3" style={styles.sectionTitle}>Eye Color</Text>
             {renderColorSwatches(
               EYE_COLORS,
               appearance.eyeColor,
               (color) => updateVisbyAppearance({ eyeColor: color }),
             )}
+          </Card>
+
+          <Card style={styles.section}>
+            <Text variant="h3" style={styles.sectionTitle}>Eye Shape</Text>
+            <View style={styles.styleRow}>
+              {EYE_SHAPES.map((shape) => (
+                <TouchableOpacity
+                  key={shape.id}
+                  onPress={() => updateVisbyAppearance({ eyeShape: shape.id })}
+                  style={[
+                    styles.styleButton,
+                    appearance.eyeShape === shape.id && styles.styleButtonSelected,
+                  ]}
+                >
+                  <Text style={styles.styleEmoji}>{shape.emoji}</Text>
+                  <Caption>{shape.label}</Caption>
+                </TouchableOpacity>
+              ))}
+            </View>
           </Card>
 
           {/* Quick links */}
@@ -388,6 +443,14 @@ const styles = StyleSheet.create({
   swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   swatch: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: colors.transparent },
   swatchSelected: { borderColor: colors.primary.wisteriaDark, borderWidth: 3 },
+  styleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  styleButton: {
+    alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: spacing.radius.lg, borderWidth: 2, borderColor: colors.transparent,
+    backgroundColor: colors.base.cream, minWidth: 64,
+  },
+  styleButtonSelected: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
+  styleEmoji: { fontSize: 22, marginBottom: 2 },
   quickLinks: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   quickLink: { flex: 1, borderRadius: spacing.radius.xl, overflow: 'hidden' },
   quickLinkGradient: { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs },

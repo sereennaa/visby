@@ -35,7 +35,7 @@ type LessonScreenProps = {
 export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route }) => {
   const { lessonId } = route.params;
   const lesson = LESSON_CONTENT[lessonId] || DEFAULT_CONTENT;
-  const { addAura } = useStore();
+  const { addAura, updateLessonProgress, completeLessonToday } = useStore();
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -46,6 +46,8 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
   const handleNext = () => {
     if (isLastSlide) {
       addAura(50);
+      updateLessonProgress(lessonId, { completed: true, completedAt: new Date() });
+      completeLessonToday();
       setIsFinished(true);
     } else {
       setCurrentSlide(prev => prev + 1);

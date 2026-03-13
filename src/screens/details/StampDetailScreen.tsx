@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -147,7 +147,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
           {/* Share Button */}
           <Button
             title="Share"
-            onPress={() => {}}
+            onPress={() => Share.share({ message: `Check out this stamp I collected at ${stamp.locationName}! 🌍✨ #Visby` })}
             variant="ghost"
             size="lg"
             icon={<Icon name="share" size={20} color={colors.primary.wisteriaDark} />}

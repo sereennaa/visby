@@ -68,7 +68,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
   };
 
   const filterTypes: (StampType | 'all')[] = [
-    'all', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'hiddenGem' as any
+    'all', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'hidden_gem'
   ];
 
   const filteredLocations = selectedType === 'all'

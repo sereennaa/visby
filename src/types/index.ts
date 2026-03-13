@@ -405,61 +405,6 @@ export interface UserLessonProgress {
 }
 
 // ===================================
-// SOCIAL
-// ===================================
-
-export interface Post {
-  id: string;
-  userId: string;
-  type: 'stamp' | 'bite' | 'badge' | 'level_up' | 'postcard';
-  referenceId: string; // Stamp, Bite, or Badge ID
-  
-  // Content
-  caption?: string;
-  imageUrl?: string;
-  
-  // Location
-  locationName?: string;
-  city?: string;
-  country?: string;
-  
-  // Engagement
-  likes: number;
-  comments: number;
-  
-  // Metadata
-  createdAt: Date;
-  isPublic: boolean;
-}
-
-export interface Comment {
-  id: string;
-  postId: string;
-  userId: string;
-  content: string;
-  createdAt: Date;
-  likes: number;
-}
-
-export interface Follow {
-  id: string;
-  followerId: string;
-  followingId: string;
-  createdAt: Date;
-}
-
-export interface Postcard {
-  id: string;
-  senderId: string;
-  recipientId: string;
-  stampId: string;
-  message: string;
-  imageUrl: string;
-  sentAt: Date;
-  isRead: boolean;
-}
-
-// ===================================
 // AURA & PROGRESSION
 // ===================================
 
@@ -570,18 +515,6 @@ export interface LocationData {
 }
 
 // ===================================
-// APP STATE
-// ===================================
-
-export interface AppState {
-  user: User | null;
-  visby: Visby | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  currentLocation: LocationData | null;
-}
-
-// ===================================
 // NAVIGATION
 // ===================================
 
@@ -613,13 +546,10 @@ export type RootStackParamList = {
   
   // Avatar
   Avatar: undefined;
-  AvatarCustomize: undefined;
-  Wardrobe: undefined;
   
   // Learning
   Learn: undefined;
   LessonCategory: { categoryId: string };
-  LessonList: { category: LessonCategory };
   Lesson: { lessonId: string };
   Quiz: undefined;
   Flashcards: undefined;
@@ -629,12 +559,6 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
   
-  // Social
-  Feed: undefined;
-  UserProfile: { userId: string };
-  PostDetail: { postId: string };
-  Postcards: undefined;
-
   // Countries & Houses (visit, buy house, walk through like Club Penguin)
   CountryWorld: undefined;
   CountryRoom: { countryId: string };

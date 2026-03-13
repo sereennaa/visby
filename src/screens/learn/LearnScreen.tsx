@@ -118,11 +118,11 @@ const SAMPLE_LESSONS: Lesson[] = [
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
-  const { user } = useStore();
+  const { user, getLessonsCompletedToday } = useStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const dailyGoal = 3;
-  const lessonsToday = 0; // This would come from store
+  const lessonsToday = getLessonsCompletedToday();
   const dailyProgress = (lessonsToday / dailyGoal) * 100;
 
   const renderCategoryCard = (category: LessonCategory) => {
@@ -161,7 +161,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
     
     return (
       <Card
-        style={[styles.lessonCard, item.locked && styles.lessonLocked]}
+        style={item.locked ? { ...styles.lessonCard, ...styles.lessonLocked } : styles.lessonCard}
         onPress={item.locked ? undefined : () => navigation.navigate('Lesson', { lessonId: item.id })}
       >
         <View style={styles.lessonContent}>
@@ -281,7 +281,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Heading level={2}>Continue Learning</Heading>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('LessonCategory', { categoryId: LESSON_CATEGORIES[0].id })}>
                 <Text variant="body" color={colors.primary.wisteriaDark}>
                   See all
                 </Text>

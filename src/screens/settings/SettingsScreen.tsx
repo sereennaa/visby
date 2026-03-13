@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   StyleSheet,
@@ -23,11 +23,7 @@ type SettingsScreenProps = {
 };
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
-  const { user, logout } = useStore();
-
-  const [notifications, setNotifications] = useState(user?.settings?.notifications ?? true);
-  const [locationTracking, setLocationTracking] = useState(user?.settings?.locationTracking ?? true);
-  const [privateProfile, setPrivateProfile] = useState(user?.settings?.privateProfile ?? false);
+  const { user, logout, settings, updateSettings } = useStore();
 
   const handleLogout = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -64,7 +60,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
       </View>
       <Text
         variant="body"
-        style={[styles.rowLabel, options?.danger && styles.dangerText]}
+        style={options?.danger ? { ...styles.rowLabel, ...styles.dangerText } : styles.rowLabel}
       >
         {label}
       </Text>
@@ -125,19 +121,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             Preferences
           </Text>
           <Card style={styles.sectionCard}>
-            {renderRow('notification', 'Notifications', () => setNotifications((v) => !v), {
+            {renderRow('notification', 'Notifications', () => updateSettings({ notifications: !settings.notifications }), {
               toggle: true,
-              toggleValue: notifications,
+              toggleValue: settings.notifications,
             })}
             <View style={styles.separator} />
-            {renderRow('location', 'Location Tracking', () => setLocationTracking((v) => !v), {
+            {renderRow('location', 'Location Tracking', () => updateSettings({ locationTracking: !settings.locationTracking }), {
               toggle: true,
-              toggleValue: locationTracking,
+              toggleValue: settings.locationTracking,
             })}
             <View style={styles.separator} />
-            {renderRow('eye', 'Private Profile', () => setPrivateProfile((v) => !v), {
+            {renderRow('eye', 'Private Profile', () => updateSettings({ privateProfile: !settings.privateProfile }), {
               toggle: true,
-              toggleValue: privateProfile,
+              toggleValue: settings.privateProfile,
             })}
           </Card>
 

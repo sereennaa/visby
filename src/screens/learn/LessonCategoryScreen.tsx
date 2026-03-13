@@ -66,8 +66,13 @@ type LessonCategoryScreenProps = {
 
 export const LessonCategoryScreen: React.FC<LessonCategoryScreenProps> = ({ navigation, route }) => {
   const { categoryId } = route.params;
+  const { lessonProgress } = useStore();
   const category = CATEGORIES[categoryId];
-  const lessons = LESSONS_BY_CATEGORY[categoryId] || [];
+  const rawLessons = LESSONS_BY_CATEGORY[categoryId] || [];
+  const lessons = rawLessons.map(l => ({
+    ...l,
+    completed: lessonProgress.some(p => p.lessonId === l.id && p.completed),
+  }));
   const completedCount = lessons.filter(l => l.completed).length;
   const progress = lessons.length > 0 ? (completedCount / lessons.length) * 100 : 0;
 
@@ -126,7 +131,7 @@ export const LessonCategoryScreen: React.FC<LessonCategoryScreenProps> = ({ navi
             {lessons.map((lesson, index) => (
               <Card
                 key={lesson.id}
-                style={[styles.lessonCard, lesson.locked && styles.lessonLocked]}
+                style={lesson.locked ? { ...styles.lessonCard, ...styles.lessonLocked } : styles.lessonCard}
                 onPress={lesson.locked ? undefined : () => navigation.navigate('Lesson', { lessonId: lesson.id })}
               >
                 <View style={styles.lessonContent}>
