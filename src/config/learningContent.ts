@@ -356,3 +356,85 @@ export const LESSON_CONTENT: Record<string, LessonData> = {
     ],
   },
 };
+
+// ─── COUNTRY-SPECIFIC QUIZ QUESTIONS (10 per country) ───
+
+export const COUNTRY_QUIZ_QUESTIONS: Record<string, QuizQuestion[]> = {
+  jp: [
+    { id: 'jp1', question: 'What is the capital of Japan?', options: ['Osaka', 'Tokyo', 'Kyoto', 'Hiroshima'], correct: 1, category: 'jp' },
+    { id: 'jp2', question: 'What do Japanese people eat with?', options: ['Forks', 'Hands', 'Chopsticks', 'Spoons'], correct: 2, category: 'jp' },
+    { id: 'jp3', question: 'What is sushi rice flavored with?', options: ['Soy sauce', 'Vinegar', 'Sugar', 'Ketchup'], correct: 1, category: 'jp' },
+    { id: 'jp4', question: 'Cherry blossom season in Japan is called...', options: ['Matsuri', 'Hanami', 'Origami', 'Tsunami'], correct: 1, category: 'jp' },
+    { id: 'jp5', question: 'Mount Fuji is a famous Japanese...', options: ['River', 'Desert', 'Volcano', 'Forest'], correct: 2, category: 'jp' },
+    { id: 'jp6', question: 'What is origami?', options: ['Cooking', 'Paper folding', 'Sword fighting', 'Painting'], correct: 1, category: 'jp' },
+    { id: 'jp7', question: 'Samurai were Japanese...', options: ['Chefs', 'Warriors', 'Farmers', 'Teachers'], correct: 1, category: 'jp' },
+    { id: 'jp8', question: 'What is the traditional Japanese robe called?', options: ['Sari', 'Kimono', 'Hanbok', 'Kilt'], correct: 1, category: 'jp' },
+    { id: 'jp9', question: 'In Japan, slurping noodles means...', options: ["You're rude", "You're enjoying them", "You're full", "You want more"], correct: 1, category: 'jp' },
+    { id: 'jp10', question: '"Kawaii" means what in Japanese?', options: ['Scary', 'Cute', 'Big', 'Fast'], correct: 1, category: 'jp' },
+  ],
+  fr: [
+    { id: 'fr1', question: 'What is the capital of France?', options: ['Lyon', 'Paris', 'Marseille', 'Nice'], correct: 1, category: 'fr' },
+    { id: 'fr2', question: 'The Eiffel Tower was built for which event?', options: ['A wedding', 'World\'s Fair 1889', 'Napoleon\'s victory', 'Christmas'], correct: 1, category: 'fr' },
+    { id: 'fr3', question: 'What is a croissant shaped like?', options: ['A star', 'A crescent moon', 'A circle', 'A triangle'], correct: 1, category: 'fr' },
+    { id: 'fr4', question: 'French people greet with kisses on the...', options: ['Forehead', 'Hand', 'Cheeks', 'Nose'], correct: 2, category: 'fr' },
+    { id: 'fr5', question: '"Merci beaucoup" means...', options: ['Good morning', 'Thank you very much', 'See you later', 'Excuse me'], correct: 1, category: 'fr' },
+    { id: 'fr6', question: 'The Louvre in Paris is a famous...', options: ['Restaurant', 'Museum', 'Park', 'Church'], correct: 1, category: 'fr' },
+    { id: 'fr7', question: 'Baguette is a type of French...', options: ['Dance', 'Song', 'Bread', 'Hat'], correct: 2, category: 'fr' },
+    { id: 'fr8', question: 'France is known for making amazing...', options: ['Sushi', 'Cheese', 'Tacos', 'Curry'], correct: 1, category: 'fr' },
+    { id: 'fr9', question: 'The French flag has how many colors?', options: ['Two', 'Three', 'Four', 'Five'], correct: 1, category: 'fr' },
+    { id: 'fr10', question: '"Au revoir" means...', options: ['Hello', 'Please', 'Goodbye', 'Sorry'], correct: 2, category: 'fr' },
+  ],
+  mx: [
+    { id: 'mx1', question: 'What is the capital of Mexico?', options: ['Cancún', 'Guadalajara', 'Mexico City', 'Monterrey'], correct: 2, category: 'mx' },
+    { id: 'mx2', question: 'Día de los Muertos celebrates...', options: ['Sports', 'Loved ones who passed', 'Birthdays', 'Harvests'], correct: 1, category: 'mx' },
+    { id: 'mx3', question: 'A taco is made with a...', options: ['Bun', 'Tortilla', 'Pita', 'Naan'], correct: 1, category: 'mx' },
+    { id: 'mx4', question: 'Piñatas are traditionally filled with...', options: ['Water', 'Sand', 'Candy', 'Rice'], correct: 2, category: 'mx' },
+    { id: 'mx5', question: 'The ancient pyramid of Chichén Itzá was built by the...', options: ['Aztecs', 'Incas', 'Maya', 'Romans'], correct: 2, category: 'mx' },
+    { id: 'mx6', question: 'Mexico\'s currency is the...', options: ['Dollar', 'Euro', 'Peso', 'Yen'], correct: 2, category: 'mx' },
+    { id: 'mx7', question: 'What instrument is iconic in Mexican mariachi music?', options: ['Piano', 'Trumpet', 'Flute', 'Drums'], correct: 1, category: 'mx' },
+    { id: 'mx8', question: 'Guacamole is made from...', options: ['Tomatoes', 'Avocados', 'Peppers', 'Beans'], correct: 1, category: 'mx' },
+    { id: 'mx9', question: '"Hola, amigo" means...', options: ['Goodbye friend', 'Hello friend', 'Thank you friend', 'Sorry friend'], correct: 1, category: 'mx' },
+    { id: 'mx10', question: 'Mexico is bordered by which ocean on the west?', options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], correct: 3, category: 'mx' },
+  ],
+  it: [
+    { id: 'it1', question: 'What is the capital of Italy?', options: ['Milan', 'Venice', 'Rome', 'Florence'], correct: 2, category: 'it' },
+    { id: 'it2', question: 'The Colosseum was used for...', options: ['Shopping', 'Gladiator games', 'School', 'Farming'], correct: 1, category: 'it' },
+    { id: 'it3', question: 'Pizza originated in which Italian city?', options: ['Rome', 'Milan', 'Naples', 'Venice'], correct: 2, category: 'it' },
+    { id: 'it4', question: 'Venice is famous for its...', options: ['Mountains', 'Canals', 'Deserts', 'Forests'], correct: 1, category: 'it' },
+    { id: 'it5', question: 'Gelato is the Italian word for...', options: ['Cake', 'Cookie', 'Ice cream', 'Candy'], correct: 2, category: 'it' },
+    { id: 'it6', question: 'The Leaning Tower is in which city?', options: ['Rome', 'Pisa', 'Venice', 'Milan'], correct: 1, category: 'it' },
+    { id: 'it7', question: '"Ciao bella" means...', options: ['Good night', 'Hello beautiful', 'Thank you', 'Excuse me'], correct: 1, category: 'it' },
+    { id: 'it8', question: 'Italy is shaped like a...', options: ['Star', 'Boot', 'Heart', 'Fish'], correct: 1, category: 'it' },
+    { id: 'it9', question: 'Leonardo da Vinci painted the...', options: ['Starry Night', 'Mona Lisa', 'The Scream', 'Girl with a Pearl'], correct: 1, category: 'it' },
+    { id: 'it10', question: 'What sport is Italy crazy about?', options: ['Baseball', 'Cricket', 'Football (soccer)', 'Hockey'], correct: 2, category: 'it' },
+  ],
+  gb: [
+    { id: 'gb1', question: 'What is the capital of the United Kingdom?', options: ['Edinburgh', 'London', 'Cardiff', 'Dublin'], correct: 1, category: 'gb' },
+    { id: 'gb2', question: 'Big Ben is actually the name of the...', options: ['Tower', 'Bell', 'Clock', 'Bridge'], correct: 1, category: 'gb' },
+    { id: 'gb3', question: 'Afternoon tea is a British tradition of drinking tea with...', options: ['Breakfast', 'Sandwiches & cakes', 'Dinner', 'Soup'], correct: 1, category: 'gb' },
+    { id: 'gb4', question: 'The UK\'s leader lives at 10...', options: ['Baker Street', 'Downing Street', 'Oxford Street', 'Abbey Road'], correct: 1, category: 'gb' },
+    { id: 'gb5', question: 'Which castle is home to the King?', options: ['Edinburgh Castle', 'Windsor Castle', 'Tower of London', 'Warwick Castle'], correct: 1, category: 'gb' },
+    { id: 'gb6', question: '"Brilliant" in British slang means...', options: ['Shiny', 'Awesome/great', 'Terrible', 'Boring'], correct: 1, category: 'gb' },
+    { id: 'gb7', question: 'Fish and chips is a classic British...', options: ['Breakfast', 'Snack', 'Meal', 'Dessert'], correct: 2, category: 'gb' },
+    { id: 'gb8', question: 'Harry Potter was written by a British author from...', options: ['London', 'Edinburgh', 'Manchester', 'Liverpool'], correct: 1, category: 'gb' },
+    { id: 'gb9', question: 'The UK drives on which side of the road?', options: ['Right', 'Left', 'Middle', 'It changes'], correct: 1, category: 'gb' },
+    { id: 'gb10', question: 'Stonehenge is a mysterious circle of...', options: ['Trees', 'Stones', 'Water', 'Sand'], correct: 1, category: 'gb' },
+  ],
+  br: [
+    { id: 'br1', question: 'What is the capital of Brazil?', options: ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador'], correct: 2, category: 'br' },
+    { id: 'br2', question: 'Brazil\'s Carnival is famous for...', options: ['Snow', 'Samba & parades', 'Silence', 'Cooking'], correct: 1, category: 'br' },
+    { id: 'br3', question: 'The Amazon Rainforest is the world\'s...', options: ['Smallest', 'Driest', 'Largest', 'Coldest'], correct: 2, category: 'br' },
+    { id: 'br4', question: 'What sport is Brazil most famous for?', options: ['Cricket', 'Football (soccer)', 'Baseball', 'Tennis'], correct: 1, category: 'br' },
+    { id: 'br5', question: 'Christ the Redeemer statue is in...', options: ['São Paulo', 'Brasília', 'Rio de Janeiro', 'Manaus'], correct: 2, category: 'br' },
+    { id: 'br6', question: 'What language do Brazilians speak?', options: ['Spanish', 'Portuguese', 'English', 'French'], correct: 1, category: 'br' },
+    { id: 'br7', question: 'Brazilian açaí bowls are made from...', options: ['Oranges', 'Berries', 'Mangos', 'Bananas'], correct: 1, category: 'br' },
+    { id: 'br8', question: 'The Amazon River is the world\'s...', options: ['Shortest', 'Second longest', 'Widest by volume', 'Cleanest'], correct: 2, category: 'br' },
+    { id: 'br9', question: '"Obrigado" means what in Portuguese?', options: ['Hello', 'Sorry', 'Thank you', 'Goodbye'], correct: 2, category: 'br' },
+    { id: 'br10', question: 'Brazil has the most species of which animal?', options: ['Dogs', 'Birds', 'Fish', 'Cats'], correct: 1, category: 'br' },
+  ],
+};
+
+export function getCountryQuiz(countryId: string, count: number = 8): QuizQuestion[] {
+  const pool = COUNTRY_QUIZ_QUESTIONS[countryId] || [];
+  return shuffleArray(pool).slice(0, count);
+}

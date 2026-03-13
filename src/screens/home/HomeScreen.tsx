@@ -142,13 +142,17 @@ const MagicActionCard: React.FC<{
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const headerOpacity = useSharedValue(0);
   const visbyScale = useSharedValue(0.7);
   const visbyOpacity = useSharedValue(0);
   const visbyFloat = useSharedValue(0);
+
+  useEffect(() => {
+    dailyCheckIn();
+  }, []);
 
   useEffect(() => {
     headerOpacity.value = withTiming(1, { duration: 500 });
@@ -376,6 +380,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   currentStreak={user.currentStreak}
                   targetStreak={7}
                 />
+                <View style={styles.streakMultiplierRow}>
+                  <Text style={styles.streakMultiplierLabel}>Aura Multiplier</Text>
+                  <View style={styles.streakMultiplierBadge}>
+                    <Text style={styles.streakMultiplierValue}>{getStreakMultiplier().toFixed(1)}x</Text>
+                  </View>
+                </View>
               </LinearGradient>
             </View>
           )}
@@ -535,6 +545,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   streakGradient: { padding: spacing.lg, borderRadius: spacing.radius.xl },
+  streakMultiplierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
+  streakMultiplierLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: '#D4760A' },
+  streakMultiplierBadge: { backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
+  streakMultiplierValue: { fontFamily: 'Baloo2-Bold', fontSize: 14, color: '#7A5A00' },
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',

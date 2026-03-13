@@ -1,6 +1,7 @@
 // Zustand Store - Global State Management
 import { create } from 'zustand';
 import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse } from '../types';
+import { LEVEL_THRESHOLDS } from '../config/constants';
 
 interface AppStore {
   // Auth State
@@ -47,6 +48,9 @@ interface AppStore {
   addAura: (amount: number) => void;
   spendAura: (amount: number) => boolean;
   incrementStreak: () => void;
+  dailyCheckIn: () => void;
+  getStreakMultiplier: () => number;
+  incrementCountriesVisited: () => void;
 
   // Actions - Houses
   setUserHouses: (houses: UserHouse[]) => void;
@@ -124,11 +128,18 @@ export const useStore = create<AppStore>((set, get) => ({
   addAura: (amount) => {
     const { user } = get();
     if (user) {
+      const multiplier = Math.min(3.0, 1.0 + (user.currentStreak * 0.1));
+      const boosted = Math.round(amount * multiplier);
+      const newTotalAura = user.totalAuraEarned + boosted;
+      const newLevel = [...LEVEL_THRESHOLDS]
+        .reverse()
+        .find((t) => newTotalAura >= t.aura)?.level ?? 1;
       set({
         user: {
           ...user,
-          aura: user.aura + amount,
-          totalAuraEarned: user.totalAuraEarned + amount,
+          aura: user.aura + boosted,
+          totalAuraEarned: newTotalAura,
+          level: newLevel,
         },
       });
     }
@@ -154,6 +165,65 @@ export const useStore = create<AppStore>((set, get) => ({
           currentStreak: newStreak,
           longestStreak: Math.max(newStreak, user.longestStreak),
           lastCheckIn: new Date(),
+        },
+      });
+    }
+  },
+  dailyCheckIn: () => {
+    const { user } = get();
+    if (!user) return;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (user.lastCheckIn) {
+      const last = new Date(user.lastCheckIn);
+      const lastDay = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+      const diffDays = Math.round((today.getTime() - lastDay.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return;
+
+      let newStreak: number;
+      if (diffDays === 1) {
+        newStreak = user.currentStreak + 1;
+      } else {
+        newStreak = 1;
+      }
+
+      set({
+        user: {
+          ...user,
+          currentStreak: newStreak,
+          longestStreak: Math.max(newStreak, user.longestStreak),
+          lastCheckIn: now,
+          aura: user.aura + 10,
+          totalAuraEarned: user.totalAuraEarned + 10,
+        },
+      });
+    } else {
+      set({
+        user: {
+          ...user,
+          currentStreak: 1,
+          longestStreak: Math.max(1, user.longestStreak),
+          lastCheckIn: now,
+          aura: user.aura + 10,
+          totalAuraEarned: user.totalAuraEarned + 10,
+        },
+      });
+    }
+  },
+  getStreakMultiplier: () => {
+    const { user } = get();
+    return Math.min(3.0, 1.0 + ((user?.currentStreak || 0) * 0.1));
+  },
+  incrementCountriesVisited: () => {
+    const { user } = get();
+    if (user) {
+      set({
+        user: {
+          ...user,
+          countriesVisited: user.countriesVisited + 1,
         },
       });
     }
