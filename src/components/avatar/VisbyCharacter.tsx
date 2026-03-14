@@ -42,6 +42,7 @@ export interface VisbyCharacterProps {
   mood?: 'happy' | 'excited' | 'sleepy' | 'surprised' | 'thinking' | 'curious' | 'proud' | 'adventurous' | 'cozy' | 'hungry' | 'bored' | 'confused' | 'sick';
   size?: number;
   animated?: boolean;
+  stage?: 'egg' | 'baby' | 'kid' | 'teen' | 'adult';
 }
 
 const defaultAppearance: VisbyAppearance = {
@@ -331,6 +332,7 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
   mood = 'happy',
   size = 150,
   animated = true,
+  stage = 'kid',
 }) => {
   const bounce = useSharedValue(0);
 
@@ -597,127 +599,259 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
   const hasCustomOutfit = equipped?.outfit && equipped.outfit !== 'default';
   const hasHat = !!equipped?.hat;
 
+  const bodyOffsetY = stage === 'teen' ? 8 : stage === 'adult' ? 15 : 0;
+
+  const renderEgg = () => (
+    <G>
+      <Defs>
+        <LinearGradient id="eggGradient" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor="#FFF8E7" />
+          <Stop offset="50%" stopColor="#F5E6C8" />
+          <Stop offset="100%" stopColor="#E8D4A0" />
+        </LinearGradient>
+        <RadialGradient id="eggGlow" cx="50%" cy="40%" r="60%">
+          <Stop offset="0%" stopColor="#FFFDF0" stopOpacity={0.7} />
+          <Stop offset="100%" stopColor="#F5E6C8" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Ellipse cx={CX} cy={143} rx={24} ry={4} fill="rgba(0,0,0,0.06)" />
+      <Ellipse cx={CX} cy={BY + 10} rx={35} ry={45} fill="url(#eggGradient)" />
+      <Ellipse cx={CX} cy={BY + 10} rx={35} ry={45} fill="url(#eggGlow)" />
+      <Path d="M 55 72 L 60 65 L 68 70" stroke="#D8C8A0" strokeWidth={1.5} fill="none" />
+      <Path d="M 82 68 L 88 62 L 92 69" stroke="#D8C8A0" strokeWidth={1.2} fill="none" />
+      <Path d="M 62 80 L 66 76 L 70 80" stroke="#D8C8A0" strokeWidth={1} fill="none" opacity={0.6} />
+      <Circle cx={65} cy={68} r={3} fill={eye} />
+      <Circle cx={85} cy={68} r={3} fill={eye} />
+      <Circle cx={64} cy={67} r={1.2} fill="#FFFFFF" opacity={0.8} />
+      <Circle cx={84} cy={67} r={1.2} fill="#FFFFFF" opacity={0.8} />
+    </G>
+  );
+
+  const renderBaby = () => (
+    <G>
+      <Defs>
+        <RadialGradient id="bodyG" cx="40%" cy="35%" r="62%">
+          <Stop offset="0%" stopColor={skinL} />
+          <Stop offset="85%" stopColor={skin} />
+          <Stop offset="100%" stopColor={skinD} />
+        </RadialGradient>
+        <RadialGradient id="blL" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
+          <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="blR" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
+          <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Ellipse cx={CX} cy={143} rx={22} ry={4} fill="rgba(0,0,0,0.06)" />
+      {/* Smaller round body base (no legs) */}
+      <Ellipse cx={CX} cy={115} rx={28} ry={22} fill="url(#bodyG)" />
+      {/* Bigger head */}
+      <G transform="translate(75, 60) scale(1.2) translate(-75, -60)">
+        <Ellipse cx={CX} cy={60} rx={38} ry={40} fill="url(#bodyG)" />
+        {/* Ears */}
+        <Circle cx={36} cy={52} r={7} fill={skin} />
+        <Circle cx={36} cy={52} r={4.5} fill={skinL} />
+        <Circle cx={114} cy={52} r={7} fill={skin} />
+        <Circle cx={114} cy={52} r={4.5} fill={skinL} />
+        {/* Hair */}
+        {renderHairStyle(appearance.hairStyle || 'default', hair, hairL)}
+        {/* Blush */}
+        <Circle cx={40} cy={68} r={10} fill="url(#blL)" />
+        <Circle cx={110} cy={68} r={10} fill="url(#blR)" />
+        {/* Bigger eyes */}
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <G key={i}>
+              <Circle cx={cx} cy={EY} r={ER + 2} fill="#FFFFFF" />
+              <Circle cx={cx} cy={EY + 1.5} r={ER - 2} fill={eye} />
+              <Circle cx={cx - 4} cy={EY - 5} r={5.5} fill="#FFFFFF" />
+              <Circle cx={cx + 3.5} cy={EY + 4} r={3} fill="#FFFFFF" opacity={0.55} />
+            </G>
+          ))}
+        </G>
+        {renderMouth()}
+      </G>
+      {/* Stub arms */}
+      <Ellipse cx={38} cy={100} rx={9} ry={6.5} fill={skin} />
+      <Ellipse cx={38} cy={99} rx={7} ry={5} fill={skinL} />
+      <Ellipse cx={112} cy={100} rx={9} ry={6.5} fill={skin} />
+      <Ellipse cx={112} cy={99} rx={7} ry={5} fill={skinL} />
+      {/* Baby bonnet */}
+      <G transform="translate(75, 60) scale(1.2) translate(-75, -60)">
+        <Path d="M 42 42 Q 50 18 75 14 Q 100 18 108 42" stroke="#B8D8F0" strokeWidth={8} fill="none" strokeLinecap="round" />
+        <Path d="M 44 40 Q 52 20 75 16 Q 98 20 106 40" stroke="#D0E8F8" strokeWidth={4} fill="none" strokeLinecap="round" />
+        <Circle cx={CX} cy={14} r={5} fill="#B8D8F0" />
+        <Circle cx={CX} cy={13} r={3} fill="#D0E8F8" />
+      </G>
+    </G>
+  );
+
+  const renderFullCharacter = () => (
+    <G>
+      <Defs>
+        <RadialGradient id="bodyG" cx="40%" cy="35%" r="62%">
+          <Stop offset="0%" stopColor={skinL} />
+          <Stop offset="85%" stopColor={skin} />
+          <Stop offset="100%" stopColor={skinD} />
+        </RadialGradient>
+        <RadialGradient id="blL" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
+          <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="blR" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
+          <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="sickTint" cx="50%" cy="40%" r="55%">
+          <Stop offset="0%" stopColor="#90B870" stopOpacity={0.35} />
+          <Stop offset="100%" stopColor="#90B870" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="sickBlush" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#A0C880" stopOpacity={0.5} />
+          <Stop offset="100%" stopColor="#A0C880" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+
+      {/* Adult sparkle/glow effect */}
+      {stage === 'adult' && (
+        <G>
+          <Path d="M 20 25 L 22 20 L 24 25 L 29 27 L 24 29 L 22 34 L 20 29 L 15 27 Z" fill="#FFD700" opacity={0.7} />
+          <Path d="M 125 18 L 127 13 L 129 18 L 134 20 L 129 22 L 127 27 L 125 22 L 120 20 Z" fill="#FFD700" opacity={0.6} />
+          <Path d="M 130 55 L 131.5 51 L 133 55 L 137 56.5 L 133 58 L 131.5 62 L 130 58 L 126 56.5 Z" fill="#FFD700" opacity={0.5} />
+          <Path d="M 12 60 L 13.5 56 L 15 60 L 19 61.5 L 15 63 L 13.5 67 L 12 63 L 8 61.5 Z" fill="#FFD700" opacity={0.5} />
+          <Path d="M 22 105 L 23 102 L 24 105 L 27 106 L 24 107 L 23 110 L 22 107 L 19 106 Z" fill="#FFD700" opacity={0.4} />
+          <Path d="M 128 95 L 129 92 L 130 95 L 133 96 L 130 97 L 129 100 L 128 97 L 125 96 Z" fill="#FFD700" opacity={0.4} />
+        </G>
+      )}
+
+      {/* Ground shadow */}
+      <Ellipse cx={CX} cy={143} rx={30} ry={5} fill="rgba(0,0,0,0.06)" />
+
+      {/* Tiny feet */}
+      <Ellipse cx={60} cy={136} rx={9} ry={5.5} fill={skinD} />
+      <Ellipse cx={90} cy={136} rx={9} ry={5.5} fill={skinD} />
+      <Ellipse cx={60} cy={135} rx={7.5} ry={4.5} fill={skin} />
+      <Ellipse cx={90} cy={135} rx={7.5} ry={4.5} fill={skin} />
+
+      {/* Main body — taller for teen/adult */}
+      <Ellipse cx={CX} cy={BY + bodyOffsetY / 2} rx={stage === 'adult' ? 47 : 44} ry={52 + bodyOffsetY / 2} fill="url(#bodyG)" />
+
+      {/* Stub arms — broader for adult */}
+      <Ellipse cx={stage === 'adult' ? 25 : 28} cy={86 + bodyOffsetY / 3} rx={stage === 'adult' ? 13 : 11} ry={stage === 'adult' ? 9 : 8} fill={skin} />
+      <Ellipse cx={stage === 'adult' ? 25 : 28} cy={85 + bodyOffsetY / 3} rx={stage === 'adult' ? 11 : 9} ry={stage === 'adult' ? 7.5 : 6.5} fill={skinL} />
+      <Ellipse cx={stage === 'adult' ? 125 : 122} cy={86 + bodyOffsetY / 3} rx={stage === 'adult' ? 13 : 11} ry={stage === 'adult' ? 9 : 8} fill={skin} />
+      <Ellipse cx={stage === 'adult' ? 125 : 122} cy={85 + bodyOffsetY / 3} rx={stage === 'adult' ? 11 : 9} ry={stage === 'adult' ? 7.5 : 6.5} fill={skinL} />
+
+      {/* Cape / outfit */}
+      {!hasCustomOutfit && (
+        <G>
+          <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#F07080" />
+          <Path d="M 38 96 Q 38 92 75 90 Q 112 92 112 96" fill="none" stroke="#FF8894" strokeWidth={0.8} opacity={0.5} />
+          <Rect x={36} y={110} width={78} height={5.5} rx={2.75} fill="#8B5E3C" />
+          <Rect x={36} y={111} width={78} height={2.5} rx={1.25} fill="#A07048" opacity={0.35} />
+          <Circle cx={CX} cy={113} r={4} fill="#FFD700" />
+          <Circle cx={CX} cy={112.5} r={2.5} fill="#FFF4B0" />
+          <Circle cx={74.5} cy={112} r={1} fill="#FFFFFF" opacity={0.7} />
+        </G>
+      )}
+
+      {/* Custom outfits */}
+      {hasCustomOutfit && equipped?.outfit === 'kimono' && (
+        <G>
+          <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#C41E3A" />
+          <Rect x={58} y={108} width={34} height={4.5} rx={2.25} fill="#FFD700" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'hanbok' && (
+        <G>
+          <Rect x={52} y={92} width={46} height={12} rx={6} fill="#FFFFFF" />
+          <Path d="M 38 104 Q 38 98 75 104 Q 112 98 112 104 L 116 130 Q 75 138 34 130 Z" fill="#E8B4C8" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'dashiki' && (
+        <G>
+          <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#FF8C00" />
+          <Circle cx={CX} cy={110} r={7} fill="none" stroke="#DC143C" strokeWidth={1.5} />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'poncho' && (
+        <G>
+          <Path d="M 28 108 L 75 82 L 122 108 Z" fill="#E8C85A" />
+          <Path d="M 34 106 L 75 86 L 116 106" fill="none" stroke="#DC143C" strokeWidth={2.5} />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'sari' && (
+        <G>
+          <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#FF6347" />
+          <Path d="M 48 102 Q 75 94 102 102" stroke="#FFD700" strokeWidth={2} fill="none" />
+        </G>
+      )}
+
+      {/* Ears */}
+      <Circle cx={32} cy={56} r={8} fill={skin} />
+      <Circle cx={32} cy={56} r={5} fill={skinL} />
+      <Circle cx={32} cy={56} r={3} fill="#FFACA0" opacity={0.3} />
+      <Circle cx={118} cy={56} r={8} fill={skin} />
+      <Circle cx={118} cy={56} r={5} fill={skinL} />
+      <Circle cx={118} cy={56} r={3} fill="#FFACA0" opacity={0.3} />
+
+      {/* Hair */}
+      {renderHairStyle(appearance.hairStyle || 'default', hair, hairL)}
+
+      {/* Teen extra hair strands */}
+      {(stage === 'teen' || stage === 'adult') && (
+        <G>
+          <Path d="M 48 39 Q 52 32 50 26" stroke={hair} strokeWidth={4} fill="none" strokeLinecap="round" />
+          <Path d="M 102 39 Q 98 32 100 26" stroke={hair} strokeWidth={4} fill="none" strokeLinecap="round" />
+          <Path d="M 65 36 Q 63 28 66 22" stroke={hair} strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 85 36 Q 87 28 84 22" stroke={hair} strokeWidth={3} fill="none" strokeLinecap="round" />
+        </G>
+      )}
+
+      {/* Hat (rendered on top of hair) */}
+      {renderHat(equipped?.hat, hair, hairL)}
+
+      {/* Sick overlay */}
+      {mood === 'sick' && (
+        <Ellipse cx={CX} cy={52} rx={32} ry={20} fill="url(#sickTint)" />
+      )}
+
+      {/* Blush cheeks */}
+      <Circle cx={36} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blL)'} />
+      <Circle cx={114} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blR)'} />
+
+      {/* Eyes */}
+      {renderEyes()}
+
+      {/* Mouth — bigger smile for adult */}
+      {stage === 'adult' ? (
+        <G>
+          <Path d="M 65 78 Q 75 90 85 78" fill="#D07060" />
+          <Path d="M 67 78 Q 75 76 83 78" fill="#FFFFFF" />
+        </G>
+      ) : renderMouth()}
+
+      {/* Teen angular jawline accents */}
+      {stage === 'teen' && (
+        <G>
+          <Path d="M 38 85 Q 42 95 50 100" stroke={skinD} strokeWidth={1} fill="none" opacity={0.3} />
+          <Path d="M 112 85 Q 108 95 100 100" stroke={skinD} strokeWidth={1} fill="none" opacity={0.3} />
+        </G>
+      )}
+
+      {/* Accessory */}
+      {renderAccessory(equipped?.accessory)}
+    </G>
+  );
+
   return (
     <Animated.View style={[styles.container, { width: safeSize, height: safeSize }, animatedStyle]}>
       <Svg width={safeSize} height={safeSize} viewBox="0 0 150 150">
-        <Defs>
-          <RadialGradient id="bodyG" cx="40%" cy="35%" r="62%">
-            <Stop offset="0%" stopColor={skinL} />
-            <Stop offset="85%" stopColor={skin} />
-            <Stop offset="100%" stopColor={skinD} />
-          </RadialGradient>
-          <RadialGradient id="blL" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
-            <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="blR" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
-            <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="sickTint" cx="50%" cy="40%" r="55%">
-            <Stop offset="0%" stopColor="#90B870" stopOpacity={0.35} />
-            <Stop offset="100%" stopColor="#90B870" stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="sickBlush" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="#A0C880" stopOpacity={0.5} />
-            <Stop offset="100%" stopColor="#A0C880" stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-
-        {/* Ground shadow */}
-        <Ellipse cx={CX} cy={143} rx={30} ry={5} fill="rgba(0,0,0,0.06)" />
-
-        {/* Tiny feet */}
-        <Ellipse cx={60} cy={136} rx={9} ry={5.5} fill={skinD} />
-        <Ellipse cx={90} cy={136} rx={9} ry={5.5} fill={skinD} />
-        <Ellipse cx={60} cy={135} rx={7.5} ry={4.5} fill={skin} />
-        <Ellipse cx={90} cy={135} rx={7.5} ry={4.5} fill={skin} />
-
-        {/* Main body */}
-        <Ellipse cx={CX} cy={BY} rx={44} ry={52} fill="url(#bodyG)" />
-
-        {/* Stub arms */}
-        <Ellipse cx={28} cy={86} rx={11} ry={8} fill={skin} />
-        <Ellipse cx={28} cy={85} rx={9} ry={6.5} fill={skinL} />
-        <Ellipse cx={122} cy={86} rx={11} ry={8} fill={skin} />
-        <Ellipse cx={122} cy={85} rx={9} ry={6.5} fill={skinL} />
-
-        {/* Cape / outfit */}
-        {!hasCustomOutfit && (
-          <G>
-            <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#F07080" />
-            <Path d="M 38 96 Q 38 92 75 90 Q 112 92 112 96" fill="none" stroke="#FF8894" strokeWidth={0.8} opacity={0.5} />
-            <Rect x={36} y={110} width={78} height={5.5} rx={2.75} fill="#8B5E3C" />
-            <Rect x={36} y={111} width={78} height={2.5} rx={1.25} fill="#A07048" opacity={0.35} />
-            <Circle cx={CX} cy={113} r={4} fill="#FFD700" />
-            <Circle cx={CX} cy={112.5} r={2.5} fill="#FFF4B0" />
-            <Circle cx={74.5} cy={112} r={1} fill="#FFFFFF" opacity={0.7} />
-          </G>
-        )}
-
-        {/* Custom outfits */}
-        {hasCustomOutfit && equipped?.outfit === 'kimono' && (
-          <G>
-            <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#C41E3A" />
-            <Rect x={58} y={108} width={34} height={4.5} rx={2.25} fill="#FFD700" />
-          </G>
-        )}
-        {hasCustomOutfit && equipped?.outfit === 'hanbok' && (
-          <G>
-            <Rect x={52} y={92} width={46} height={12} rx={6} fill="#FFFFFF" />
-            <Path d="M 38 104 Q 38 98 75 104 Q 112 98 112 104 L 116 130 Q 75 138 34 130 Z" fill="#E8B4C8" />
-          </G>
-        )}
-        {hasCustomOutfit && equipped?.outfit === 'dashiki' && (
-          <G>
-            <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#FF8C00" />
-            <Circle cx={CX} cy={110} r={7} fill="none" stroke="#DC143C" strokeWidth={1.5} />
-          </G>
-        )}
-        {hasCustomOutfit && equipped?.outfit === 'poncho' && (
-          <G>
-            <Path d="M 28 108 L 75 82 L 122 108 Z" fill="#E8C85A" />
-            <Path d="M 34 106 L 75 86 L 116 106" fill="none" stroke="#DC143C" strokeWidth={2.5} />
-          </G>
-        )}
-        {hasCustomOutfit && equipped?.outfit === 'sari' && (
-          <G>
-            <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#FF6347" />
-            <Path d="M 48 102 Q 75 94 102 102" stroke="#FFD700" strokeWidth={2} fill="none" />
-          </G>
-        )}
-
-        {/* Ears */}
-        <Circle cx={32} cy={56} r={8} fill={skin} />
-        <Circle cx={32} cy={56} r={5} fill={skinL} />
-        <Circle cx={32} cy={56} r={3} fill="#FFACA0" opacity={0.3} />
-        <Circle cx={118} cy={56} r={8} fill={skin} />
-        <Circle cx={118} cy={56} r={5} fill={skinL} />
-        <Circle cx={118} cy={56} r={3} fill="#FFACA0" opacity={0.3} />
-
-        {/* Hair */}
-        {renderHairStyle(appearance.hairStyle || 'default', hair, hairL)}
-
-        {/* Hat (rendered on top of hair) */}
-        {renderHat(equipped?.hat, hair, hairL)}
-
-        {/* Sick overlay */}
-        {mood === 'sick' && (
-          <Ellipse cx={CX} cy={52} rx={32} ry={20} fill="url(#sickTint)" />
-        )}
-
-        {/* Blush cheeks */}
-        <Circle cx={36} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blL)'} />
-        <Circle cx={114} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blR)'} />
-
-        {/* Eyes */}
-        {renderEyes()}
-
-        {/* Mouth */}
-        {renderMouth()}
-
-        {/* Accessory */}
-        {renderAccessory(equipped?.accessory)}
+        {stage === 'egg' && renderEgg()}
+        {stage === 'baby' && renderBaby()}
+        {(stage === 'kid' || stage === 'teen' || stage === 'adult') && renderFullCharacter()}
       </Svg>
     </Animated.View>
   );

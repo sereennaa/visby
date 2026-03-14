@@ -295,7 +295,7 @@ const AuraPopup: React.FC<{ visible: boolean }> = ({ visible }) => {
 };
 
 export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby } = useStore();
+  const { addAura, studyWithVisby, addSkillPoints } = useStore();
   const [round, setRound] = useState(() => pickRound());
   const [selectedForeign, setSelectedForeign] = useState<number | null>(null);
   const [foreignStates, setForeignStates] = useState<CardState[]>(
@@ -387,6 +387,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
           const finishTime = Date.now();
           setEndTime(finishTime);
           studyWithVisby();
+          addSkillPoints('language', 5);
           setTimeout(() => setIsFinished(true), 600);
         }
         setTimeout(() => {

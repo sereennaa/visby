@@ -16,7 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, SkillProgress } from '../../types';
 import { getQuizByCategory, getRandomQuiz, QuizQuestion } from '../../config/learningContent';
 
 type QuizScreenProps = {
@@ -26,7 +26,7 @@ type QuizScreenProps = {
 
 export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => {
   const category = route.params?.category;
-  const { addAura, checkAndAwardBadges, studyWithVisby } = useStore();
+  const { addAura, checkAndAwardBadges, studyWithVisby, addSkillPoints } = useStore();
   const [refreshKey, setRefreshKey] = useState(0);
   const questions = useMemo<QuizQuestion[]>(
     () => category ? getQuizByCategory(category, 10) : getRandomQuiz(10),
@@ -83,6 +83,16 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
         addAura(auraEarned);
         checkAndAwardBadges({ quizPerfect: finalScore === questions.length });
         studyWithVisby();
+        const categorySkillMap: Record<string, keyof SkillProgress> = {
+          language: 'language',
+          geography: 'geography',
+          culture: 'culture',
+          history: 'history',
+          etiquette: 'culture',
+          food: 'cooking',
+        };
+        const skill = categorySkillMap[category || 'geography'] || 'geography';
+        addSkillPoints(skill, Math.round(finalScore * 2));
         setIsFinished(true);
       } else {
         setCurrentQuestion(prev => prev + 1);

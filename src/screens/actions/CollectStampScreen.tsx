@@ -55,7 +55,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   route,
 }) => {
   const { locationId } = route.params;
-  const { user, currentLocation, addStamp, addAura } = useStore();
+  const { user, currentLocation, addStamp, addAura, addSkillPoints } = useStore();
 
   const [locationName, setLocationName] = useState('');
   const [selectedType, setSelectedType] = useState<StampType>('city');
@@ -125,6 +125,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
 
     addStamp(stamp);
     addAura(reward);
+    addSkillPoints('exploration', 5);
     setEarnedAura(reward);
     setShowSuccess(true);
   };

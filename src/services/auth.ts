@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { User, Visby, VisbyAppearance } from '../types';
-import { DEFAULT_NEEDS } from '../store/useStore';
+import { DEFAULT_NEEDS, DEFAULT_SKILLS } from '../store/useStore';
 
 const DEFAULT_VISBY_APPEARANCE: VisbyAppearance = {
   skinTone: '#FFBA6B',
@@ -39,6 +39,7 @@ function createDemoUser(email: string, password: string, username: string): { us
     citiesVisited: 0,
     totalCarePoints: 0,
     visitedCountries: [],
+    skills: { ...DEFAULT_SKILLS },
     settings: {
       notifications: true,
       locationTracking: true,

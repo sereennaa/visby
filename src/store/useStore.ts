@@ -2,10 +2,19 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
 import { COUNTRY_SOUVENIRS } from '../config/cosmetics';
+
+export const DEFAULT_SKILLS: SkillProgress = {
+  language: 0,
+  geography: 0,
+  culture: 0,
+  history: 0,
+  cooking: 0,
+  exploration: 0,
+};
 
 export const DEFAULT_NEEDS: VisbyNeeds = {
   hunger: 80,
@@ -46,6 +55,14 @@ function deriveVisbyMood(needs: VisbyNeeds): import('../types').VisbyMood {
   if (needs.happiness < 30) return 'bored';
   if (needs.knowledge < 30) return 'confused';
   return 'happy';
+}
+
+export function getGrowthStage(totalCarePoints: number): VisbyGrowthStage {
+  if (totalCarePoints <= 0) return 'egg';
+  if (totalCarePoints < 50) return 'baby';
+  if (totalCarePoints < 200) return 'kid';
+  if (totalCarePoints < 500) return 'teen';
+  return 'adult';
 }
 
 interface AppStore {
@@ -137,6 +154,12 @@ interface AppStore {
   placeFurniture: (countryId: string, roomId: string, item: PlacedFurniture) => void;
   removePlacedFurniture: (countryId: string, roomId: string, placedId: string) => void;
   updateRoomColors: (countryId: string, roomId: string, wallColor?: string, floorColor?: string) => void;
+
+  // Actions - Skills
+  addSkillPoints: (skill: keyof SkillProgress, amount: number) => void;
+
+  // Actions - Growth
+  getGrowthStage: () => VisbyGrowthStage;
 
   // Actions - Settings
   updateSettings: (settings: Partial<AppStore['settings']>) => void;
@@ -580,6 +603,28 @@ export const useStore = create<AppStore>()(
         const updated = [...userHouses];
         updated[idx] = house;
         set({ userHouses: updated });
+      },
+
+      // Growth Stage
+      getGrowthStage: () => {
+        const { user } = get();
+        return getGrowthStage(user?.totalCarePoints || 0);
+      },
+
+      // Skills Actions
+      addSkillPoints: (skill, amount) => {
+        const { user } = get();
+        if (!user) return;
+        const skills = user.skills || DEFAULT_SKILLS;
+        set({
+          user: {
+            ...user,
+            skills: {
+              ...skills,
+              [skill]: Math.min(100, (skills[skill] || 0) + amount),
+            },
+          },
+        });
       },
 
       // Settings Actions

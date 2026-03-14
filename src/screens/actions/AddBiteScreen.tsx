@@ -31,7 +31,7 @@ type AddBiteScreenProps = {
 };
 
 export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
-  const { user, currentLocation, addBite, addAura } = useStore();
+  const { user, currentLocation, addBite, addAura, addSkillPoints } = useStore();
 
   const [foodName, setFoodName] = useState('');
   const [description, setDescription] = useState('');
@@ -106,6 +106,7 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
 
     addBite(bite);
     addAura(reward);
+    addSkillPoints('cooking', 3);
     setEarnedAura(reward);
     setShowSuccess(true);
   };

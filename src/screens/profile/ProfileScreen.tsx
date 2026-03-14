@@ -19,10 +19,11 @@ import { LevelBadge, AuraBadge } from '../../components/ui/Badge';
 import { LevelProgress } from '../../components/ui/ProgressBar';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
-import { useStore } from '../../store/useStore';
+import { useStore, DEFAULT_SKILLS } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
 import { RootStackParamList } from '../../types';
+import { RadarChart } from '../../components/ui/RadarChart';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 type ProfileScreenProps = {
@@ -88,6 +89,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { icon: 'city', label: 'Cities', value: user?.citiesVisited || 0 },
     { icon: 'flame', label: 'Best Streak', value: user?.longestStreak || 0 },
   ];
+
+  const skills = user?.skills || DEFAULT_SKILLS;
 
   const menuItems: { icon: IconName; label: string; screen: keyof RootStackParamList }[] = [
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
@@ -207,6 +210,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               </View>
             </Card>
           )}
+
+          {/* Skills Radar */}
+          <Card style={styles.skillsCard}>
+            <View style={styles.sectionHeader}>
+              <Heading level={2}>Skills</Heading>
+              <Caption>Grow by learning and exploring</Caption>
+            </View>
+            <RadarChart
+              data={[
+                { label: 'Language', value: skills.language },
+                { label: 'Geography', value: skills.geography },
+                { label: 'Culture', value: skills.culture },
+                { label: 'History', value: skills.history },
+                { label: 'Cooking', value: skills.cooking },
+                { label: 'Exploration', value: skills.exploration },
+              ]}
+              size={220}
+            />
+          </Card>
 
           {/* Menu Items */}
           <View style={styles.menuSection}>
@@ -365,6 +387,14 @@ const styles = StyleSheet.create({
   },
   streakInfo: {
     flex: 1,
+  },
+  skillsCard: {
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   menuSection: {
     backgroundColor: colors.base.cream,

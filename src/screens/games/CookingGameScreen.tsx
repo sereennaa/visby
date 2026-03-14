@@ -194,7 +194,7 @@ const IngredientButton: React.FC<IngredientButtonProps> = ({ name, onPress, disa
 };
 
 export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation }) => {
-  const { addAura, feedVisby } = useStore();
+  const { addAura, feedVisby, addSkillPoints } = useStore();
 
   const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * RECIPES.length));
   const recipe = RECIPES[recipeIndex];
@@ -254,6 +254,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             setGamePhase('won');
             addAura(finalScore);
             feedVisby();
+            addSkillPoints('cooking', 5);
           }, 600);
         }
       } else {

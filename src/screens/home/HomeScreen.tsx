@@ -38,10 +38,18 @@ import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore, DEFAULT_NEEDS } from '../../store/useStore';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
-import { RootStackParamList, StampType, VisbyNeeds } from '../../types';
+import { RootStackParamList, StampType, VisbyNeeds, VisbyGrowthStage } from '../../types';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 10;
+
+const STAGE_LABELS: Record<VisbyGrowthStage, string> = {
+  egg: 'Egg',
+  baby: 'Baby',
+  kid: 'Kid',
+  teen: 'Teen',
+  adult: 'Adult',
+};
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -183,7 +191,7 @@ const NeedsHUD: React.FC<{
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, feedVisby, playWithVisby, restVisby, studyWithVisby } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, feedVisby, playWithVisby, restVisby, studyWithVisby, getGrowthStage } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const visbyFloat = useSharedValue(0);
@@ -366,7 +374,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         mood={visby?.currentMood || 'happy'}
                         size={110}
                         animated={true}
+                        stage={getGrowthStage()}
                       />
+                      <Caption style={styles.stageLabel}>
+                        {STAGE_LABELS[getGrowthStage()]} Visby
+                      </Caption>
                     </Animated.View>
 
                     <View style={styles.visbyRight}>
@@ -645,7 +657,15 @@ const styles = StyleSheet.create({
     left: -10,
   },
   visbyContent: { flexDirection: 'row', alignItems: 'center' },
-  visbyLeft: { marginRight: spacing.lg },
+  visbyLeft: { marginRight: spacing.lg, alignItems: 'center' },
+  stageLabel: {
+    fontSize: 11,
+    color: colors.primary.wisteriaDark,
+    marginTop: 4,
+    fontFamily: 'Nunito-Bold',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
   visbyRight: { flex: 1 },
   visbyNameRow: {
     flexDirection: 'row',

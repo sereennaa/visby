@@ -43,6 +43,9 @@ export interface User {
   // Avatar Reference
   visbyId: string;
   
+  // Skills
+  skills: SkillProgress;
+
   // Settings
   settings: UserSettings;
 }
@@ -111,12 +114,23 @@ export type VisbyMood =
   | 'confused'
   | 'sick';
 
+export type VisbyGrowthStage = 'egg' | 'baby' | 'kid' | 'teen' | 'adult';
+
 export interface VisbyNeeds {
   hunger: number;    // 0-100
   happiness: number; // 0-100
   energy: number;    // 0-100
   knowledge: number; // 0-100
   lastUpdated: string; // ISO timestamp
+}
+
+export interface SkillProgress {
+  language: number;    // 0-100
+  geography: number;   // 0-100
+  culture: number;     // 0-100
+  history: number;     // 0-100
+  cooking: number;     // 0-100
+  exploration: number; // 0-100
 }
 
 // ===================================
