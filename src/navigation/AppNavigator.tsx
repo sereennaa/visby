@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BlurView } from 'expo-blur';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { Icon, IconName } from '../components/ui/Icon';
@@ -82,6 +83,16 @@ const MainTabs = () => {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
+        tabBarBackground: () =>
+          Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={60}
+              tint="systemChromeMaterialLight"
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, styles.tabBarFallbackBg]} />
+          ),
         tabBarShowLabel: true,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarActiveTintColor: colors.primary.wisteriaDark,
@@ -235,21 +246,27 @@ export const AppNavigator = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.base.warmWhite,
+    position: 'absolute',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(253, 251, 248, 0.92)',
     borderTopWidth: 0,
     height: 88,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg + 4,
-    shadowColor: 'rgba(199, 184, 234, 0.25)',
-    shadowOffset: { width: 0, height: -6 },
+    shadowColor: 'rgba(184, 165, 224, 0.2)',
+    shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 12,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    shadowRadius: 24,
+    elevation: 16,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  tabBarFallbackBg: {
+    backgroundColor: 'rgba(253, 251, 248, 0.95)',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   tabBarLabel: {
-    fontFamily: 'Nunito-Medium',
+    fontFamily: 'Nunito-SemiBold',
     fontSize: 10,
     marginTop: 2,
     letterSpacing: 0.3,
@@ -263,22 +280,22 @@ const styles = StyleSheet.create({
   tabIconFocused: {},
   focusGlow: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(199, 184, 234, 0.15)',
-    top: -4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(184, 165, 224, 0.12)',
+    top: -6,
   },
   focusIndicator: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: colors.primary.wisteria,
-    marginTop: 3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary.wisteriaDark,
+    marginTop: 4,
     shadowColor: colors.primary.wisteria,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
   },
 });
 

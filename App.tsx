@@ -4,6 +4,13 @@ import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import {
+  Ionicons,
+  MaterialCommunityIcons,
+  Feather,
+  FontAwesome5,
+  MaterialIcons,
+} from '@expo/vector-icons';
+import {
   Baloo2_400Regular,
   Baloo2_500Medium,
   Baloo2_600SemiBold,
@@ -70,7 +77,10 @@ export default function App() {
   useEffect(() => {
     async function loadFonts() {
       try {
+        const iconFonts = [Ionicons, MaterialCommunityIcons, Feather, FontAwesome5, MaterialIcons];
+        const iconFontMap = Object.assign({}, ...iconFonts.map(f => (f as any).font));
         await Font.loadAsync({
+          ...iconFontMap,
           'Baloo2-Regular': Baloo2_400Regular,
           'Baloo2-Medium': Baloo2_500Medium,
           'Baloo2-SemiBold': Baloo2_600SemiBold,
@@ -165,12 +175,13 @@ export default function App() {
     };
   }, []);
 
-  // Show loading screen while fonts are loading
   if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Icon name="sparkles" size={64} color={colors.reward.gold} />
-        <Text style={styles.loadingText}>Visby</Text>
+        <View style={styles.loadingLogoContainer}>
+          <View style={styles.loadingGlow} />
+          <Text style={styles.loadingText}>Visby</Text>
+        </View>
         <Text style={styles.loadingSubtext}>Loading adventure...</Text>
       </View>
     );
@@ -198,17 +209,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingIcon: {
-    marginBottom: 16,
+  loadingLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  loadingGlow: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(184, 165, 224, 0.15)',
   },
   loadingText: {
-    fontSize: 48,
+    fontSize: 52,
     fontWeight: 'bold',
     color: colors.primary.wisteriaDark,
-    marginBottom: 8,
+    letterSpacing: -1,
   },
   loadingSubtext: {
-    fontSize: 16,
-    color: colors.text.secondary,
+    fontSize: 15,
+    color: colors.text.muted,
+    letterSpacing: 0.5,
   },
 });

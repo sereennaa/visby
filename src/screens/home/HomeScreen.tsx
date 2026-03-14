@@ -6,6 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +20,8 @@ import Animated, {
   withSequence,
   Easing,
   interpolate,
+  FadeInDown,
+  FadeInUp,
 } from 'react-native-reanimated';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -26,36 +29,39 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { LevelProgress, StreakProgress } from '../../components/ui/ProgressBar';
+import { LevelProgress } from '../../components/ui/ProgressBar';
 import { AuraBadge, LevelBadge } from '../../components/ui/Badge';
-import { Icon, IconName } from '../../components/ui/Icon';
+import { Icon, IconName, IconBadge } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { StampMini } from '../../components/collectibles/StampCard';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
-import { PulseGlow } from '../../components/effects/Shimmer';
+import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore } from '../../store/useStore';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
 import { RootStackParamList, StampType } from '../../types';
 
 const { width } = Dimensions.get('window');
+const CARD_GAP = 10;
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
 };
 
-const MagicStatCard: React.FC<{
+/* ─── Animated stat bubble ─── */
+const StatBubble: React.FC<{
   icon: IconName;
   value: number;
   label: string;
   delay: number;
-  gradient: [string, string];
-}> = ({ icon, value, label, delay, gradient }) => {
+  iconBg: string;
+  iconColor: string;
+}> = ({ icon, value, label, delay, iconBg, iconColor }) => {
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
-    scale.value = withDelay(delay, withSpring(1, { damping: 10, stiffness: 80 }));
-    opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
+    scale.value = withDelay(delay, withSpring(1, { damping: 12, stiffness: 90 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 500 }));
   }, []);
 
   const style = useAnimatedStyle(() => ({
@@ -64,72 +70,59 @@ const MagicStatCard: React.FC<{
   }));
 
   return (
-    <Animated.View style={[styles.statCard, style]}>
-      <LinearGradient
-        colors={gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.statGradient}
-      >
-        <View style={styles.statIconBubble}>
-          <Icon name={icon} size={20} color={colors.primary.wisteriaDark} />
-        </View>
-        <Text variant="h2" align="center" style={styles.statValue}>{value}</Text>
-        <Text variant="caption" align="center" color={colors.text.secondary}>{label}</Text>
-      </LinearGradient>
+    <Animated.View style={[styles.statBubble, style]}>
+      <View style={[styles.statIconRing, { backgroundColor: iconBg }]}>
+        <Icon name={icon} size={18} color={iconColor} />
+      </View>
+      <Text variant="h2" style={styles.statValue}>{value}</Text>
+      <Caption style={styles.statLabel}>{label}</Caption>
     </Animated.View>
   );
 };
 
-const MagicActionCard: React.FC<{
+/* ─── Adventure card (quick action) ─── */
+const AdventureCard: React.FC<{
   icon: IconName;
   label: string;
+  subtitle: string;
   gradient: [string, string];
+  iconBg: string;
   onPress: () => void;
   delay: number;
-}> = ({ icon, label, gradient, onPress, delay }) => {
-  const translateY = useSharedValue(30);
+}> = ({ icon, label, subtitle, gradient, iconBg, onPress, delay }) => {
+  const translateY = useSharedValue(40);
   const opacity = useSharedValue(0);
-  const hoverGlow = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withDelay(delay, withSpring(0, { damping: 12 }));
-    opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
-    hoverGlow.value = withDelay(
-      delay + 800,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
-          withTiming(0, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
-        ),
-        -1,
-        true,
-      ),
-    );
+    translateY.value = withDelay(delay, withSpring(0, { damping: 14, stiffness: 80 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 500 }));
   }, []);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
-    shadowColor: colors.primary.wisteria,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: interpolate(hoverGlow.value, [0, 1], [0, 0.3]),
-    shadowRadius: interpolate(hoverGlow.value, [0, 1], [0, 12]),
   }));
 
   return (
-    <Animated.View style={[styles.actionCard, style]}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={label}>
+    <Animated.View style={[styles.adventureCard, style]}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={styles.adventureTouch}
+      >
         <LinearGradient
           colors={gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.actionGradient}
+          style={styles.adventureGradient}
         >
-          <Icon name={icon} size={28} color={colors.text.primary} />
-          <Text variant="bodySmall" align="center" style={styles.actionLabel}>
-            {label}
-          </Text>
+          <View style={[styles.adventureIconWrap, { backgroundColor: iconBg }]}>
+            <Icon name={icon} size={22} color="#FFFFFF" />
+          </View>
+          <Text variant="bodySmall" style={styles.adventureLabel}>{label}</Text>
+          <Caption style={styles.adventureSub}>{subtitle}</Caption>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
@@ -140,9 +133,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const headerOpacity = useSharedValue(0);
-  const visbyScale = useSharedValue(0.7);
-  const visbyOpacity = useSharedValue(0);
   const visbyFloat = useSharedValue(0);
 
   useEffect(() => {
@@ -150,16 +140,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    headerOpacity.value = withTiming(1, { duration: 500 });
-    visbyScale.value = withDelay(200, withSpring(1, { damping: 10, stiffness: 60 }));
-    visbyOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
-
     visbyFloat.value = withDelay(
-      800,
+      600,
       withRepeat(
         withSequence(
-          withTiming(-5, { duration: 2500, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
-          withTiming(0, { duration: 2500, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
+          withTiming(-6, { duration: 2800, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
+          withTiming(0, { duration: 2800, easing: Easing.bezier(0.42, 0, 0.58, 1) }),
         ),
         -1,
         true,
@@ -167,10 +153,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }, []);
 
-  const headerStyle = useAnimatedStyle(() => ({ opacity: headerOpacity.value }));
-  const visbyStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: visbyScale.value }, { translateY: visbyFloat.value }],
-    opacity: visbyOpacity.value,
+  const visbyAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: visbyFloat.value }],
   }));
 
   const onRefresh = async () => {
@@ -200,15 +184,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (hour < 17) return 'Good afternoon';
     if (hour < 21) return 'Good evening';
     return 'Goodnight';
-  };
-
-  const getGreetingIcon = (): IconName => {
-    const hour = new Date().getHours();
-    if (hour < 6) return 'star';
-    if (hour < 12) return 'sparkles';
-    if (hour < 17) return 'star';
-    if (hour < 21) return 'sparkles';
-    return 'sparkles';
   };
 
   const getCurrentLevel = () => {
@@ -247,32 +222,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (stampCounts[stamp.type] !== undefined) stampCounts[stamp.type]++;
   });
 
-  const statItems: { icon: IconName; value: number; label: string; gradient: [string, string] }[] = [
-    { icon: 'stamp', value: stamps.length, label: 'Stamps', gradient: [colors.primary.wisteriaFaded, '#F3EAFF'] },
-    { icon: 'food', value: bites.length, label: 'Bites', gradient: [colors.reward.peachLight, '#FFF5E6'] },
-    { icon: 'trophy', value: badges.length, label: 'Badges', gradient: [colors.success.honeydew, '#E8FFE8'] },
-    { icon: 'globe', value: user?.countriesVisited || 0, label: 'Places', gradient: [colors.calm.skyLight, '#E6F5FF'] },
+  const statItems = [
+    { icon: 'stamp' as IconName, value: stamps.length, label: 'Stamps', iconBg: '#EDE3FA', iconColor: colors.primary.wisteriaDark },
+    { icon: 'food' as IconName, value: bites.length, label: 'Bites', iconBg: '#FFEAD0', iconColor: '#E08A3A' },
+    { icon: 'trophy' as IconName, value: badges.length, label: 'Badges', iconBg: '#DFF5E1', iconColor: colors.success.emerald },
+    { icon: 'globe' as IconName, value: user?.countriesVisited || 0, label: 'Places', iconBg: '#E6F2FC', iconColor: colors.calm.ocean },
   ];
 
-  const actionItems: { icon: IconName; label: string; colors: [string, string]; onPress: () => void }[] = [
-    { icon: 'globe', label: 'Visit World', colors: ['#FFF0DB', '#FFEACC'], onPress: () => navigation.navigate('CountryWorld') },
-    { icon: 'stamp', label: 'Collect Stamp', colors: ['#F3EAFF', '#EDE3FA'], onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
-    { icon: 'bowl', label: 'Log Food', colors: ['#FFF5E6', '#FFEDD5'], onPress: () => navigation.navigate('AddBite') },
-    { icon: 'book', label: 'Learn', colors: ['#E6F5FF', '#D6ECFF'], onPress: () => navigation.navigate('Learn') },
-    { icon: 'trophy', label: 'Badges', colors: ['#E8FFE8', '#D4F7D4'], onPress: () => navigation.navigate('Badges') },
-    { icon: 'shirt', label: 'Shop', colors: ['#FFE8F0', '#F3EAFF'], onPress: () => navigation.navigate('CosmeticShop') },
+  const adventures = [
+    { icon: 'globe' as IconName, label: 'World', subtitle: 'Explore', gradient: ['#F6EDFF', '#EDE3FA'] as [string, string], iconBg: '#A78BDB', onPress: () => navigation.navigate('CountryWorld') },
+    { icon: 'stamp' as IconName, label: 'Stamp', subtitle: 'Collect', gradient: ['#FFF5E6', '#FFEAD0'] as [string, string], iconBg: '#E8A04E', onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
+    { icon: 'bowl' as IconName, label: 'Bite', subtitle: 'Log food', gradient: ['#FFF0F0', '#FFE0DE'] as [string, string], iconBg: '#E07A6A', onPress: () => navigation.navigate('AddBite') },
+    { icon: 'book' as IconName, label: 'Learn', subtitle: 'Study', gradient: ['#E8F4FF', '#D6ECFF'] as [string, string], iconBg: '#5EA0D4', onPress: () => navigation.navigate('Learn') },
+    { icon: 'trophy' as IconName, label: 'Badges', subtitle: 'Earn', gradient: ['#E8FFE8', '#D4F7D4'] as [string, string], iconBg: '#48B048', onPress: () => navigation.navigate('Badges') },
+    { icon: 'shirt' as IconName, label: 'Shop', subtitle: 'Style', gradient: ['#FFF0F7', '#FFE0ED'] as [string, string], iconBg: '#D46B9B', onPress: () => navigation.navigate('CosmeticShop') },
   ];
 
   return (
     <View style={styles.container}>
+      {/* Layered gradient background */}
       <LinearGradient
-        colors={[colors.base.cream, '#F5EEFF', '#EAF5FF', colors.base.cream]}
+        colors={['#FDFBF8', '#F3EAFF', '#EAF2FF', '#FFF8F2', '#FDFBF8']}
+        locations={[0, 0.25, 0.5, 0.75, 1]}
         style={StyleSheet.absoluteFill}
-        locations={[0, 0.3, 0.6, 1]}
       />
 
-      {/* Subtle floating particles */}
-      <FloatingParticles count={8} variant="sparkle" opacity={0.35} speed="slow" />
+      <FloatingParticles count={6} variant="sparkle" opacity={0.3} speed="slow" />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
@@ -283,18 +258,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Header */}
-          <Animated.View style={[styles.header, headerStyle]}>
+          {/* ──── HEADER ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
             <View style={styles.headerLeft}>
-              <View style={styles.greetingRow}>
-                <Icon name={getGreetingIcon()} size={18} color={colors.text.secondary} />
-                <Text variant="body" color={colors.text.secondary}>
-                  {getGreeting()}, {user?.username || 'Explorer'}!
-                </Text>
-              </View>
-              <Text variant="h1" style={styles.levelTitle}>
-                {currentLevel.title}
+              <Text variant="body" color={colors.text.muted} style={styles.greetingText}>
+                {getGreeting()}, {user?.username || 'Explorer'}
               </Text>
+              <Heading level={1} style={styles.titleText}>
+                {currentLevel.title}
+              </Heading>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('AuraStore')}
@@ -302,186 +274,248 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               accessibilityRole="button"
               accessibilityLabel="View Aura Store"
             >
-              <PulseGlow color="rgba(255, 215, 0, 0.4)" intensity={12} speed={3000}>
+              <PulseGlow color="rgba(255, 215, 0, 0.35)" intensity={14} speed={3000}>
                 <AuraBadge amount={currentAura} />
               </PulseGlow>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Visby Character Card */}
-          <Animated.View style={visbyStyle}>
+          {/* ──── VISBY CHARACTER HERO ──── */}
+          <Animated.View entering={FadeInDown.duration(600).delay(200)}>
             <TouchableOpacity
-              activeOpacity={0.9}
+              activeOpacity={0.92}
               onPress={() => navigation.navigate('Avatar')}
               accessibilityRole="button"
               accessibilityLabel="Customize your Visby"
             >
+              <MagicBorder
+                borderRadius={28}
+                borderWidth={2}
+                colors={['#D4C4F0', '#FFD700', '#90C8EE', '#FFB6C1', '#D4C4F0']}
+                style={styles.visbyCardOuter}
+              >
+                <LinearGradient
+                  colors={['#FAF5FF', '#FFF9F0', '#F0F7FF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.visbyCardInner}
+                >
+                  {/* Decorative background circles */}
+                  <View style={styles.decorCircle1} />
+                  <View style={styles.decorCircle2} />
+
+                  <View style={styles.visbyContent}>
+                    <Animated.View style={[styles.visbyLeft, visbyAnimStyle]}>
+                      <VisbyCharacter
+                        appearance={defaultAppearance}
+                        equipped={visby?.equipped}
+                        mood={user?.currentStreak && user.currentStreak > 0 ? 'excited' : 'happy'}
+                        size={110}
+                        animated={true}
+                      />
+                    </Animated.View>
+
+                    <View style={styles.visbyRight}>
+                      <View style={styles.visbyNameRow}>
+                        <Text variant="h2" style={styles.visbyName}>
+                          {visby?.name || 'Your Visby'}
+                        </Text>
+                        <LevelBadge level={user?.level || 1} />
+                      </View>
+
+                      <LevelProgress
+                        currentXP={progressAura}
+                        requiredXP={requiredAura}
+                        level={user?.level || 1}
+                        style={styles.levelProgress}
+                      />
+
+                      <View style={styles.tapHintRow}>
+                        <Icon name="sparkles" size={12} color={colors.reward.gold} />
+                        <Caption color={colors.text.muted}>Tap to customize</Caption>
+                      </View>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </MagicBorder>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* ──── QUICK STATS ──── */}
+          <View style={styles.statsRow}>
+            {statItems.map((stat, i) => (
+              <StatBubble
+                key={stat.label}
+                icon={stat.icon}
+                value={stat.value}
+                label={stat.label}
+                delay={350 + i * 80}
+                iconBg={stat.iconBg}
+                iconColor={stat.iconColor}
+              />
+            ))}
+          </View>
+
+          {/* ──── STREAK ──── */}
+          {user?.currentStreak !== undefined && user.currentStreak > 0 && (
+            <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.streakCard}>
               <LinearGradient
-                colors={['#F3EAFF', '#FFF8F0', '#EAF5FF']}
+                colors={['#FFF3EC', '#FFE8DA']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.visbyCard}
+                style={styles.streakGradient}
               >
-                <View style={styles.visbyContent}>
-                  <View style={styles.visbyLeft}>
-                    <VisbyCharacter
-                      appearance={defaultAppearance}
-                      equipped={visby?.equipped}
-                      mood={user?.currentStreak && user.currentStreak > 0 ? 'excited' : 'happy'}
-                      size={120}
-                      animated={true}
-                    />
+                <View style={styles.streakLeft}>
+                  <View style={styles.streakFireWrap}>
+                    <Icon name="flame" size={28} color="#FF6B3D" />
                   </View>
-                  <View style={styles.visbyRight}>
-                    <View style={styles.visbyNameRow}>
-                      <Text variant="h2">{visby?.name || 'Your Visby'}</Text>
-                      <LevelBadge level={user?.level || 1} />
-                    </View>
-                    <LevelProgress
-                      currentXP={progressAura}
-                      requiredXP={requiredAura}
-                      level={user?.level || 1}
-                      style={styles.levelProgress}
-                    />
-                    <Text variant="caption" color={colors.text.muted}>
-                      Tap to customize
+                  <View>
+                    <Text variant="h3" style={styles.streakDays}>
+                      {user.currentStreak} day streak
                     </Text>
+                    <Caption color="#C4763A">
+                      {getStreakMultiplier().toFixed(1)}x aura multiplier
+                    </Caption>
                   </View>
+                </View>
+                <View style={styles.streakBadge}>
+                  <Icon name="flash" size={14} color="#FFFFFF" />
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {/* ──── LOCATION ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(550)}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Map')}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="Explore nearby"
+            >
+              <LinearGradient
+                colors={['#FFFFFF', '#F8F5FF']}
+                style={styles.locationCard}
+              >
+                <View style={styles.locationLeft}>
+                  <View style={styles.locationPulse} />
+                  <View style={styles.locationIconWrap}>
+                    <Icon name="location" size={22} color={colors.primary.wisteriaDark} />
+                  </View>
+                  <View style={styles.locationTextWrap}>
+                    <Text variant="h3" numberOfLines={1}>
+                      {currentLocation?.city || 'Unknown Location'}
+                    </Text>
+                    <Caption color={colors.text.muted} numberOfLines={1}>
+                      {currentLocation?.country || 'Enable location to explore'}
+                    </Caption>
+                  </View>
+                </View>
+                <View style={styles.locationArrow}>
+                  <Icon name="chevronRight" size={18} color={colors.primary.wisteria} />
                 </View>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Quick Stats */}
-          <View style={styles.statsRow}>
-            {statItems.map((stat, index) => (
-              <MagicStatCard
-                key={stat.label}
-                icon={stat.icon}
-                value={stat.value}
-                label={stat.label}
-                delay={400 + index * 100}
-                gradient={stat.gradient}
-              />
-            ))}
-          </View>
+          {/* ──── YOUR STAMPS ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(600)}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="stamp" size={18} color={colors.primary.wisteriaDark} />
+                <Heading level={2} style={styles.sectionTitle}>Your Stamps</Heading>
+              </View>
+              {stamps.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Stamps')}
+                  accessibilityRole="button"
+                  accessibilityLabel="See all stamps"
+                  style={styles.seeAllBtn}
+                >
+                  <Text variant="bodySmall" color={colors.primary.wisteriaDark}>See All</Text>
+                  <Icon name="chevronRight" size={14} color={colors.primary.wisteriaDark} />
+                </TouchableOpacity>
+              )}
+            </View>
 
-          {/* Streak Card */}
-          {user?.currentStreak !== undefined && user.currentStreak > 0 && (
-            <View style={styles.streakWrapper}>
+            {stamps.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stampsScroll}
+              >
+                {(['city', 'park', 'beach', 'landmark', 'restaurant'] as StampType[]).map(
+                  (type) => (
+                    <StampMini
+                      key={type}
+                      type={type}
+                      count={stampCounts[type]}
+                      onPress={() => navigation.navigate('Stamps')}
+                    />
+                  )
+                )}
+              </ScrollView>
+            ) : (
               <LinearGradient
-                colors={['#FFF0F0', '#FFE8E0', '#FFF5F0']}
+                colors={['#FAF5FF', '#FFF8F0']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.streakGradient}
+                style={styles.emptyStampCard}
               >
-                <StreakProgress
-                  currentStreak={user.currentStreak}
-                  targetStreak={7}
-                />
-                <View style={styles.streakMultiplierRow}>
-                  <Text style={styles.streakMultiplierLabel}>Aura Multiplier</Text>
-                  <View style={styles.streakMultiplierBadge}>
-                    <Text style={styles.streakMultiplierValue}>{getStreakMultiplier().toFixed(1)}x</Text>
-                  </View>
+                <View style={styles.emptyStampIconWrap}>
+                  <Icon name="stamp" size={32} color={colors.primary.wisteriaDark} />
                 </View>
-              </LinearGradient>
-            </View>
-          )}
-
-          {/* Location */}
-          <Card style={styles.locationCard}>
-            <View style={styles.locationHeader}>
-              <View style={styles.locationIconBubble}>
-                <Icon name="location" size={22} color={colors.primary.wisteriaDark} />
-              </View>
-              <View style={styles.locationText}>
-                <Text variant="h3">
-                  {currentLocation?.city || 'Unknown Location'}
-                </Text>
-                <Text variant="caption" color={colors.text.secondary}>
-                  {currentLocation?.country || 'Enable location to explore'}
-                </Text>
-              </View>
-            </View>
-            <Button
-              title="Explore"
-              onPress={() => navigation.navigate('Map')}
-              variant="secondary"
-              size="sm"
-            />
-          </Card>
-
-          {/* Stamp Collection */}
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Icon name="stamp" size={20} color={colors.text.primary} />
-              <Heading level={2}>Your Stamps</Heading>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Stamps')} accessibilityRole="button" accessibilityLabel="See all stamps">
-              <View style={styles.seeAllRow}>
-                <Text variant="body" color={colors.primary.wisteriaDark}>See All</Text>
-                <Icon name="chevronRight" size={16} color={colors.primary.wisteriaDark} />
-              </View>
-            </TouchableOpacity>
-          </View>
-          {stamps.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.stampsScroll}
-            >
-              {(['city', 'park', 'beach', 'landmark', 'restaurant'] as StampType[]).map(
-                (type) => (
-                  <StampMini
-                    key={type}
-                    type={type}
-                    count={stampCounts[type]}
-                    onPress={() => navigation.navigate('Stamps')}
-                  />
-                )
-              )}
-            </ScrollView>
-          ) : (
-            <Card style={styles.welcomeCard}>
-              <View style={styles.welcomeContent}>
-                <Icon name="stamp" size={40} color={colors.primary.wisteriaDark} />
-                <Text variant="h3" align="center">Start Your Collection</Text>
-                <Caption align="center">Visit a place nearby and collect your first stamp!</Caption>
+                <View style={styles.emptyStampText}>
+                  <Text variant="h3">Start Your Collection</Text>
+                  <Caption color={colors.text.muted}>
+                    Visit a place nearby to collect your first stamp!
+                  </Caption>
+                </View>
                 <Button
                   title="Collect a Stamp"
                   onPress={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
                   variant="primary"
                   size="sm"
                 />
-              </View>
-            </Card>
-          )}
+              </LinearGradient>
+            )}
+          </Animated.View>
 
-          {/* Quick Actions */}
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Icon name="flash" size={20} color={colors.text.primary} />
-              <Heading level={2}>Adventures</Heading>
+          {/* ──── ADVENTURES GRID ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(700)}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="rocket" size={18} color={colors.primary.wisteriaDark} />
+                <Heading level={2} style={styles.sectionTitle}>Adventures</Heading>
+              </View>
             </View>
-          </View>
-          <View style={styles.actionsGrid}>
-            {actionItems.map((action, index) => (
-              <MagicActionCard
-                key={action.label}
-                icon={action.icon}
-                label={action.label}
-                gradient={action.colors}
-                onPress={action.onPress}
-                delay={600 + index * 80}
-              />
-            ))}
-          </View>
+
+            <View style={styles.adventuresGrid}>
+              {adventures.map((adv, i) => (
+                <AdventureCard
+                  key={adv.label}
+                  icon={adv.icon}
+                  label={adv.label}
+                  subtitle={adv.subtitle}
+                  gradient={adv.gradient}
+                  iconBg={adv.iconBg}
+                  onPress={adv.onPress}
+                  delay={700 + i * 60}
+                />
+              ))}
+            </View>
+          </Animated.View>
+
+          <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 };
+
+/* ─── Styles ─── */
+const STAT_SIZE = (width - spacing.screenPadding * 2 - CARD_GAP * 3) / 4;
+const ADV_CARD_W = (width - spacing.screenPadding * 2 - CARD_GAP * 2) / 3;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -489,34 +523,61 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xxxl * 2,
+    paddingBottom: 120,
   },
+
+  /* Header */
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
   headerLeft: { flex: 1 },
-  greetingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  greetingText: {
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
-  levelTitle: {
+  titleText: {
+    fontSize: 28,
+    letterSpacing: -0.5,
     color: colors.text.primary,
-    marginTop: spacing.xxs,
+    marginTop: 2,
   },
-  visbyCard: {
-    borderRadius: spacing.radius.xxl,
-    padding: spacing.xl,
+
+  /* Visby Hero Card */
+  visbyCardOuter: {
     marginBottom: spacing.xl,
-    shadowColor: 'rgba(184, 165, 224, 0.3)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 5,
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: 'rgba(184, 165, 224, 0.4)',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 1,
+      shadowRadius: 28,
+      elevation: 8,
+    } : {}),
+  },
+  visbyCardInner: {
+    padding: spacing.lg + 4,
+    overflow: 'hidden',
+  },
+  decorCircle1: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(184, 165, 224, 0.06)',
+    top: -40,
+    right: -30,
+  },
+  decorCircle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    bottom: -20,
+    left: -10,
   },
   visbyContent: { flexDirection: 'row', alignItems: 'center' },
   visbyLeft: { marginRight: spacing.lg },
@@ -527,54 +588,126 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
+  visbyName: { fontSize: 20 },
   levelProgress: { marginBottom: spacing.sm },
+  tapHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  /* Stats */
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: CARD_GAP,
     marginBottom: spacing.xl,
-    gap: spacing.sm,
   },
-  statCard: { flex: 1 },
-  statGradient: {
+  statBubble: {
+    width: STAT_SIZE,
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xs,
-    borderRadius: spacing.radius.xl,
-    gap: spacing.xxs,
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: 'rgba(0,0,0,0.06)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 12,
+      elevation: 3,
+    } : {}),
   },
-  statIconBubble: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+  statIconRing: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 6,
   },
-  statValue: { color: colors.text.primary },
-  streakWrapper: {
+  statValue: {
+    fontSize: 22,
+    color: colors.text.primary,
+    lineHeight: 26,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: colors.text.muted,
+    marginTop: 1,
+  },
+
+  /* Streak */
+  streakCard: {
     marginBottom: spacing.xl,
-    borderRadius: spacing.radius.xl,
+    borderRadius: 20,
     overflow: 'hidden',
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: 'rgba(255, 107, 61, 0.15)',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 1,
+      shadowRadius: 16,
+      elevation: 4,
+    } : {}),
   },
-  streakGradient: { padding: spacing.lg, borderRadius: spacing.radius.xl },
-  streakMultiplierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
-  streakMultiplierLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: '#D4760A' },
-  streakMultiplierBadge: { backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  streakMultiplierValue: { fontFamily: 'Baloo2-Bold', fontSize: 14, color: '#7A5A00' },
+  streakGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderRadius: 20,
+  },
+  streakLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  streakFireWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 107, 61, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakDays: {
+    color: '#8B4513',
+    fontSize: 16,
+  },
+  streakBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF8C42',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Location */
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderRadius: 20,
     marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.15)',
   },
-  locationHeader: {
+  locationLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     gap: spacing.md,
   },
-  locationIconBubble: {
+  locationPulse: {
+    position: 'absolute',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(184, 165, 224, 0.08)',
+    left: -4,
+  },
+  locationIconWrap: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -582,40 +715,112 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  locationText: { flex: 1 },
+  locationTextWrap: { flex: 1 },
+  locationArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary.wisteriaFaded,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Section headers */
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-  stampsScroll: { paddingVertical: spacing.sm, marginBottom: spacing.xl },
-  welcomeCard: { marginBottom: spacing.xl },
-  welcomeContent: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
-  actionsGrid: {
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sectionTitle: { fontSize: 18 },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: spacing.radius.round,
+    backgroundColor: colors.primary.wisteriaFaded,
+  },
+  stampsScroll: {
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+
+  /* Empty stamp card */
+  emptyStampCard: {
+    borderRadius: 20,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.15)',
+    borderStyle: 'dashed',
+  },
+  emptyStampIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary.wisteriaFaded,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStampText: {
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  /* Adventures grid */
+  adventuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: CARD_GAP,
   },
-  actionCard: {
-    width: (width - spacing.screenPadding * 2 - spacing.md * 2) / 3,
-    borderRadius: spacing.radius.xl,
+  adventureCard: {
+    width: ADV_CARD_W,
+    borderRadius: 20,
     overflow: 'hidden',
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: 'rgba(0,0,0,0.06)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 10,
+      elevation: 3,
+    } : {}),
   },
-  actionGradient: {
+  adventureTouch: { borderRadius: 20 },
+  adventureGradient: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg + 4,
     paddingHorizontal: spacing.sm,
-    gap: spacing.sm,
-    borderRadius: spacing.radius.xl,
+    borderRadius: 20,
+    gap: 6,
   },
-  actionLabel: {
+  adventureIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  adventureLabel: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 13,
     color: colors.text.primary,
-    fontFamily: 'Nunito-SemiBold',
-    fontSize: 12,
   },
+  adventureSub: {
+    fontSize: 10,
+    color: colors.text.muted,
+  },
+
+  bottomSpacer: { height: 20 },
 });
 
 export default HomeScreen;
