@@ -262,6 +262,38 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          {/* Mini-Games */}
+          <View style={styles.section}>
+            <Heading level={2} style={styles.sectionTitle}>
+              Mini-Games
+            </Heading>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gamesRow}>
+              {([
+                { key: 'WordMatch', label: 'Word Match', icon: 'language' as IconName, color: colors.primary.wisteriaDark, bg: colors.primary.wisteriaFaded },
+                { key: 'MemoryCards', label: 'Memory', icon: 'flashcard' as IconName, color: colors.calm.ocean, bg: colors.calm.skyLight },
+                { key: 'CookingGame', label: 'Cooking', icon: 'food' as IconName, color: colors.reward.peachDark, bg: colors.reward.peachLight },
+                { key: 'TreasureHunt', label: 'Treasure Hunt', icon: 'compass' as IconName, color: colors.success.emerald, bg: colors.success.honeydew },
+              ] as const).map((game) => (
+                <TouchableOpacity
+                  key={game.key}
+                  style={styles.gameCard}
+                  onPress={() => (navigation as any).navigate(game.key)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={[game.bg, colors.base.cream]}
+                    style={styles.gameCardGradient}
+                  >
+                    <View style={[styles.gameIconWrap, { backgroundColor: game.color + '25' }]}>
+                      <Icon name={game.icon} size={26} color={game.color} />
+                    </View>
+                    <Text variant="bodySmall" style={styles.gameLabel}>{game.label}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           {/* Categories */}
           <View style={styles.section}>
             <Heading level={2} style={styles.sectionTitle}>
@@ -450,6 +482,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: spacing.radius.sm,
+  },
+  gamesRow: {
+    marginHorizontal: -spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  gameCard: {
+    width: 100,
+    marginRight: spacing.sm,
+    borderRadius: spacing.radius.lg,
+    overflow: 'hidden',
+  },
+  gameCardGradient: {
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: spacing.radius.lg,
+  },
+  gameIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gameLabel: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 12,
+    textAlign: 'center',
   },
   xpText: {
     color: colors.reward.amber,

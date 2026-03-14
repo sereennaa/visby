@@ -54,6 +54,12 @@ import { LessonScreen } from '../screens/learn/LessonScreen';
 import { QuizScreen } from '../screens/learn/QuizScreen';
 import { FlashcardsScreen } from '../screens/learn/FlashcardsScreen';
 
+// Game Screens
+import { WordMatchScreen } from '../screens/games/WordMatchScreen';
+import { MemoryCardsScreen } from '../screens/games/MemoryCardsScreen';
+import { CookingGameScreen } from '../screens/games/CookingGameScreen';
+import { TreasureHuntScreen } from '../screens/games/TreasureHuntScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -234,6 +240,12 @@ export const AppNavigator = () => {
         <Stack.Screen name="Lesson" component={LessonScreen} />
         <Stack.Screen name="Quiz" component={QuizScreen} />
         <Stack.Screen name="Flashcards" component={FlashcardsScreen} />
+
+        {/* Mini-Games */}
+        <Stack.Screen name="WordMatch" component={WordMatchScreen} />
+        <Stack.Screen name="MemoryCards" component={MemoryCardsScreen} />
+        <Stack.Screen name="CookingGame" component={CookingGameScreen} />
+        <Stack.Screen name="TreasureHunt" component={TreasureHuntScreen} />
 
         {/* Shop & Membership */}
         <Stack.Screen name="CosmeticShop" component={CosmeticShopScreen} />

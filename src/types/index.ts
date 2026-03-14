@@ -587,6 +587,12 @@ export type RootStackParamList = {
   CountryWorld: undefined;
   CountryRoom: { countryId: string };
 
+  // Mini-Games
+  WordMatch: { countryId?: string } | undefined;
+  MemoryCards: { category?: string } | undefined;
+  CookingGame: { countryId?: string } | undefined;
+  TreasureHunt: { countryId?: string } | undefined;
+
   // Shop & Membership
   CosmeticShop: undefined;
   AuraStore: undefined;
