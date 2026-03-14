@@ -72,6 +72,9 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
 
+  // Games modal
+  const [showGamesModal, setShowGamesModal] = useState(false);
+
   // Edit / Decorate mode
   const [editMode, setEditMode] = useState(false);
   const [showFurniturePanel, setShowFurniturePanel] = useState(false);
@@ -439,17 +442,34 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           )}
 
           {/* Quick Actions */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionCard} onPress={startQuiz}>
-              <Icon name="quiz" size={28} color={colors.text.primary} />
-              <Text style={styles.actionLabel}>Take Quiz</Text>
-              <Text style={styles.actionSub}>+{QUIZ_AURA_PER_CORRECT}/correct</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => { if (facts.length > 0) { setFactIndex(0); openFact(facts[0]); } }}>
-              <Icon name="book" size={28} color={colors.text.primary} />
-              <Text style={styles.actionLabel}>Read Facts</Text>
-              <Text style={styles.actionSub}>{readFacts.size}/{facts.length} read</Text>
-            </TouchableOpacity>
+          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+            <View style={styles.actionsRow}>
+              <TouchableOpacity style={styles.actionCard} onPress={startQuiz}>
+                <Icon name="quiz" size={28} color={colors.primary.wisteriaDark} />
+                <Text style={styles.actionLabel}>Take Quiz</Text>
+                <Text style={styles.actionSub}>+{QUIZ_AURA_PER_CORRECT}/correct</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionCard} onPress={() => setShowGamesModal(true)}>
+                <Icon name="sparkles" size={28} color={colors.reward.gold} />
+                <Text style={styles.actionLabel}>Mini-Games</Text>
+                <Text style={styles.actionSub}>4 games to play</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.actionsRow}>
+              <TouchableOpacity style={styles.actionCard} onPress={() => { if (facts.length > 0) { setFactIndex(0); openFact(facts[0]); } }}>
+                <Icon name="book" size={28} color={colors.calm.ocean} />
+                <Text style={styles.actionLabel}>Read Facts</Text>
+                <Text style={styles.actionSub}>{readFacts.size}/{facts.length} read</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionCard}
+                onPress={() => isOwner ? setEditMode(true) : navigation.navigate('CountryWorld' as any)}
+              >
+                <Icon name={isOwner ? "edit" : "home"} size={28} color={isOwner ? colors.success.emerald : colors.reward.peachDark} />
+                <Text style={styles.actionLabel}>{isOwner ? 'Decorate' : 'Get House'}</Text>
+                <Text style={styles.actionSub}>{isOwner ? 'Edit your room' : 'Buy a house here'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Fun Facts scroll */}
@@ -680,6 +700,40 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
         </Pressable>
       </Modal>
 
+      {/* Games Modal */}
+      <Modal visible={showGamesModal} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowGamesModal(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Heading level={3} style={{ textAlign: 'center', marginBottom: spacing.md }}>Mini-Games</Heading>
+            <View style={styles.gamesGrid}>
+              {[
+                { key: 'WordMatch', name: 'Word Match', icon: 'language', desc: 'Match foreign words', color: colors.primary.wisteriaDark },
+                { key: 'MemoryCards', name: 'Memory', icon: 'flashcard', desc: 'Flip and match pairs', color: colors.calm.ocean },
+                { key: 'CookingGame', name: 'Cooking', icon: 'food', desc: 'Cook world recipes', color: colors.reward.peachDark },
+                { key: 'TreasureHunt', name: 'Treasure Hunt', icon: 'compass', desc: 'Find hidden items', color: colors.success.emerald },
+              ].map((game) => (
+                <TouchableOpacity
+                  key={game.key}
+                  style={styles.gamePickCard}
+                  onPress={() => {
+                    setShowGamesModal(false);
+                    (navigation as any).navigate(game.key, { countryId });
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.gamePickIcon, { backgroundColor: game.color + '20' }]}>
+                    <Icon name={game.icon as any} size={24} color={game.color} />
+                  </View>
+                  <Text style={styles.gamePickName}>{game.name}</Text>
+                  <Caption>{game.desc}</Caption>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Button title="Close" variant="secondary" onPress={() => setShowGamesModal(false)} style={{ marginTop: spacing.md }} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Quiz modal */}
       <Modal visible={quizActive} transparent animationType="slide">
         <Pressable style={styles.modalOverlay}>
@@ -879,6 +933,23 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 14, color: colors.text.primary },
   actionSub: { fontFamily: 'Nunito-Medium', fontSize: 11, color: colors.text.muted },
+
+  // Games grid (modal)
+  gamesGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+  },
+  gamePickCard: {
+    width: '47%' as any, alignItems: 'center', padding: spacing.md,
+    backgroundColor: colors.base.cream, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.15)',
+  },
+  gamePickIcon: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  },
+  gamePickName: {
+    fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.text.primary,
+  },
 
   // Facts section
   factsSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },

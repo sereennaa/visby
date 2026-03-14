@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -138,61 +140,78 @@ const AdventureCard: React.FC<{
 };
 
 /* ─── Needs HUD ─── */
-const NEED_CONFIG: { key: keyof Omit<VisbyNeeds, 'lastUpdated'>; icon: IconName; label: string; color: string; bgColor: string; action: string }[] = [
-  { key: 'hunger', icon: 'food', label: 'Hunger', color: '#E8A04E', bgColor: '#FFEAD0', action: 'Feed' },
-  { key: 'happiness', icon: 'heart', label: 'Happy', color: '#E07A8A', bgColor: '#FFE0E8', action: 'Play' },
-  { key: 'energy', icon: 'flash', label: 'Energy', color: '#5EA0D4', bgColor: '#E0F0FF', action: 'Rest' },
-  { key: 'knowledge', icon: 'book', label: 'Knowledge', color: '#8B6FC0', bgColor: '#EDE3FA', action: 'Study' },
+const NEED_CONFIG: { key: keyof Omit<VisbyNeeds, 'lastUpdated'>; icon: IconName; label: string; color: string; bgColor: string; hint: string; howTo: string }[] = [
+  { key: 'hunger', icon: 'food', label: 'Food', color: '#E8A04E', bgColor: '#FFEAD0', hint: 'Hungry!', howTo: 'Log a bite or play Cooking Game' },
+  { key: 'happiness', icon: 'heart', label: 'Joy', color: '#E07A8A', bgColor: '#FFE0E8', hint: 'Bored!', howTo: 'Collect stamps or play games' },
+  { key: 'energy', icon: 'flash', label: 'Energy', color: '#5EA0D4', bgColor: '#E0F0FF', hint: 'Tired!', howTo: 'Check in daily to rest' },
+  { key: 'knowledge', icon: 'book', label: 'Smarts', color: '#8B6FC0', bgColor: '#EDE3FA', hint: 'Curious!', howTo: 'Take a quiz or finish a lesson' },
 ];
 
 const NeedsHUD: React.FC<{
-  getVisbyNeeds: () => VisbyNeeds;
-  feedVisby: () => void;
-  playWithVisby: () => void;
-  restVisby: () => void;
-  studyWithVisby: () => void;
-}> = ({ getVisbyNeeds, feedVisby, playWithVisby, restVisby, studyWithVisby }) => {
-  const needs = getVisbyNeeds();
-  const actions = [feedVisby, playWithVisby, restVisby, studyWithVisby];
+  needs: VisbyNeeds;
+  onNeedTap: (need: typeof NEED_CONFIG[number]) => void;
+}> = ({ needs, onNeedTap }) => {
+  const lowestNeed = NEED_CONFIG.reduce((low, n) =>
+    (needs[n.key] as number) < (needs[low.key] as number) ? n : low
+  , NEED_CONFIG[0]);
+  const lowestVal = needs[lowestNeed.key] as number;
 
   return (
     <View style={styles.needsContainer}>
-      {NEED_CONFIG.map((need, i) => {
-        const value = needs[need.key] as number;
-        const isLow = value < 30;
-        return (
-          <TouchableOpacity
-            key={need.key}
-            style={styles.needItem}
-            onPress={actions[i]}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={`${need.action} Visby, ${need.label} at ${value}%`}
-          >
-            <View style={[styles.needIconWrap, { backgroundColor: need.bgColor }]}>
-              <Icon name={need.icon} size={14} color={need.color} />
-            </View>
-            <View style={styles.needBarTrack}>
-              <View
-                style={[
-                  styles.needBarFill,
-                  {
-                    width: `${value}%` as any,
-                    backgroundColor: isLow ? colors.status.error : need.color,
-                  },
-                ]}
-              />
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+      {/* Urgent hint */}
+      {lowestVal < 40 && (
+        <TouchableOpacity
+          style={[styles.needsAlert, { backgroundColor: lowestNeed.bgColor }]}
+          onPress={() => onNeedTap(lowestNeed)}
+          activeOpacity={0.8}
+        >
+          <Icon name={lowestNeed.icon} size={16} color={lowestNeed.color} />
+          <Text style={[styles.needsAlertText, { color: lowestNeed.color }]}>
+            {lowestNeed.hint} {lowestNeed.howTo}
+          </Text>
+          <Icon name="chevronRight" size={14} color={lowestNeed.color} />
+        </TouchableOpacity>
+      )}
+      {/* Bars */}
+      <View style={styles.needsBarsRow}>
+        {NEED_CONFIG.map((need) => {
+          const value = needs[need.key] as number;
+          const isLow = value < 30;
+          const isCritical = value < 15;
+          return (
+            <TouchableOpacity
+              key={need.key}
+              style={styles.needItem}
+              onPress={() => onNeedTap(need)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.needIconWrap, { backgroundColor: need.bgColor }]}>
+                <Icon name={need.icon} size={14} color={need.color} />
+              </View>
+              <View style={styles.needBarTrack}>
+                <View
+                  style={[
+                    styles.needBarFill,
+                    {
+                      width: `${value}%` as any,
+                      backgroundColor: isCritical ? colors.status.error : isLow ? colors.status.warning : need.color,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.needLabel, isLow && { color: colors.status.error }]}>{need.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, feedVisby, playWithVisby, restVisby, studyWithVisby, getGrowthStage } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [careHint, setCareHint] = React.useState<typeof NEED_CONFIG[number] | null>(null);
 
   const visbyFloat = useSharedValue(0);
 
@@ -410,11 +429,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {/* ──── VISBY NEEDS ──── */}
           <Animated.View entering={FadeInDown.duration(500).delay(300)}>
             <NeedsHUD
-              getVisbyNeeds={getVisbyNeeds}
-              feedVisby={feedVisby}
-              playWithVisby={playWithVisby}
-              restVisby={restVisby}
-              studyWithVisby={studyWithVisby}
+              needs={getVisbyNeeds()}
+              onNeedTap={(need) => setCareHint(need)}
             />
           </Animated.View>
 
@@ -558,8 +574,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             )}
           </Animated.View>
 
-          {/* ──── ADVENTURES GRID ──── */}
+          {/* ──── MINI-GAMES ──── */}
           <Animated.View entering={FadeInDown.duration(500).delay(700)}>
+            <View style={styles.sectionHeader}>
+              <Heading level={2}>Play</Heading>
+              <Caption>Learn while having fun</Caption>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gamesScrollRow}>
+              {([
+                { key: 'WordMatch', label: 'Word\nMatch', icon: 'language' as IconName, gradient: ['#EDE3FA', '#FAF5FF'] as [string, string], iconColor: colors.primary.wisteriaDark },
+                { key: 'MemoryCards', label: 'Memory\nCards', icon: 'flashcard' as IconName, gradient: ['#E0F0FF', '#F0F7FF'] as [string, string], iconColor: colors.calm.ocean },
+                { key: 'CookingGame', label: 'World\nCooking', icon: 'food' as IconName, gradient: ['#FFEAD0', '#FFF5E8'] as [string, string], iconColor: colors.reward.peachDark },
+                { key: 'TreasureHunt', label: 'Treasure\nHunt', icon: 'compass' as IconName, gradient: ['#DFF5E1', '#F0FFF0'] as [string, string], iconColor: colors.success.emerald },
+              ] as const).map((game, i) => (
+                <Animated.View key={game.key} entering={FadeInDown.duration(400).delay(750 + i * 80)}>
+                  <TouchableOpacity
+                    style={styles.gameHomeCard}
+                    onPress={() => (navigation as any).navigate(game.key)}
+                    activeOpacity={0.85}
+                  >
+                    <LinearGradient
+                      colors={game.gradient}
+                      style={styles.gameHomeGradient}
+                    >
+                      <View style={[styles.gameHomeIconWrap, { backgroundColor: game.iconColor + '20' }]}>
+                        <Icon name={game.icon} size={28} color={game.iconColor} />
+                      </View>
+                      <Text style={styles.gameHomeLabel}>{game.label}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </ScrollView>
+          </Animated.View>
+
+          {/* ──── ADVENTURES GRID ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(900)}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Icon name="rocket" size={18} color={colors.primary.wisteriaDark} />
@@ -586,6 +636,82 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
+
+      {/* Care Hint Modal */}
+      <Modal visible={!!careHint} transparent animationType="fade">
+        <Pressable style={styles.careOverlay} onPress={() => setCareHint(null)}>
+          <Pressable style={styles.careModal} onPress={(e) => e.stopPropagation()}>
+            {careHint && (
+              <>
+                <View style={[styles.careIconCircle, { backgroundColor: careHint.bgColor }]}>
+                  <Icon name={careHint.icon} size={36} color={careHint.color} />
+                </View>
+                <Heading level={2} style={styles.careTitle}>
+                  {(getVisbyNeeds()[careHint.key] as number) < 30
+                    ? `Your Visby is ${careHint.hint.replace('!', '')}!`
+                    : `${careHint.label}: ${getVisbyNeeds()[careHint.key]}%`}
+                </Heading>
+                <Text variant="body" style={styles.careDesc}>
+                  {careHint.key === 'hunger'
+                    ? 'Feed your Visby by logging the foods you eat! Try the Cooking Game too.'
+                    : careHint.key === 'happiness'
+                    ? 'Make your Visby happy by collecting stamps, exploring countries, and playing mini-games!'
+                    : careHint.key === 'energy'
+                    ? 'Your Visby rests when you check in each day. Come back tomorrow for more energy!'
+                    : 'Teach your Visby by taking quizzes, completing lessons, and playing Word Match!'}
+                </Text>
+                <View style={styles.careActions}>
+                  {careHint.key === 'hunger' && (
+                    <>
+                      <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); navigation.navigate('AddBite'); }}>
+                        <Icon name="food" size={20} color={careHint.color} />
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Log a Bite</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); (navigation as any).navigate('CookingGame'); }}>
+                        <Icon name="sparkles" size={20} color={careHint.color} />
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Cooking Game</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {careHint.key === 'happiness' && (
+                    <>
+                      <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); navigation.navigate('CollectStamp', { locationId: 'quick' }); }}>
+                        <Icon name="stamp" size={20} color={careHint.color} />
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Collect Stamp</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); (navigation as any).navigate('TreasureHunt'); }}>
+                        <Icon name="compass" size={20} color={careHint.color} />
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Treasure Hunt</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {careHint.key === 'energy' && (
+                    <View style={[styles.careBtn, { backgroundColor: careHint.bgColor }]}>
+                      <Icon name="time" size={20} color={careHint.color} />
+                      <Text style={[styles.careBtnText, { color: careHint.color }]}>Restores daily at check-in</Text>
+                    </View>
+                  )}
+                  {careHint.key === 'knowledge' && (
+                    <>
+                      <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); navigation.navigate('Quiz'); }}>
+                        <Icon name="quiz" size={20} color={careHint.color} />
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Take a Quiz</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); (navigation as any).navigate('WordMatch'); }}>
+                        <Icon name="language" size={20} color={careHint.color} />
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Word Match</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+                <TouchableOpacity style={styles.careDismiss} onPress={() => setCareHint(null)}>
+                  <Text style={styles.careDismissText}>Got it</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -861,6 +987,41 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 
+  /* Mini-games row */
+  gamesScrollRow: {
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  gameHomeCard: {
+    width: 100,
+    marginRight: spacing.sm,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  gameHomeGradient: {
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: 20,
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  gameHomeIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gameHomeLabel: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 12,
+    textAlign: 'center',
+    color: colors.text.primary,
+    lineHeight: 16,
+  },
+
   /* Adventures grid */
   adventuresGrid: {
     flexDirection: 'row',
@@ -907,11 +1068,9 @@ const styles = StyleSheet.create({
 
   /* Needs HUD */
   needsContainer: {
-    flexDirection: 'row',
-    gap: 8,
     marginBottom: spacing.xl,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: spacing.md,
     ...(Platform.OS !== 'web' ? {
       shadowColor: 'rgba(0,0,0,0.05)',
@@ -921,10 +1080,28 @@ const styles = StyleSheet.create({
       elevation: 2,
     } : {}),
   },
+  needsAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  needsAlertText: {
+    flex: 1,
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 12,
+  },
+  needsBarsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   needItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   needIconWrap: {
     width: 28,
@@ -943,6 +1120,72 @@ const styles = StyleSheet.create({
   needBarFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  needLabel: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 9,
+    color: colors.text.muted,
+    textAlign: 'center',
+  },
+
+  /* Care Hint Modal */
+  careOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  careModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: spacing.xl,
+    maxWidth: 340,
+    width: '100%',
+    alignItems: 'center',
+  },
+  careIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  careTitle: {
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  careDesc: {
+    textAlign: 'center',
+    color: colors.text.secondary,
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+  },
+  careActions: {
+    width: '100%',
+    gap: spacing.sm,
+  },
+  careBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    borderRadius: 16,
+  },
+  careBtnText: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 14,
+  },
+  careDismiss: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  careDismissText: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 14,
+    color: colors.text.muted,
   },
 
   bottomSpacer: { height: 20 },

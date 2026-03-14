@@ -98,6 +98,55 @@ export const ALL_QUIZ_QUESTIONS: QuizQuestion[] = [
   { id: 'sq8', question: '"Fiesta" in Spanish means...', options: ['Nap', 'Party/festival', 'Food', 'Friends'], correct: 1, category: 'slang' },
   { id: 'sq9', question: '"Wanderlust" is a German word meaning...', options: ['Homesick', 'Love of travel', 'Love of food', 'Fear of heights'], correct: 1, category: 'slang' },
   { id: 'sq10', question: '"Aloha" in Hawaiian can mean...', options: ['Only hello', 'Only goodbye', 'Hello, goodbye, and love', 'Food'], correct: 2, category: 'slang' },
+
+  // NEW COUNTRY QUESTIONS (40)
+  { id: 'nkr1', question: 'Kimchi is a famous fermented food from which country?', options: ['Japan', 'South Korea', 'China', 'Thailand'], correct: 1, category: 'culture' },
+  { id: 'nkr2', question: 'What is the traditional Korean dress called?', options: ['Kimono', 'Sari', 'Hanbok', 'Ao dai'], correct: 2, category: 'culture' },
+  { id: 'nkr3', question: 'K-pop music comes from which country?', options: ['Japan', 'China', 'Thailand', 'South Korea'], correct: 3, category: 'culture' },
+  { id: 'nkr4', question: 'Which Korean martial art is an Olympic sport?', options: ['Karate', 'Judo', 'Taekwondo', 'Kung fu'], correct: 2, category: 'culture' },
+  { id: 'nkr5', question: 'Bibimbap is a Korean dish served in a...', options: ['Tortilla', 'Bowl', 'Baguette', 'Crepe'], correct: 1, category: 'geography' },
+
+  { id: 'nth1', question: 'Thailand has over 40,000 Buddhist...', options: ['Schools', 'Statues', 'Temples', 'Bridges'], correct: 2, category: 'geography' },
+  { id: 'nth2', question: 'Songkran is the Thai New Year festival celebrated with...', options: ['Fire', 'Water', 'Flowers', 'Kites'], correct: 1, category: 'culture' },
+  { id: 'nth3', question: 'What is the national animal of Thailand?', options: ['Tiger', 'Elephant', 'Panda', 'Dragon'], correct: 1, category: 'geography' },
+  { id: 'nth4', question: 'Pad Thai is a dish made with stir-fried...', options: ['Rice', 'Bread', 'Noodles', 'Potatoes'], correct: 2, category: 'culture' },
+  { id: 'nth5', question: 'Muay Thai is also known as...', options: ['Thai cooking', 'Thai boxing', 'Thai dancing', 'Thai singing'], correct: 1, category: 'culture' },
+
+  { id: 'nma1', question: 'Moroccan medinas are famous old walled...', options: ['Castles', 'Cities', 'Gardens', 'Temples'], correct: 1, category: 'geography' },
+  { id: 'nma2', question: 'Morocco is partly covered by which desert?', options: ['Gobi', 'Kalahari', 'Sahara', 'Atacama'], correct: 2, category: 'geography' },
+  { id: 'nma3', question: 'A tagine is a Moroccan...', options: ['Dance', 'Clay cooking pot', 'Musical instrument', 'Hat'], correct: 1, category: 'culture' },
+  { id: 'nma4', question: 'Moroccan mint tea is poured from...', options: ['Very low', 'Very high up', 'Behind the back', 'Sitting down'], correct: 1, category: 'culture' },
+  { id: 'nma5', question: 'Zellige is a Moroccan art of making...', options: ['Music', 'Tile mosaics', 'Carpets', 'Pottery'], correct: 1, category: 'culture' },
+
+  { id: 'npe1', question: 'Machu Picchu was built by which civilization?', options: ['Maya', 'Aztec', 'Inca', 'Roman'], correct: 2, category: 'history' },
+  { id: 'npe2', question: 'Peru is home to which mountain range?', options: ['Alps', 'Himalayas', 'Rockies', 'Andes'], correct: 3, category: 'geography' },
+  { id: 'npe3', question: 'Ceviche is Peru\'s national dish made with...', options: ['Cooked beef', 'Raw fish and lime', 'Fried chicken', 'Baked potatoes'], correct: 1, category: 'culture' },
+  { id: 'npe4', question: 'Quipus were knotted strings used by the Inca for...', options: ['Fishing', 'Record keeping', 'Decoration', 'Music'], correct: 1, category: 'history' },
+  { id: 'npe5', question: 'Peru is the birthplace of which common vegetable?', options: ['Carrot', 'Tomato', 'Potato', 'Onion'], correct: 2, category: 'geography' },
+
+  { id: 'nke1', question: 'The Great Migration happens in Kenya\'s...', options: ['Sahara', 'Amazon', 'Maasai Mara', 'Serengeti only'], correct: 2, category: 'geography' },
+  { id: 'nke2', question: 'The Maasai people are known for wearing which color?', options: ['Blue', 'Green', 'Red', 'Yellow'], correct: 2, category: 'culture' },
+  { id: 'nke3', question: 'Kenya grows some of the world\'s best...', options: ['Rice', 'Coffee', 'Wheat', 'Corn'], correct: 1, category: 'geography' },
+  { id: 'nke4', question: 'Kenyan runners are famous for winning...', options: ['Sprints', 'Swimming', 'Long-distance races', 'Cycling'], correct: 2, category: 'culture' },
+  { id: 'nke5', question: 'Ugali is a Kenyan staple food made from...', options: ['Rice', 'Wheat', 'Maize flour', 'Potatoes'], correct: 2, category: 'culture' },
+
+  { id: 'nno1', question: 'Norway\'s fjords were carved by...', options: ['Rivers', 'Earthquakes', 'Glaciers', 'Wind'], correct: 2, category: 'geography' },
+  { id: 'nno2', question: 'Vikings originally came from Scandinavia, including...', options: ['Spain', 'Norway', 'Italy', 'Greece'], correct: 1, category: 'history' },
+  { id: 'nno3', question: 'The northern lights are also called the aurora...', options: ['Australis', 'Borealis', 'Solaris', 'Lunaris'], correct: 1, category: 'geography' },
+  { id: 'nno4', question: 'In Norwegian folklore, trolls turn to stone in...', options: ['Rain', 'Moonlight', 'Sunlight', 'Snow'], correct: 2, category: 'culture' },
+  { id: 'nno5', question: '"Friluftsliv" is a Norwegian word meaning...', options: ['Cooking together', 'Open-air living', 'Ice fishing', 'Mountain climbing'], correct: 1, category: 'culture' },
+
+  { id: 'ntr1', question: 'Istanbul\'s Grand Bazaar has over how many shops?', options: ['400', '1,000', '4,000', '10,000'], correct: 2, category: 'geography' },
+  { id: 'ntr2', question: 'Istanbul sits on which two continents?', options: ['Asia and Africa', 'Europe and Asia', 'Europe and Africa', 'Asia and Australia'], correct: 1, category: 'geography' },
+  { id: 'ntr3', question: 'Turkish delight (lokum) is a type of...', options: ['Bread', 'Cheese', 'Candy', 'Soup'], correct: 2, category: 'culture' },
+  { id: 'ntr4', question: 'Cappadocia is famous for its hot air balloons and...', options: ['Beaches', 'Fairy chimneys', 'Waterfalls', 'Forests'], correct: 1, category: 'geography' },
+  { id: 'ntr5', question: 'A Turkish hammam is a traditional...', options: ['Kitchen', 'Bathhouse', 'School', 'Market'], correct: 1, category: 'culture' },
+
+  { id: 'ngr1', question: 'Ancient Greeks believed the gods lived on Mount...', options: ['Everest', 'Fuji', 'Olympus', 'Sinai'], correct: 2, category: 'culture' },
+  { id: 'ngr2', question: 'Greece has about how many islands?', options: ['100', '600', '2,000', '6,000'], correct: 3, category: 'geography' },
+  { id: 'ngr3', question: 'The ancient Olympics were first held in...', options: ['Athens', 'Sparta', 'Olympia', 'Corinth'], correct: 2, category: 'history' },
+  { id: 'ngr4', question: 'Greek gyros are wrapped in...', options: ['Tortilla', 'Naan', 'Pita bread', 'Rice paper'], correct: 2, category: 'culture' },
+  { id: 'ngr5', question: 'The word "philosophy" comes from Greek and means...', options: ['Love of food', 'Love of wisdom', 'Love of sports', 'Love of music'], correct: 1, category: 'culture' },
 ];
 
 export function getQuizByCategory(category: string, count: number = 10): QuizQuestion[] {
@@ -164,6 +213,54 @@ export const ALL_FLASHCARDS: FlashcardItem[] = [
   { id: 'fe6', front: 'Saudade', back: 'Deep longing & nostalgia (Portuguese)', icon: '', deck: 'expressions' },
   { id: 'fe7', front: 'Fiesta', back: 'Party or celebration (Spanish)', icon: '', deck: 'expressions' },
   { id: 'fe8', front: 'Aloha', back: 'Hello, goodbye & love (Hawaiian)', icon: '', deck: 'expressions' },
+
+  // Korean phrases
+  { id: 'fkr1', front: 'Annyeonghaseyo', back: 'Hello (Korean)', icon: '', deck: 'phrases' },
+  { id: 'fkr2', front: 'Kamsahamnida', back: 'Thank you (Korean)', icon: '', deck: 'phrases' },
+  { id: 'fkr3', front: 'Annyeonghi gaseyo', back: 'Goodbye (Korean)', icon: '', deck: 'phrases' },
+  { id: 'fkr4', front: 'Ne', back: 'Yes (Korean)', icon: '', deck: 'phrases' },
+
+  // Thai phrases
+  { id: 'fth1', front: 'Sawadee krap/ka', back: 'Hello (Thai)', icon: '', deck: 'phrases' },
+  { id: 'fth2', front: 'Khop khun krap/ka', back: 'Thank you (Thai)', icon: '', deck: 'phrases' },
+  { id: 'fth3', front: 'Sabai dee mai?', back: 'How are you? (Thai)', icon: '', deck: 'phrases' },
+  { id: 'fth4', front: 'Aroi', back: 'Delicious (Thai)', icon: '', deck: 'phrases' },
+
+  // Arabic/Darija phrases (Morocco)
+  { id: 'fma1', front: 'Salam', back: 'Hello / Peace (Moroccan Arabic)', icon: '', deck: 'phrases' },
+  { id: 'fma2', front: 'Shukran', back: 'Thank you (Arabic)', icon: '', deck: 'phrases' },
+  { id: 'fma3', front: 'Labas?', back: 'How are you? (Moroccan Darija)', icon: '', deck: 'phrases' },
+  { id: 'fma4', front: 'Bislama', back: 'Goodbye (Moroccan Darija)', icon: '', deck: 'phrases' },
+
+  // Spanish/Quechua phrases (Peru)
+  { id: 'fpe1', front: 'Hola', back: 'Hello (Peruvian Spanish)', icon: '', deck: 'phrases' },
+  { id: 'fpe2', front: 'Allianchu?', back: 'How are you? (Quechua)', icon: '', deck: 'phrases' },
+  { id: 'fpe3', front: 'Añay', back: 'Thank you (Quechua)', icon: '', deck: 'phrases' },
+  { id: 'fpe4', front: 'Tupananchiskama', back: 'See you later (Quechua)', icon: '', deck: 'phrases' },
+
+  // Swahili phrases (Kenya)
+  { id: 'fke1', front: 'Jambo', back: 'Hello (Swahili)', icon: '', deck: 'phrases' },
+  { id: 'fke2', front: 'Asante', back: 'Thank you (Swahili)', icon: '', deck: 'phrases' },
+  { id: 'fke3', front: 'Habari?', back: 'How are you? / What\'s the news? (Swahili)', icon: '', deck: 'phrases' },
+  { id: 'fke4', front: 'Hakuna matata', back: 'No worries (Swahili)', icon: '', deck: 'phrases' },
+
+  // Norwegian phrases
+  { id: 'fno1', front: 'Hei', back: 'Hello (Norwegian)', icon: '', deck: 'phrases' },
+  { id: 'fno2', front: 'Takk', back: 'Thank you (Norwegian)', icon: '', deck: 'phrases' },
+  { id: 'fno3', front: 'Ha det bra', back: 'Goodbye (Norwegian)', icon: '', deck: 'phrases' },
+  { id: 'fno4', front: 'Skål', back: 'Cheers! (Norwegian)', icon: '', deck: 'phrases' },
+
+  // Turkish phrases
+  { id: 'ftr1', front: 'Merhaba', back: 'Hello (Turkish)', icon: '', deck: 'phrases' },
+  { id: 'ftr2', front: 'Teşekkürler', back: 'Thank you (Turkish)', icon: '', deck: 'phrases' },
+  { id: 'ftr3', front: 'Güle güle', back: 'Goodbye (Turkish)', icon: '', deck: 'phrases' },
+  { id: 'ftr4', front: 'Evet', back: 'Yes (Turkish)', icon: '', deck: 'phrases' },
+
+  // Greek phrases
+  { id: 'fgr1', front: 'Yia sou', back: 'Hello / Goodbye (Greek)', icon: '', deck: 'phrases' },
+  { id: 'fgr2', front: 'Efcharistó', back: 'Thank you (Greek)', icon: '', deck: 'phrases' },
+  { id: 'fgr3', front: 'Parakaló', back: 'Please / You\'re welcome (Greek)', icon: '', deck: 'phrases' },
+  { id: 'fgr4', front: 'Opa!', back: 'Hooray! / expression of joy (Greek)', icon: '', deck: 'phrases' },
 ];
 
 export const FLASHCARD_DECKS = [
@@ -171,6 +268,7 @@ export const FLASHCARD_DECKS = [
   { id: 'food', title: 'World Foods', icon: '', count: 10 },
   { id: 'landmarks', title: 'Famous Landmarks', icon: '', count: 8 },
   { id: 'expressions', title: 'Fun Expressions', icon: '', count: 8 },
+  { id: 'phrases', title: 'World Phrases', icon: '', count: 32 },
 ];
 
 export function getFlashcardDeck(deckId: string): FlashcardItem[] {
@@ -355,6 +453,78 @@ export const LESSON_CONTENT: Record<string, LessonData> = {
       { text: 'Mount Everest grows about 4mm taller every year!', icon: '' },
     ],
   },
+  kr_intro: {
+    title: 'Discover South Korea',
+    slides: [
+      { text: 'South Korea is a small but mighty country in East Asia, famous for technology, music, and delicious food!', icon: '' },
+      { text: 'K-pop groups like BTS train for years in singing, dancing, and languages before they debut. Music videos can get billions of views!', icon: '' },
+      { text: 'Kimchi is eaten at almost every Korean meal. Families make huge batches together each autumn in a tradition called "kimjang."', icon: '' },
+      { text: 'Hangul, the Korean alphabet, was invented by King Sejong the Great in 1443 so everyone could learn to read — not just scholars!', icon: '' },
+    ],
+  },
+  th_intro: {
+    title: 'Discover Thailand',
+    slides: [
+      { text: 'Thailand is known as the "Land of Smiles." It has golden temples, tropical beaches, and some of the best street food in the world!', icon: '' },
+      { text: 'Thailand has over 40,000 Buddhist temples. Monks walk barefoot each morning to collect food offerings from the community.', icon: '' },
+      { text: 'Songkran, the Thai New Year in April, is the world\'s biggest water fight! Everyone splashes each other in the streets for three days.', icon: '' },
+      { text: 'Elephants are deeply respected in Thai culture. The white elephant is the royal symbol, and sanctuaries care for rescued elephants.', icon: '' },
+    ],
+  },
+  ma_intro: {
+    title: 'Discover Morocco',
+    slides: [
+      { text: 'Morocco is in North Africa, where the Sahara Desert meets the Atlantic Ocean. Its cities are full of color, spice, and history!', icon: '' },
+      { text: 'Moroccan medinas are winding old cities packed with shops. In Marrakech, you can find everything from leather goods to fresh spices!', icon: '' },
+      { text: 'Mint tea is poured from high up to create a frothy top. It is offered as a sign of friendship — refusing a glass is considered rude!', icon: '' },
+      { text: 'Berber women in the Atlas Mountains hand-weave carpets with patterns that tell stories. Each symbol has a secret meaning!', icon: '' },
+    ],
+  },
+  pe_intro: {
+    title: 'Discover Peru',
+    slides: [
+      { text: 'Peru is a land of extremes — towering Andes mountains, lush Amazon rainforest, and a long desert coastline all in one country!', icon: '' },
+      { text: 'Machu Picchu, the lost Inca city, sits high in the clouds. The stones fit together so perfectly that no mortar was needed!', icon: '' },
+      { text: 'Peru is the birthplace of the potato — over 3,000 varieties grow here! Purple, yellow, red, and even blue potatoes.', icon: '' },
+      { text: 'Peruvian weavers use techniques passed down for 5,000 years. Alpaca wool is softer than sheep wool and comes in 22 natural colors!', icon: '' },
+    ],
+  },
+  ke_intro: {
+    title: 'Discover Kenya',
+    slides: [
+      { text: 'Kenya is in East Africa and is famous for its incredible wildlife. Safaris here let you see lions, elephants, and giraffes up close!', icon: '' },
+      { text: 'The Great Migration sees over 1.5 million wildebeest cross the Maasai Mara each year — one of nature\'s most amazing events!', icon: '' },
+      { text: 'The Maasai people are famous for their red clothing, beaded jewelry, and the adumu jumping dance. The highest jumper earns great respect!', icon: '' },
+      { text: 'Kenyan runners dominate long-distance races worldwide. Eliud Kipchoge was the first human to run a marathon in under 2 hours!', icon: '' },
+    ],
+  },
+  no_intro: {
+    title: 'Discover Norway',
+    slides: [
+      { text: 'Norway is a Scandinavian country of dramatic fjords, midnight sun, and Viking history. Nature here is truly breathtaking!', icon: '' },
+      { text: 'Vikings sailed from Norway over 1,000 years ago. They reached Iceland, Greenland, and even North America in their famous longships!', icon: '' },
+      { text: 'The northern lights (aurora borealis) paint Norway\'s sky with dancing ribbons of green, purple, and pink light in winter.', icon: '' },
+      { text: 'Norwegians love "friluftsliv" (open-air living). They hike, ski, and enjoy nature all year round — even when it\'s snowing!', icon: '' },
+    ],
+  },
+  tr_intro: {
+    title: 'Discover Turkey',
+    slides: [
+      { text: 'Turkey bridges Europe and Asia. Istanbul is the only major city in the world that sits on two continents!', icon: '' },
+      { text: 'The Grand Bazaar in Istanbul has over 4,000 shops and has been open since 1461. You can buy spices, lamps, carpets, and Turkish delight!', icon: '' },
+      { text: 'In Cappadocia, hundreds of hot air balloons float over fairy chimneys at dawn. Ancient people carved homes inside these rock towers!', icon: '' },
+      { text: 'Turkish hammams (bathhouses) have been a tradition for over 600 years. People go to steam, scrub, and relax together!', icon: '' },
+    ],
+  },
+  gr_intro: {
+    title: 'Discover Greece',
+    slides: [
+      { text: 'Greece is the birthplace of democracy, the Olympics, and Western philosophy. Its sunny islands and ancient ruins attract millions of visitors!', icon: '' },
+      { text: 'Ancient Greeks believed 12 gods lived on Mount Olympus. Stories of Zeus, Athena, and Hercules are still told around the world today!', icon: '' },
+      { text: 'Greece has about 6,000 islands! Santorini\'s white buildings and blue domes overlooking the sea are one of the most photographed sights on Earth.', icon: '' },
+      { text: 'The ancient Olympics began in 776 BC. Athletes competed in running, wrestling, and chariot racing. Wars were paused so they could compete!', icon: '' },
+    ],
+  },
 };
 
 // ─── COUNTRY-SPECIFIC QUIZ QUESTIONS (10 per country) ───
@@ -431,6 +601,102 @@ export const COUNTRY_QUIZ_QUESTIONS: Record<string, QuizQuestion[]> = {
     { id: 'br8', question: 'The Amazon River is the world\'s...', options: ['Shortest', 'Second longest', 'Widest by volume', 'Cleanest'], correct: 2, category: 'br' },
     { id: 'br9', question: '"Obrigado" means what in Portuguese?', options: ['Hello', 'Sorry', 'Thank you', 'Goodbye'], correct: 2, category: 'br' },
     { id: 'br10', question: 'Brazil has the most species of which animal?', options: ['Dogs', 'Birds', 'Fish', 'Cats'], correct: 1, category: 'br' },
+  ],
+  kr: [
+    { id: 'kr1', question: 'What is the capital of South Korea?', options: ['Busan', 'Seoul', 'Incheon', 'Daegu'], correct: 1, category: 'kr' },
+    { id: 'kr2', question: 'Kimchi is made primarily from fermented...', options: ['Rice', 'Cabbage', 'Potatoes', 'Corn'], correct: 1, category: 'kr' },
+    { id: 'kr3', question: 'What is the Korean alphabet called?', options: ['Kanji', 'Hangul', 'Hiragana', 'Pinyin'], correct: 1, category: 'kr' },
+    { id: 'kr4', question: 'Which Korean martial art uses powerful kicks?', options: ['Judo', 'Karate', 'Taekwondo', 'Aikido'], correct: 2, category: 'kr' },
+    { id: 'kr5', question: 'K-pop stands for...', options: ['Korean pop', 'Kyoto pop', 'Kids pop', 'Kenya pop'], correct: 0, category: 'kr' },
+    { id: 'kr6', question: 'Bibimbap means...', options: ['Fried rice', 'Mixed rice', 'Sticky rice', 'Sweet rice'], correct: 1, category: 'kr' },
+    { id: 'kr7', question: 'The Korean New Year celebration is called...', options: ['Chuseok', 'Seollal', 'Songkran', 'Diwali'], correct: 1, category: 'kr' },
+    { id: 'kr8', question: 'Who invented the Korean alphabet?', options: ['King Sejong', 'Emperor Meiji', 'Confucius', 'Buddha'], correct: 0, category: 'kr' },
+    { id: 'kr9', question: '"Annyeonghaseyo" means what in Korean?', options: ['Goodbye', 'Thank you', 'Hello', 'Sorry'], correct: 2, category: 'kr' },
+    { id: 'kr10', question: 'South Korea is famous for its fast...', options: ['Cars', 'Trains', 'Internet', 'Horses'], correct: 2, category: 'kr' },
+  ],
+  th: [
+    { id: 'th1', question: 'What is the capital of Thailand?', options: ['Chiang Mai', 'Phuket', 'Bangkok', 'Pattaya'], correct: 2, category: 'th' },
+    { id: 'th2', question: 'What is Thailand\'s national animal?', options: ['Tiger', 'Elephant', 'Dragon', 'Monkey'], correct: 1, category: 'th' },
+    { id: 'th3', question: 'Thai temples are called...', options: ['Wats', 'Shrines', 'Pagodas', 'Mosques'], correct: 0, category: 'th' },
+    { id: 'th4', question: 'Songkran is celebrated with a massive...', options: ['Fire show', 'Water fight', 'Kite festival', 'Dance battle'], correct: 1, category: 'th' },
+    { id: 'th5', question: 'Pad Thai is a dish made with...', options: ['Rice', 'Noodles', 'Bread', 'Potatoes'], correct: 1, category: 'th' },
+    { id: 'th6', question: 'Muay Thai uses how many "limbs"?', options: ['Four', 'Six', 'Eight', 'Ten'], correct: 2, category: 'th' },
+    { id: 'th7', question: 'Thailand used to be called...', options: ['Burma', 'Siam', 'Ceylon', 'Indochina'], correct: 1, category: 'th' },
+    { id: 'th8', question: 'The Thai greeting "wai" involves pressing...', options: ['Fists together', 'Palms together', 'Elbows together', 'Noses together'], correct: 1, category: 'th' },
+    { id: 'th9', question: '"Sawadee" means what in Thai?', options: ['Thank you', 'Goodbye', 'Hello', 'Please'], correct: 2, category: 'th' },
+    { id: 'th10', question: 'Thai silk is famous for being very...', options: ['Rough', 'Shimmering', 'Stretchy', 'Heavy'], correct: 1, category: 'th' },
+  ],
+  ma: [
+    { id: 'ma1', question: 'What is the capital of Morocco?', options: ['Casablanca', 'Marrakech', 'Rabat', 'Fez'], correct: 2, category: 'ma' },
+    { id: 'ma2', question: 'Morocco is on which continent?', options: ['Asia', 'Europe', 'Africa', 'South America'], correct: 2, category: 'ma' },
+    { id: 'ma3', question: 'A Moroccan medina is an old walled...', options: ['Garden', 'City', 'Castle', 'Farm'], correct: 1, category: 'ma' },
+    { id: 'ma4', question: 'What desert partly covers Morocco?', options: ['Gobi', 'Sahara', 'Atacama', 'Kalahari'], correct: 1, category: 'ma' },
+    { id: 'ma5', question: 'Moroccan mint tea is known as...', options: ['Chai', 'Matcha', 'Moroccan whiskey (a joke name)', 'Green gold'], correct: 2, category: 'ma' },
+    { id: 'ma6', question: 'A tagine is shaped like a...', options: ['Square', 'Cone', 'Star', 'Tube'], correct: 1, category: 'ma' },
+    { id: 'ma7', question: 'The Atlas Mountains are in...', options: ['Morocco', 'Egypt', 'Kenya', 'Turkey'], correct: 0, category: 'ma' },
+    { id: 'ma8', question: 'Zellige is the Moroccan art of...', options: ['Painting', 'Tile mosaic', 'Wood carving', 'Weaving'], correct: 1, category: 'ma' },
+    { id: 'ma9', question: '"Shukran" means what in Arabic?', options: ['Hello', 'Goodbye', 'Thank you', 'Please'], correct: 2, category: 'ma' },
+    { id: 'ma10', question: 'Couscous is traditionally eaten on which day in Morocco?', options: ['Monday', 'Wednesday', 'Friday', 'Sunday'], correct: 2, category: 'ma' },
+  ],
+  pe: [
+    { id: 'pe1', question: 'What is the capital of Peru?', options: ['Cusco', 'Lima', 'Arequipa', 'Machu Picchu'], correct: 1, category: 'pe' },
+    { id: 'pe2', question: 'Machu Picchu was built by the...', options: ['Maya', 'Aztec', 'Inca', 'Spanish'], correct: 2, category: 'pe' },
+    { id: 'pe3', question: 'What is Peru\'s national dish?', options: ['Tacos', 'Ceviche', 'Paella', 'Sushi'], correct: 1, category: 'pe' },
+    { id: 'pe4', question: 'The Andes Mountains run through...', options: ['Africa', 'Asia', 'South America', 'Europe'], correct: 2, category: 'pe' },
+    { id: 'pe5', question: 'Peru is the birthplace of the...', options: ['Tomato', 'Potato', 'Carrot', 'Onion'], correct: 1, category: 'pe' },
+    { id: 'pe6', question: 'Quipus were Inca recording devices made from...', options: ['Stone', 'Clay', 'Knotted strings', 'Metal'], correct: 2, category: 'pe' },
+    { id: 'pe7', question: 'Which animal provides soft wool in Peru?', options: ['Sheep', 'Alpaca', 'Goat', 'Rabbit'], correct: 1, category: 'pe' },
+    { id: 'pe8', question: 'Lake Titicaca is the highest navigable lake in...', options: ['Africa', 'Asia', 'The world', 'Europe'], correct: 2, category: 'pe' },
+    { id: 'pe9', question: 'What language did the Inca speak?', options: ['Spanish', 'Latin', 'Quechua', 'Portuguese'], correct: 2, category: 'pe' },
+    { id: 'pe10', question: 'Peru\'s purple corn is used to make a drink called...', options: ['Pisco', 'Chicha morada', 'Horchata', 'Maté'], correct: 1, category: 'pe' },
+  ],
+  ke: [
+    { id: 'ke1', question: 'What is the capital of Kenya?', options: ['Mombasa', 'Nairobi', 'Kisumu', 'Nakuru'], correct: 1, category: 'ke' },
+    { id: 'ke2', question: 'The Maasai Mara is famous for the annual...', options: ['Festival', 'Great Migration', 'Marathon', 'Harvest'], correct: 1, category: 'ke' },
+    { id: 'ke3', question: 'Kenya\'s Big Five animals do NOT include...', options: ['Lions', 'Elephants', 'Giraffes', 'Rhinos'], correct: 2, category: 'ke' },
+    { id: 'ke4', question: '"Jambo" means what in Swahili?', options: ['Goodbye', 'Thank you', 'Hello', 'Friend'], correct: 2, category: 'ke' },
+    { id: 'ke5', question: 'Mount Kenya is Africa\'s...', options: ['Tallest peak', 'Second-highest peak', 'Third-highest peak', 'Lowest peak'], correct: 1, category: 'ke' },
+    { id: 'ke6', question: 'Ugali is made from...', options: ['Rice flour', 'Maize flour', 'Wheat flour', 'Potato flour'], correct: 1, category: 'ke' },
+    { id: 'ke7', question: 'Nyama choma means...', options: ['Sweet bread', 'Roasted meat', 'Fried fish', 'Spicy soup'], correct: 1, category: 'ke' },
+    { id: 'ke8', question: 'The Great Rift Valley runs through...', options: ['South America', 'Europe', 'Kenya', 'Australia'], correct: 2, category: 'ke' },
+    { id: 'ke9', question: 'Kenyan marathon legend Eliud Kipchoge ran a marathon in under...', options: ['3 hours', '2.5 hours', '2 hours', '1.5 hours'], correct: 2, category: 'ke' },
+    { id: 'ke10', question: '"Hakuna matata" in Swahili means...', options: ['Good morning', 'No worries', 'Let\'s go', 'Goodbye'], correct: 1, category: 'ke' },
+  ],
+  no: [
+    { id: 'no1', question: 'What is the capital of Norway?', options: ['Bergen', 'Oslo', 'Tromsø', 'Stavanger'], correct: 1, category: 'no' },
+    { id: 'no2', question: 'Norwegian fjords were carved by...', options: ['Rivers', 'Wind', 'Glaciers', 'Earthquakes'], correct: 2, category: 'no' },
+    { id: 'no3', question: 'Vikings traveled in ships called...', options: ['Galleons', 'Longships', 'Canoes', 'Junks'], correct: 1, category: 'no' },
+    { id: 'no4', question: 'The Northern Lights are also called...', options: ['Aurora australis', 'Aurora borealis', 'Solar flare', 'Moonbow'], correct: 1, category: 'no' },
+    { id: 'no5', question: 'In Norwegian folklore, trolls turn to stone in...', options: ['Rain', 'Moonlight', 'Sunlight', 'Wind'], correct: 2, category: 'no' },
+    { id: 'no6', question: 'Brunost is a Norwegian...', options: ['Bread', 'Fish', 'Brown cheese', 'Soup'], correct: 2, category: 'no' },
+    { id: 'no7', question: 'The midnight sun means the sun...', options: ['Is very dim', 'Never sets', 'Is red', 'Sets twice'], correct: 1, category: 'no' },
+    { id: 'no8', question: '"Friluftsliv" means...', options: ['Cooking outdoors', 'Open-air living', 'Ice swimming', 'Skiing fast'], correct: 1, category: 'no' },
+    { id: 'no9', question: 'Viking runes were a type of...', options: ['Food', 'Weapon', 'Alphabet', 'Dance'], correct: 2, category: 'no' },
+    { id: 'no10', question: 'Norway is in which region of Europe?', options: ['Southern', 'Eastern', 'Western', 'Scandinavia'], correct: 3, category: 'no' },
+  ],
+  tr: [
+    { id: 'tr1', question: 'Istanbul sits on which two continents?', options: ['Africa & Asia', 'Europe & Africa', 'Europe & Asia', 'Asia & Australia'], correct: 2, category: 'tr' },
+    { id: 'tr2', question: 'The Grand Bazaar in Istanbul has over...', options: ['400 shops', '1,000 shops', '4,000 shops', '10,000 shops'], correct: 2, category: 'tr' },
+    { id: 'tr3', question: 'Turkish delight is called lokum and is a type of...', options: ['Bread', 'Cheese', 'Candy', 'Drink'], correct: 2, category: 'tr' },
+    { id: 'tr4', question: 'Cappadocia is famous for fairy chimneys and...', options: ['Volcanoes', 'Hot air balloons', 'Waterfalls', 'Pyramids'], correct: 1, category: 'tr' },
+    { id: 'tr5', question: 'A Turkish hammam is a...', options: ['Market', 'Bathhouse', 'School', 'Restaurant'], correct: 1, category: 'tr' },
+    { id: 'tr6', question: 'Hagia Sophia has been a church, a mosque, and a...', options: ['School', 'Museum-mosque', 'Hospital', 'Palace'], correct: 1, category: 'tr' },
+    { id: 'tr7', question: 'Whirling dervishes spin as a form of...', options: ['Exercise', 'Entertainment', 'Meditation and prayer', 'Cooking'], correct: 2, category: 'tr' },
+    { id: 'tr8', question: '"Merhaba" means what in Turkish?', options: ['Goodbye', 'Thank you', 'Hello', 'Please'], correct: 2, category: 'tr' },
+    { id: 'tr9', question: 'Turkish coffee is served in...', options: ['Large mugs', 'Tiny cups', 'Bowls', 'Coconut shells'], correct: 1, category: 'tr' },
+    { id: 'tr10', question: 'The nazar boncuğu (evil eye charm) is colored...', options: ['Red', 'Green', 'Blue', 'Yellow'], correct: 2, category: 'tr' },
+  ],
+  gr: [
+    { id: 'gr1', question: 'What is the capital of Greece?', options: ['Sparta', 'Athens', 'Thessaloniki', 'Olympia'], correct: 1, category: 'gr' },
+    { id: 'gr2', question: 'The ancient Greeks believed gods lived on Mount...', options: ['Everest', 'Olympus', 'Fuji', 'Sinai'], correct: 1, category: 'gr' },
+    { id: 'gr3', question: 'The Parthenon was built for the goddess...', options: ['Hera', 'Aphrodite', 'Athena', 'Artemis'], correct: 2, category: 'gr' },
+    { id: 'gr4', question: 'The ancient Olympics started in which year BC?', options: ['1000 BC', '776 BC', '500 BC', '200 BC'], correct: 1, category: 'gr' },
+    { id: 'gr5', question: 'Greece has about how many islands?', options: ['600', '1,000', '3,000', '6,000'], correct: 3, category: 'gr' },
+    { id: 'gr6', question: 'Gyros means what in Greek?', options: ['Meat', 'Turn', 'Wrap', 'Bread'], correct: 1, category: 'gr' },
+    { id: 'gr7', question: 'Which Greek philosopher taught by asking questions?', options: ['Plato', 'Aristotle', 'Socrates', 'Homer'], correct: 2, category: 'gr' },
+    { id: 'gr8', question: 'Santorini sits on the rim of a volcanic...', options: ['Mountain', 'Crater', 'Island', 'Valley'], correct: 1, category: 'gr' },
+    { id: 'gr9', question: '"Efcharistó" means what in Greek?', options: ['Hello', 'Goodbye', 'Thank you', 'Sorry'], correct: 2, category: 'gr' },
+    { id: 'gr10', question: 'The Mediterranean diet is known for lots of...', options: ['Butter', 'Olive oil', 'Cream', 'Sugar'], correct: 1, category: 'gr' },
   ],
 };
 
