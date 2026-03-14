@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isConfigured } from '../lib/supabase';
 import { useToast } from '../App';
+import { ImageUpload } from '../components/ImageUpload';
 
 interface Location {
   id: string;
@@ -244,10 +245,11 @@ export default function LocationsPage() {
                 <input className="form-input" type="number" step="0.0001" value={editing.longitude} onChange={e => setEditing({ ...editing, longitude: Number(e.target.value) })} />
               </div>
             </div>
-            <div className="form-group">
-              <label>Image URL</label>
-              <input className="form-input" value={editing.image_url} onChange={e => setEditing({ ...editing, image_url: e.target.value })} placeholder="https://..." />
-            </div>
+            <ImageUpload
+              value={editing.image_url || ''}
+              onChange={(url) => setEditing({ ...editing, image_url: url })}
+              label="Location Photo"
+            />
             <div className="form-actions">
               <button className="btn btn-primary" onClick={handleSave}>{isNew ? 'Create' : 'Save Changes'}</button>
               <button className="btn btn-secondary" onClick={() => setEditing(null)}>Cancel</button>

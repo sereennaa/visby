@@ -27,6 +27,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Icon } from './src/components/ui/Icon';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { ProgressionOverlay } from './src/components/ui/ProgressionOverlay';
 import { useStore } from './src/store/useStore';
 import { supabase, isSupabaseConfigured } from './src/config/supabase';
 import { authService } from './src/services/auth';
@@ -193,6 +194,7 @@ export default function App() {
         <StatusBar style="dark" />
         <ErrorBoundary>
           <AppNavigator />
+          <ProgressionOverlay />
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

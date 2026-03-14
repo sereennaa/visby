@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isConfigured } from '../lib/supabase';
 import { useToast } from '../App';
+import { ImageUpload } from '../components/ImageUpload';
 
 interface Country {
   id: string;
@@ -218,10 +219,11 @@ export default function CountriesPage() {
               <label>Description</label>
               <textarea className="form-textarea" value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} placeholder="Brief description of this country..." />
             </div>
-            <div className="form-group">
-              <label>Image URL</label>
-              <input className="form-input" value={editing.image_url} onChange={e => setEditing({ ...editing, image_url: e.target.value })} placeholder="https://..." />
-            </div>
+            <ImageUpload
+              value={editing.image_url || ''}
+              onChange={(url) => setEditing({ ...editing, image_url: url })}
+              label="Country Hero Image"
+            />
             <div className="form-actions">
               <button className="btn btn-primary" onClick={handleSave}>{isNew ? 'Create' : 'Save Changes'}</button>
               <button className="btn btn-secondary" onClick={() => setEditing(null)}>Cancel</button>

@@ -19,7 +19,8 @@ import { LevelBadge, AuraBadge } from '../../components/ui/Badge';
 import { LevelProgress } from '../../components/ui/ProgressBar';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
-import { useStore, DEFAULT_SKILLS } from '../../store/useStore';
+import { ProgressBar } from '../../components/ui/ProgressBar';
+import { useStore, DEFAULT_SKILLS, getGrowthStage } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
 import { RootStackParamList } from '../../types';
@@ -91,6 +92,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   ];
 
   const skills = user?.skills || DEFAULT_SKILLS;
+
+  const currentStage = getGrowthStage(user?.totalCarePoints || 0);
+  const stageOrder = ['egg', 'baby', 'kid', 'teen', 'adult'];
+  const stageThresholds = [0, 1, 50, 200, 500];
+  const currentIdx = stageOrder.indexOf(currentStage);
+  const nextThreshold = currentIdx < 4 ? stageThresholds[currentIdx + 1] : 500;
+  const currentThreshold = stageThresholds[currentIdx];
+  const stageProgress = currentStage === 'adult' ? 100 : ((user?.totalCarePoints || 0) - currentThreshold) / (nextThreshold - currentThreshold) * 100;
+  const carePointsToNext = nextThreshold - (user?.totalCarePoints || 0);
+  const nextStageName = currentIdx < 4 ? stageOrder[currentIdx + 1] : 'adult';
 
   const menuItems: { icon: IconName; label: string; screen: keyof RootStackParamList }[] = [
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
@@ -228,6 +239,41 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               ]}
               size={220}
             />
+          </Card>
+
+          {/* Growth Stage */}
+          <Card style={styles.stageCard}>
+            <Heading level={2}>Growth Stage</Heading>
+            <View style={styles.stageTracker}>
+              {([
+                { stage: 'egg', label: 'Egg', icon: 'sparkles' as IconName },
+                { stage: 'baby', label: 'Baby', icon: 'heart' as IconName },
+                { stage: 'kid', label: 'Kid', icon: 'star' as IconName },
+                { stage: 'teen', label: 'Teen', icon: 'flash' as IconName },
+                { stage: 'adult', label: 'Adult', icon: 'trophy' as IconName },
+              ]).map((s, i) => {
+                const isCurrent = currentStage === s.stage;
+                const isPast = stageOrder.indexOf(currentStage) > i;
+                return (
+                  <View key={s.stage} style={styles.stageStep}>
+                    <View style={[styles.stageCircle, isCurrent && styles.stageCircleCurrent, isPast && styles.stageCirclePast]}>
+                      <Icon name={s.icon} size={isCurrent ? 20 : 16} color={isCurrent || isPast ? '#FFFFFF' : colors.text.muted} />
+                    </View>
+                    <Caption style={isCurrent ? styles.stageLabelCurrent : undefined}>{s.label}</Caption>
+                  </View>
+                );
+              })}
+            </View>
+            <ProgressBar
+              progress={stageProgress}
+              variant="aura"
+              height={8}
+            />
+            <Caption style={styles.stageHint}>
+              {currentStage === 'adult'
+                ? 'Max stage reached! You are legendary!'
+                : `${carePointsToNext} more care points to become ${nextStageName}!`}
+            </Caption>
           </Card>
 
           {/* Menu Items */}
@@ -395,6 +441,46 @@ const styles = StyleSheet.create({
   sectionHeader: {
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  stageCard: {
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  stageTracker: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginVertical: spacing.lg,
+  },
+  stageStep: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  stageCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary.wisteriaFaded,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stageCircleCurrent: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary.wisteria,
+  },
+  stageCirclePast: {
+    backgroundColor: colors.primary.wisteriaDark,
+  },
+  stageLabelCurrent: {
+    fontWeight: '700',
+    color: colors.primary.wisteriaDark,
+  },
+  stageHint: {
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   menuSection: {
     backgroundColor: colors.base.cream,
