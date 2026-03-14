@@ -39,7 +39,7 @@ export interface VisbyEquipped {
 export interface VisbyCharacterProps {
   appearance?: VisbyAppearance;
   equipped?: VisbyEquipped;
-  mood?: 'happy' | 'excited' | 'sleepy' | 'surprised' | 'thinking' | 'curious' | 'proud' | 'adventurous' | 'cozy';
+  mood?: 'happy' | 'excited' | 'sleepy' | 'surprised' | 'thinking' | 'curious' | 'proud' | 'adventurous' | 'cozy' | 'hungry' | 'bored' | 'confused' | 'sick';
   size?: number;
   animated?: boolean;
 }
@@ -412,6 +412,76 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
         </G>
       );
     }
+    if (mood === 'hungry') {
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <G key={i}>
+              <Circle cx={cx} cy={EY} r={ER + 1} fill="#FFFFFF" />
+              <Circle cx={cx} cy={EY - 2} r={ER - 3} fill={eye} />
+              <Circle cx={cx - 4} cy={EY - 6} r={4.5} fill="#FFFFFF" />
+              <Circle cx={cx + 3} cy={EY + 2} r={2.5} fill="#FFFFFF" opacity={0.6} />
+              <Path d={`M ${cx - 10} ${EY - 8} Q ${cx} ${EY - 4} ${cx + 10} ${EY - 8}`}
+                stroke={darken(eye, 15)} strokeWidth={2.5} fill="none" strokeLinecap="round" />
+            </G>
+          ))}
+        </G>
+      );
+    }
+    if (mood === 'bored') {
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <G key={i}>
+              <Circle cx={cx} cy={EY} r={ER} fill="#FFFFFF" />
+              <Circle cx={cx} cy={EY + 1.5} r={ER - 4} fill={eye} />
+              <Circle cx={cx - 4} cy={EY - 4} r={4} fill="#FFFFFF" />
+              <Path d={`M ${cx - 12} ${EY - 5} L ${cx + 12} ${EY - 5}`}
+                stroke={darken(eye, 10)} strokeWidth={3} strokeLinecap="round" />
+            </G>
+          ))}
+        </G>
+      );
+    }
+    if (mood === 'confused') {
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <G key={i}>
+              <Circle cx={cx} cy={EY} r={ER} fill="#FFFFFF" />
+              <Circle cx={cx} cy={EY + 1.5} r={ER - 4} fill={eye} />
+              <Circle cx={cx - 4} cy={EY - 4} r={5} fill="#FFFFFF" />
+              <Circle cx={cx + 3.5} cy={EY + 4} r={2.5} fill="#FFFFFF" opacity={0.55} />
+            </G>
+          ))}
+          {/* Raised left eyebrow */}
+          <Path d={`M ${LX - 12} ${EY - 18} Q ${LX} ${EY - 26} ${LX + 12} ${EY - 20}`}
+            stroke={darken(eye, 10)} strokeWidth={2.8} fill="none" strokeLinecap="round" />
+          {/* Flat right eyebrow */}
+          <Path d={`M ${RX - 10} ${EY - 17} L ${RX + 10} ${EY - 17}`}
+            stroke={darken(eye, 10)} strokeWidth={2.8} fill="none" strokeLinecap="round" />
+          {/* Small question mark */}
+          <Path d={`M ${RX + 14} ${EY - 20} Q ${RX + 18} ${EY - 24} ${RX + 14} ${EY - 28} Q ${RX + 10} ${EY - 32} ${RX + 14} ${EY - 36}`}
+            stroke={darken(eye, 10)} strokeWidth={1.8} fill="none" strokeLinecap="round" />
+          <Circle cx={RX + 14} cy={EY - 17} r={1.2} fill={darken(eye, 10)} />
+        </G>
+      );
+    }
+    if (mood === 'sick') {
+      const sickEyeColor = '#6B8E6B';
+      return (
+        <G>
+          {[LX, RX].map((cx, i) => (
+            <G key={i}>
+              <Path d={`M ${cx - 6} ${EY - 6} L ${cx + 6} ${EY + 6}`}
+                stroke={sickEyeColor} strokeWidth={3} strokeLinecap="round" />
+              <Path d={`M ${cx + 6} ${EY - 6} L ${cx - 6} ${EY + 6}`}
+                stroke={sickEyeColor} strokeWidth={3} strokeLinecap="round" />
+            </G>
+          ))}
+        </G>
+      );
+    }
 
     switch (eyeShape) {
       case 'almond':
@@ -506,6 +576,14 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
         return <Ellipse cx={CX} cy={80} rx={4} ry={5} fill="#D07060" />;
       case 'thinking':
         return <Path d="M 73 80 Q 78 78 83 80" stroke="#D07060" strokeWidth={2} fill="none" strokeLinecap="round" />;
+      case 'hungry':
+        return <Ellipse cx={CX} cy={81} rx={5} ry={4} fill="#D07060" />;
+      case 'bored':
+        return <Path d="M 69 80 L 81 80" stroke="#D07060" strokeWidth={2} strokeLinecap="round" />;
+      case 'confused':
+        return <Path d="M 67 80 Q 71 82 75 79 Q 79 76 83 80" stroke="#D07060" strokeWidth={2} fill="none" strokeLinecap="round" />;
+      case 'sick':
+        return <Path d="M 67 82 Q 75 77 83 82" stroke="#8B9B6B" strokeWidth={2.2} fill="none" strokeLinecap="round" />;
       case 'happy':
       case 'proud':
       case 'cozy':
@@ -535,6 +613,14 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
           <RadialGradient id="blR" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor="#FF8899" stopOpacity={0.65} />
             <Stop offset="100%" stopColor="#FF8899" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="sickTint" cx="50%" cy="40%" r="55%">
+            <Stop offset="0%" stopColor="#90B870" stopOpacity={0.35} />
+            <Stop offset="100%" stopColor="#90B870" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="sickBlush" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#A0C880" stopOpacity={0.5} />
+            <Stop offset="100%" stopColor="#A0C880" stopOpacity={0} />
           </RadialGradient>
         </Defs>
 
@@ -615,9 +701,14 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
         {/* Hat (rendered on top of hair) */}
         {renderHat(equipped?.hat, hair, hairL)}
 
+        {/* Sick overlay */}
+        {mood === 'sick' && (
+          <Ellipse cx={CX} cy={52} rx={32} ry={20} fill="url(#sickTint)" />
+        )}
+
         {/* Blush cheeks */}
-        <Circle cx={36} cy={74} r={12} fill="url(#blL)" />
-        <Circle cx={114} cy={74} r={12} fill="url(#blR)" />
+        <Circle cx={36} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blL)'} />
+        <Circle cx={114} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blR)'} />
 
         {/* Eyes */}
         {renderEyes()}

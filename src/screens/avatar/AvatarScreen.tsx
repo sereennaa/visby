@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  FadeIn,
+  FadeInDown,
+  Layout,
+} from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
@@ -16,48 +26,77 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
-import { PulseGlow } from '../../components/effects/Shimmer';
+import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList, VisbyMood, CosmeticType } from '../../types';
 import {
   COSMETICS_CATALOG,
   RARITY_COLORS,
+  RARITY_LABELS,
   ShopCosmetic,
 } from '../../config/cosmetics';
+
+const { width: SCREEN_W } = Dimensions.get('window');
 
 type AvatarScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
 };
 
-const MOODS: { mood: VisbyMood; label: string }[] = [
-  { mood: 'happy', label: 'Happy' },
-  { mood: 'excited', label: 'Excited' },
-  { mood: 'curious', label: 'Curious' },
-  { mood: 'sleepy', label: 'Sleepy' },
-  { mood: 'proud', label: 'Proud' },
-  { mood: 'adventurous', label: 'Adventurous' },
-  { mood: 'cozy', label: 'Cozy' },
+const MOODS: { mood: VisbyMood; label: string; emoji: string; color: string; bg: string }[] = [
+  { mood: 'happy', label: 'Happy', emoji: '😊', color: '#FFB020', bg: '#FFF6E0' },
+  { mood: 'excited', label: 'Excited', emoji: '🤩', color: '#FF6B8A', bg: '#FFF0F3' },
+  { mood: 'curious', label: 'Curious', emoji: '🧐', color: '#6B9BD9', bg: '#EDF4FF' },
+  { mood: 'sleepy', label: 'Sleepy', emoji: '😴', color: '#9B8EC4', bg: '#F0ECF9' },
+  { mood: 'proud', label: 'Proud', emoji: '😎', color: '#5CB85C', bg: '#EEFAEE' },
+  { mood: 'adventurous', label: 'Adventure', emoji: '⚔️', color: '#E07040', bg: '#FFF0E8' },
+  { mood: 'cozy', label: 'Cozy', emoji: '🧸', color: '#D4886B', bg: '#FFF4EE' },
 ];
 
-const SKIN_TONES = ['#FFDAB9', '#F5C8A0', '#E8B89D', '#D4A574', '#A67C52', '#8B5A3C'];
-const HAIR_COLORS = ['#F7E07D', '#E8C55A', '#8B4513', '#A0522D', '#2F2F2F', '#D75C37', '#9B6FA6', '#6B9BC3', '#FFB6C1'];
-const EYE_COLORS = ['#4A90D9', '#6B9B6B', '#8B4513', '#2F2F2F', '#9B6FA6', '#40E0D0'];
-
-const HAIR_STYLES: { id: string; label: string }[] = [
-  { id: 'default', label: 'Viking' },
-  { id: 'short', label: 'Short' },
-  { id: 'long', label: 'Long' },
-  { id: 'curly', label: 'Curly' },
-  { id: 'braids', label: 'Braids' },
-  { id: 'bun', label: 'Bun' },
+const SKIN_TONES: { color: string; label: string }[] = [
+  { color: '#FFDAB9', label: 'Peach' },
+  { color: '#F5C8A0', label: 'Apricot' },
+  { color: '#E8B89D', label: 'Sand' },
+  { color: '#D4A574', label: 'Caramel' },
+  { color: '#A67C52', label: 'Cocoa' },
+  { color: '#8B5A3C', label: 'Chestnut' },
 ];
 
-const EYE_SHAPES: { id: string; label: string }[] = [
-  { id: 'round', label: 'Round' },
-  { id: 'almond', label: 'Almond' },
-  { id: 'big', label: 'Big' },
-  { id: 'sleepy', label: 'Sleepy' },
-  { id: 'sparkle', label: 'Sparkle' },
+const HAIR_COLORS: { color: string; label: string }[] = [
+  { color: '#F7E07D', label: 'Gold' },
+  { color: '#E8C55A', label: 'Honey' },
+  { color: '#8B4513', label: 'Brown' },
+  { color: '#A0522D', label: 'Auburn' },
+  { color: '#2F2F2F', label: 'Black' },
+  { color: '#D75C37', label: 'Red' },
+  { color: '#9B6FA6', label: 'Purple' },
+  { color: '#6B9BC3', label: 'Blue' },
+  { color: '#FFB6C1', label: 'Pink' },
+];
+
+const EYE_COLORS: { color: string; label: string }[] = [
+  { color: '#4A90D9', label: 'Sky' },
+  { color: '#6B9B6B', label: 'Forest' },
+  { color: '#8B4513', label: 'Hazel' },
+  { color: '#2F2F2F', label: 'Onyx' },
+  { color: '#9B6FA6', label: 'Violet' },
+  { color: '#40E0D0', label: 'Aqua' },
+];
+
+const HAIR_STYLES: { id: string; label: string; icon: string }[] = [
+  { id: 'default', label: 'Viking', icon: '⚔️' },
+  { id: 'short', label: 'Short', icon: '✂️' },
+  { id: 'long', label: 'Long', icon: '🧜' },
+  { id: 'curly', label: 'Curly', icon: '🌀' },
+  { id: 'braids', label: 'Braids', icon: '🎀' },
+  { id: 'bun', label: 'Bun', icon: '🍡' },
+];
+
+const EYE_SHAPES: { id: string; label: string; icon: string }[] = [
+  { id: 'round', label: 'Round', icon: '⭕' },
+  { id: 'almond', label: 'Almond', icon: '🌰' },
+  { id: 'big', label: 'Big', icon: '👀' },
+  { id: 'sleepy', label: 'Sleepy', icon: '😌' },
+  { id: 'sparkle', label: 'Sparkle', icon: '✨' },
 ];
 
 const WARDROBE_TABS: { type: CosmeticType; label: string; icon: IconName }[] = [
@@ -65,6 +104,14 @@ const WARDROBE_TABS: { type: CosmeticType; label: string; icon: IconName }[] = [
   { type: 'outfit', label: 'Outfits', icon: 'shirt' },
   { type: 'accessory', label: 'Items', icon: 'viking' },
 ];
+
+const RARITY_GLOW: Record<string, string> = {
+  common: 'transparent',
+  uncommon: 'rgba(92, 184, 92, 0.15)',
+  rare: 'rgba(74, 144, 217, 0.15)',
+  epic: 'rgba(155, 89, 182, 0.2)',
+  legendary: 'rgba(255, 215, 0, 0.25)',
+};
 
 export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
   const { visby, updateVisbyAppearance, equipCosmetic, setVisbyMood } = useStore();
@@ -81,50 +128,67 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
 
   const equipped = visby?.equipped || {};
   const owned = visby?.ownedCosmetics || [];
+  const aura = useStore.getState().user?.aura || 0;
 
   const ownedItems = COSMETICS_CATALOG.filter(
     (c) => c.type === wardrobeTab && (owned.includes(c.id) || c.price === 0)
   );
 
-  const isEquipped = (id: string, type: CosmeticType) => {
-    return equipped[type] === id;
-  };
+  const isEquipped = (id: string, type: CosmeticType) => equipped[type] === id;
 
-  const toggleEquip = (item: ShopCosmetic) => {
+  const toggleEquip = useCallback((item: ShopCosmetic) => {
     if (isEquipped(item.id, item.type)) {
       equipCosmetic(item.type, undefined);
     } else {
       equipCosmetic(item.type, item.id);
     }
-  };
+  }, [equipped, equipCosmetic]);
+
+  const handleMoodSelect = useCallback((mood: VisbyMood) => {
+    setSelectedMood(mood);
+    setVisbyMood(mood);
+  }, [setVisbyMood]);
 
   const renderColorSwatches = (
-    swatchColors: string[],
+    swatches: { color: string; label: string }[],
     selectedColor: string,
     onSelect: (color: string) => void,
   ) => (
     <View style={styles.swatchRow}>
-      {swatchColors.map((color) => (
+      {swatches.map(({ color, label }) => (
         <TouchableOpacity
           key={color}
           onPress={() => onSelect(color)}
-          style={[
-            styles.swatch,
-            { backgroundColor: color },
-            selectedColor === color && styles.swatchSelected,
-          ]}
-        />
+          style={styles.swatchContainer}
+          accessibilityLabel={`Select ${label}`}
+          accessibilityRole="button"
+        >
+          <View
+            style={[
+              styles.swatch,
+              { backgroundColor: color },
+              selectedColor === color && styles.swatchSelected,
+            ]}
+          >
+            {selectedColor === color && (
+              <Icon name="check" size={14} color={isLightColor(color) ? '#2D2D3A' : '#FFFFFF'} />
+            )}
+          </View>
+          <Text variant="caption" align="center" style={styles.swatchLabel}>
+            {label}
+          </Text>
+        </TouchableOpacity>
       ))}
     </View>
   );
 
   return (
     <LinearGradient
-      colors={['#FAF8FF', '#F0E8FF', '#FFF8F0', '#FAF8FF']}
-      locations={[0, 0.3, 0.6, 1]}
+      colors={['#FAF8FF', '#EDE4FF', '#FFF3EE', '#F0ECFF', '#FAF8FF']}
+      locations={[0, 0.25, 0.5, 0.75, 1]}
       style={styles.container}
     >
-      <FloatingParticles count={6} variant="sparkle" opacity={0.25} speed="slow" />
+      <FloatingParticles count={10} variant="mixed" opacity={0.3} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
@@ -133,140 +197,225 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
-              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Icon name="chevronLeft" size={22} color={colors.text.primary} />
             </TouchableOpacity>
-            <Heading level={1}>Your Visby</Heading>
+            <View style={styles.headerCenter}>
+              <Text variant="caption" color={colors.primary.wisteriaDark} style={styles.headerSubtitle}>
+                Customize
+              </Text>
+              <Heading level={1}>Your Visby</Heading>
+            </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('CosmeticShop')}
               style={styles.shopButton}
+              accessibilityRole="button"
+              accessibilityLabel="Open shop"
             >
-              <Icon name="shirt" size={20} color={colors.primary.wisteriaDark} />
+              <Icon name="shirt" size={18} color={colors.primary.wisteriaDark} />
             </TouchableOpacity>
           </View>
 
           {/* Character Display */}
-          <Card
-            variant="gradient"
-            gradientColors={[colors.primary.wisteriaFaded, colors.base.cream]}
-            style={styles.characterCard}
+          <MagicBorder
+            borderRadius={28}
+            borderWidth={2}
+            colors={['#C7B8EA', '#FFD700', '#7FBDE8', '#FFB6C1', '#C7B8EA']}
+            style={styles.characterBorder}
           >
-            <PulseGlow color="rgba(199, 184, 234, 0.5)" intensity={20} speed={3000}>
-              <VisbyCharacter
-                appearance={appearance}
-                equipped={equipped}
-                mood={selectedMood}
-                size={200}
-                animated={true}
-              />
-            </PulseGlow>
-            <Text variant="h2" align="center" style={styles.visbyName}>
-              {visby?.name || 'Your Visby'}
-            </Text>
-            <View style={styles.auraRow}>
-              <Icon name="sparkles" size={16} color={colors.reward.gold} />
-              <Text variant="caption" color={colors.reward.amber}>
-                {useStore.getState().user?.aura || 0} Aura
+            <LinearGradient
+              colors={['#F5F0FF', '#FFF6EE', '#F0ECFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.characterGradient}
+            >
+              <PulseGlow color="rgba(199, 184, 234, 0.6)" intensity={24} speed={3000}>
+                <VisbyCharacter
+                  appearance={appearance}
+                  equipped={equipped}
+                  mood={selectedMood}
+                  size={220}
+                  animated={true}
+                />
+              </PulseGlow>
+              <Text variant="h2" align="center" style={styles.visbyName}>
+                {visby?.name || 'Your Visby'}
               </Text>
-            </View>
-          </Card>
+              <View style={styles.auraRow}>
+                <View style={styles.auraPill}>
+                  <Icon name="sparkles" size={14} color={colors.reward.gold} />
+                  <Text variant="caption" color={colors.reward.amber} style={styles.auraText}>
+                    {aura} Aura
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </MagicBorder>
 
           {/* Mood Selector */}
-          <Card style={styles.section}>
-            <Text variant="h3" style={styles.sectionTitle}>Mood</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.moodRow}>
-                {MOODS.map(({ mood, label }) => (
-                  <TouchableOpacity
-                    key={mood}
-                    onPress={() => { setSelectedMood(mood); setVisbyMood(mood); }}
-                    style={[
-                      styles.moodButton,
-                      selectedMood === mood && styles.moodButtonSelected,
-                    ]}
+          <SectionHeader icon="sparkles" title="Mood" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.moodScroll}
+          >
+            {MOODS.map(({ mood, label, emoji, color, bg }) => {
+              const active = selectedMood === mood;
+              return (
+                <TouchableOpacity
+                  key={mood}
+                  onPress={() => handleMoodSelect(mood)}
+                  style={[
+                    styles.moodChip,
+                    { backgroundColor: active ? bg : colors.base.cream },
+                    active && { borderColor: color },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set mood to ${label}`}
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={styles.moodEmoji}>{emoji}</Text>
+                  <Text
+                    variant="caption"
+                    color={active ? color : colors.text.secondary}
+                    style={active ? styles.moodLabelActive : undefined}
                   >
-                    <Caption>{label}</Caption>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          </Card>
+                    {label}
+                  </Text>
+                  {active && <View style={[styles.moodDot, { backgroundColor: color }]} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-          {/* Wardrobe Section */}
+          {/* Wardrobe */}
           <View style={styles.wardrobeHeader}>
-            <Heading level={2}>Wardrobe</Heading>
+            <View style={styles.wardrobeHeaderLeft}>
+              <Icon name="star" size={18} color={colors.reward.gold} />
+              <Heading level={2} style={styles.wardrobeTitle}>Wardrobe</Heading>
+            </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('CosmeticShop')}
               style={styles.shopLink}
             >
-              <Icon name="add" size={16} color={colors.primary.wisteriaDark} />
-              <Text variant="caption" color={colors.primary.wisteriaDark}>Shop</Text>
+              <LinearGradient
+                colors={[colors.primary.wisteriaFaded, colors.primary.wisteriaLight]}
+                style={styles.shopLinkGradient}
+              >
+                <Icon name="add" size={14} color={colors.primary.wisteriaDark} />
+                <Text variant="caption" color={colors.primary.wisteriaDark}>Shop</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
           {/* Wardrobe Tabs */}
           <View style={styles.tabRow}>
-            {WARDROBE_TABS.map((tab) => (
-              <TouchableOpacity
-                key={tab.type}
-                onPress={() => setWardrobeTab(tab.type)}
-                style={[
-                  styles.tab,
-                  wardrobeTab === tab.type && styles.tabSelected,
-                ]}
-              >
-                <Icon name={tab.icon} size={16} color={wardrobeTab === tab.type ? colors.text.inverse : colors.text.secondary} />
-                <Text
-                  variant="caption"
-                  color={wardrobeTab === tab.type ? colors.text.inverse : colors.text.secondary}
+            {WARDROBE_TABS.map((tab) => {
+              const active = wardrobeTab === tab.type;
+              return (
+                <TouchableOpacity
+                  key={tab.type}
+                  onPress={() => setWardrobeTab(tab.type)}
+                  style={[styles.tab, active && styles.tabSelected]}
                 >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Icon
+                    name={tab.icon}
+                    size={15}
+                    color={active ? '#FFFFFF' : colors.text.muted}
+                  />
+                  <Text
+                    variant="caption"
+                    color={active ? '#FFFFFF' : colors.text.muted}
+                    style={active ? styles.tabLabelActive : undefined}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Wardrobe Items */}
           {ownedItems.length > 0 ? (
             <View style={styles.wardrobeGrid}>
-              {/* "None" option to unequip */}
+              {/* "None" to unequip */}
               <TouchableOpacity
                 style={[
                   styles.wardrobeItem,
-                  !equipped[wardrobeTab] && styles.wardrobeItemEquipped,
+                  !equipped[wardrobeTab] && styles.wardrobeItemActive,
                 ]}
                 onPress={() => equipCosmetic(wardrobeTab, undefined)}
+                accessibilityRole="button"
+                accessibilityLabel="Unequip"
               >
-                <Icon name="close" size={24} color={colors.text.muted} />
-                <Caption>None</Caption>
+                <View style={styles.wardrobeItemInner}>
+                  <View style={styles.wardrobeIconCircle}>
+                    <Icon name="close" size={20} color={colors.text.muted} />
+                  </View>
+                  <Caption style={styles.wardrobeItemName}>None</Caption>
+                </View>
+                {!equipped[wardrobeTab] && (
+                  <View style={styles.equippedBadge}>
+                    <Icon name="check" size={10} color="#FFFFFF" />
+                  </View>
+                )}
               </TouchableOpacity>
-              {ownedItems.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.wardrobeItem,
-                    isEquipped(item.id, item.type) && styles.wardrobeItemEquipped,
-                  ]}
-                  onPress={() => toggleEquip(item)}
-                >
-                  <Icon name={item.icon} size={32} color={colors.primary.wisteriaDark} />
-                  <Caption numberOfLines={1}>{item.name}</Caption>
-                  <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[item.rarity] }]} />
-                  {isEquipped(item.id, item.type) && (
-                    <View style={styles.equippedBadge}>
-                      <Icon name="check" size={10} color={colors.text.inverse} />
+
+              {ownedItems.map((item) => {
+                const active = isEquipped(item.id, item.type);
+                const rarityColor = RARITY_COLORS[item.rarity];
+                const rarityGlow = RARITY_GLOW[item.rarity];
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.wardrobeItem,
+                      active && styles.wardrobeItemActive,
+                      { backgroundColor: active ? rarityGlow : colors.base.cream },
+                      active && { borderColor: rarityColor },
+                    ]}
+                    onPress={() => toggleEquip(item)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${active ? 'Unequip' : 'Equip'} ${item.name}`}
+                  >
+                    <View style={styles.wardrobeItemInner}>
+                      <View style={[styles.wardrobeIconCircle, { backgroundColor: `${rarityColor}18` }]}>
+                        <Icon name={item.icon} size={26} color={rarityColor} />
+                      </View>
+                      <Caption numberOfLines={1} style={styles.wardrobeItemName}>{item.name}</Caption>
+                      <View style={styles.rarityRow}>
+                        <View style={[styles.rarityDot, { backgroundColor: rarityColor }]} />
+                        <Text
+                          variant="caption"
+                          color={rarityColor}
+                          style={styles.rarityText}
+                        >
+                          {RARITY_LABELS[item.rarity]}
+                        </Text>
+                      </View>
                     </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {active && (
+                      <View style={[styles.equippedBadge, { backgroundColor: rarityColor }]}>
+                        <Icon name="check" size={10} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ) : (
             <Card style={styles.emptyWardrobe}>
-              <Text variant="body" align="center" color={colors.text.secondary}>
-                No {wardrobeTab}s yet!
+              <Text variant="h3" align="center">No {wardrobeTab}s yet!</Text>
+              <Text variant="body" align="center" color={colors.text.secondary} style={styles.emptyText}>
+                Visit the shop to find treasures
               </Text>
               <Button
-                title="Visit Shop"
+                title="Browse Shop"
                 onPress={() => navigation.navigate('CosmeticShop')}
                 variant="primary"
                 size="sm"
@@ -275,10 +424,12 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
           )}
 
           {/* Appearance Section */}
-          <Heading level={2} style={styles.appearanceTitle}>Appearance</Heading>
+          <SectionHeader icon="star" title="Appearance" />
 
-          <Card style={styles.section}>
-            <Text variant="h3" style={styles.sectionTitle}>Skin Tone</Text>
+          <Card variant="magic" style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text variant="h3">Skin Tone</Text>
+            </View>
             {renderColorSwatches(
               SKIN_TONES,
               appearance.skinTone,
@@ -286,8 +437,10 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
             )}
           </Card>
 
-          <Card style={styles.section}>
-            <Text variant="h3" style={styles.sectionTitle}>Hair Color</Text>
+          <Card variant="magic" style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text variant="h3">Hair Color</Text>
+            </View>
             {renderColorSwatches(
               HAIR_COLORS,
               appearance.hairColor,
@@ -295,26 +448,39 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
             )}
           </Card>
 
-          <Card style={styles.section}>
-            <Text variant="h3" style={styles.sectionTitle}>Hair Style</Text>
+          <Card variant="magic" style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text variant="h3">Hair Style</Text>
+            </View>
             <View style={styles.styleRow}>
-              {HAIR_STYLES.map((style) => (
-                <TouchableOpacity
-                  key={style.id}
-                  onPress={() => updateVisbyAppearance({ hairStyle: style.id })}
-                  style={[
-                    styles.styleButton,
-                    appearance.hairStyle === style.id && styles.styleButtonSelected,
-                  ]}
-                >
-                  <Caption>{style.label}</Caption>
-                </TouchableOpacity>
-              ))}
+              {HAIR_STYLES.map((style) => {
+                const active = appearance.hairStyle === style.id;
+                return (
+                  <TouchableOpacity
+                    key={style.id}
+                    onPress={() => updateVisbyAppearance({ hairStyle: style.id })}
+                    style={[
+                      styles.styleChip,
+                      active && styles.styleChipSelected,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${style.label} hair style`}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={styles.styleEmoji}>{style.icon}</Text>
+                    <Caption color={active ? colors.primary.wisteriaDark : colors.text.secondary}>
+                      {style.label}
+                    </Caption>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </Card>
 
-          <Card style={styles.section}>
-            <Text variant="h3" style={styles.sectionTitle}>Eye Color</Text>
+          <Card variant="magic" style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text variant="h3">Eye Color</Text>
+            </View>
             {renderColorSwatches(
               EYE_COLORS,
               appearance.eyeColor,
@@ -322,36 +488,51 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
             )}
           </Card>
 
-          <Card style={styles.section}>
-            <Text variant="h3" style={styles.sectionTitle}>Eye Shape</Text>
+          <Card variant="magic" style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text variant="h3">Eye Shape</Text>
+            </View>
             <View style={styles.styleRow}>
-              {EYE_SHAPES.map((shape) => (
-                <TouchableOpacity
-                  key={shape.id}
-                  onPress={() => updateVisbyAppearance({ eyeShape: shape.id })}
-                  style={[
-                    styles.styleButton,
-                    appearance.eyeShape === shape.id && styles.styleButtonSelected,
-                  ]}
-                >
-                  <Caption>{shape.label}</Caption>
-                </TouchableOpacity>
-              ))}
+              {EYE_SHAPES.map((shape) => {
+                const active = appearance.eyeShape === shape.id;
+                return (
+                  <TouchableOpacity
+                    key={shape.id}
+                    onPress={() => updateVisbyAppearance({ eyeShape: shape.id })}
+                    style={[
+                      styles.styleChip,
+                      active && styles.styleChipSelected,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${shape.label} eye shape`}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={styles.styleEmoji}>{shape.icon}</Text>
+                    <Caption color={active ? colors.primary.wisteriaDark : colors.text.secondary}>
+                      {shape.label}
+                    </Caption>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </Card>
 
-          {/* Quick links */}
+          {/* Quick Links */}
           <View style={styles.quickLinks}>
             <TouchableOpacity
               style={styles.quickLink}
               onPress={() => navigation.navigate('AuraStore')}
             >
               <LinearGradient
-                colors={[colors.reward.peachLight, colors.reward.peach]}
+                colors={['#FFF6E0', '#FFE8B0']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={styles.quickLinkGradient}
               >
-                <Icon name="sparkles" size={24} color={colors.reward.gold} />
-                <Text variant="caption">Get Aura</Text>
+                <View style={styles.quickLinkIcon}>
+                  <Icon name="sparkles" size={22} color={colors.reward.gold} />
+                </View>
+                <Text variant="caption" color={colors.reward.amber}>Get Aura</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
@@ -359,11 +540,15 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
               onPress={() => navigation.navigate('Membership')}
             >
               <LinearGradient
-                colors={[colors.primary.wisteriaFaded, colors.primary.wisteriaLight]}
+                colors={['#F0ECFF', '#DDD4F2']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={styles.quickLinkGradient}
               >
-                <Icon name="crown" size={24} color={colors.reward.gold} />
-                <Text variant="caption">Membership</Text>
+                <View style={styles.quickLinkIcon}>
+                  <Icon name="crown" size={22} color={colors.primary.wisteriaDark} />
+                </View>
+                <Text variant="caption" color={colors.primary.wisteriaDark}>Membership</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -373,11 +558,35 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
   );
 };
 
+const SectionHeader: React.FC<{ icon: IconName; title: string }> = ({ icon, title }) => (
+  <View style={styles.sectionHeader}>
+    <View style={styles.sectionDivider} />
+    <View style={styles.sectionHeaderContent}>
+      <Icon name={icon} size={14} color={colors.reward.gold} />
+      <Heading level={2} style={styles.sectionHeaderText}>{title}</Heading>
+      <Icon name={icon} size={14} color={colors.reward.gold} />
+    </View>
+    <View style={styles.sectionDivider} />
+  </View>
+);
+
+function isLightColor(hex: string): boolean {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
+
+const ITEM_WIDTH = (SCREEN_W - spacing.screenPadding * 2 - spacing.sm * 2) / 3;
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxxl * 2 },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -385,68 +594,317 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
   backButton: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.base.warmWhite,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.shadow.light, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS !== 'web'
+      ? { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 }
+      : {}),
   },
   shopButton: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.primary.wisteriaFaded,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  characterCard: { alignItems: 'center', marginBottom: spacing.lg, paddingVertical: spacing.xl },
+
+  // Character
+  characterBorder: {
+    marginBottom: spacing.xl,
+  },
+  characterGradient: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl + 4,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 26,
+  },
   visbyName: { marginTop: spacing.md },
-  auraRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  section: { marginBottom: spacing.md },
-  sectionTitle: { marginBottom: spacing.md },
-  moodRow: { flexDirection: 'row', gap: spacing.sm },
-  moodButton: {
-    alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    borderRadius: spacing.radius.lg, borderWidth: 2, borderColor: colors.transparent,
+  auraRow: { marginTop: spacing.sm },
+  auraPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs + 2,
+    backgroundColor: 'rgba(255,215,0,0.12)',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.radius.round,
   },
-  moodButtonSelected: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
+  auraText: { fontWeight: '700' },
+
+  // Mood
+  moodScroll: {
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  moodChip: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.radius.xl,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 72,
+  },
+  moodEmoji: {
+    fontSize: 22,
+    marginBottom: 2,
+  },
+  moodLabelActive: {
+    fontWeight: '700',
+  },
+  moodDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 4,
+  },
+
+  // Section Header
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(184, 165, 224, 0.2)',
+  },
+  sectionHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  sectionHeaderText: {
+    marginBottom: 0,
+  },
+
+  // Wardrobe
   wardrobeHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: spacing.md, marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
-  shopLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-  tabRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  wardrobeHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  wardrobeTitle: {
+    marginBottom: 0,
+  },
+  shopLink: {
+    borderRadius: spacing.radius.round,
+    overflow: 'hidden',
+  },
+  shopLinkGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: spacing.radius.round,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: spacing.radius.round,
     backgroundColor: colors.base.cream,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.15)',
   },
-  tabSelected: { backgroundColor: colors.primary.wisteriaDark },
-  wardrobeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  tabSelected: {
+    backgroundColor: colors.primary.wisteriaDark,
+    borderColor: colors.primary.wisteriaDark,
+  },
+  tabLabelActive: {
+    fontWeight: '700',
+  },
+  wardrobeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
   wardrobeItem: {
-    width: '30%', alignItems: 'center', paddingVertical: spacing.md,
-    backgroundColor: colors.base.cream, borderRadius: spacing.radius.xl,
-    borderWidth: 2, borderColor: colors.transparent, position: 'relative',
+    width: ITEM_WIDTH,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.xl,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+    ...(Platform.OS !== 'web'
+      ? { shadowColor: 'rgba(0,0,0,0.04)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 1 }
+      : {}),
   },
-  wardrobeItemEquipped: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
-  rarityDot: { width: 6, height: 6, borderRadius: 3, marginTop: spacing.xxs },
+  wardrobeItemActive: {
+    borderWidth: 2,
+  },
+  wardrobeItemInner: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  wardrobeIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(184, 165, 224, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wardrobeItemName: {
+    textAlign: 'center',
+  },
+  rarityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  rarityDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  rarityText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
   equippedBadge: {
-    position: 'absolute', top: 4, right: 4,
-    backgroundColor: colors.primary.wisteriaDark, borderRadius: 8,
-    width: 16, height: 16, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: colors.primary.wisteriaDark,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  emptyWardrobe: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl, marginBottom: spacing.lg },
-  appearanceTitle: { marginBottom: spacing.md, marginTop: spacing.sm },
-  swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  swatch: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: colors.transparent },
-  swatchSelected: { borderColor: colors.primary.wisteriaDark, borderWidth: 3 },
-  styleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  styleButton: {
-    alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    borderRadius: spacing.radius.lg, borderWidth: 2, borderColor: colors.transparent,
-    backgroundColor: colors.base.cream, minWidth: 64,
+  emptyWardrobe: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xl,
+    marginBottom: spacing.lg,
   },
-  styleButtonSelected: { borderColor: colors.primary.wisteria, backgroundColor: colors.primary.wisteriaFaded },
-  quickLinks: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
-  quickLink: { flex: 1, borderRadius: spacing.radius.xl, overflow: 'hidden' },
-  quickLinkGradient: { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs },
+  emptyText: {
+    marginTop: -spacing.xs,
+  },
+
+  // Appearance
+  section: {
+    marginBottom: spacing.md,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  swatchRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  swatchContainer: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  swatch: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swatchSelected: {
+    borderWidth: 3,
+    borderColor: colors.primary.wisteriaDark,
+  },
+  swatchLabel: {
+    fontSize: 9,
+    marginTop: 1,
+  },
+  styleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  styleChip: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.radius.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.base.parchment,
+    minWidth: 68,
+    gap: 2,
+  },
+  styleChipSelected: {
+    borderColor: colors.primary.wisteria,
+    backgroundColor: colors.primary.wisteriaFaded,
+  },
+  styleEmoji: {
+    fontSize: 18,
+  },
+
+  // Quick Links
+  quickLinks: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  quickLink: {
+    flex: 1,
+    borderRadius: spacing.radius.xl,
+    overflow: 'hidden',
+  },
+  quickLinkGradient: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.xs,
+  },
+  quickLinkIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
 });
 
 export default AvatarScreen;

@@ -1,10 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
+import ReAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withSequence,
+  runOnJS,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -69,24 +76,29 @@ const steps: OnboardingStep[] = [
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const fade = useSharedValue(1);
+  const scale = useSharedValue(1);
 
   const isLastStep = currentStep === steps.length - 1;
   const step = steps[currentStep];
 
-  const animateToStep = (nextStep: number) => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 0.92, duration: 150, useNativeDriver: true }),
-    ]).start(() => {
-      setCurrentStep(nextStep);
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, damping: 14, stiffness: 200, useNativeDriver: true }),
-      ]).start();
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: fade.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  const goToStep = useCallback((nextStep: number) => {
+    setCurrentStep(nextStep);
+    fade.value = withTiming(1, { duration: 300 });
+    scale.value = withSpring(1, { damping: 14, stiffness: 200 });
+  }, []);
+
+  const animateToStep = useCallback((nextStep: number) => {
+    fade.value = withTiming(0, { duration: 150 });
+    scale.value = withTiming(0.92, { duration: 150 }, () => {
+      runOnJS(goToStep)(nextStep);
     });
-  };
+  }, [goToStep]);
 
   const handleNext = () => {
     if (isLastStep) {
@@ -116,12 +128,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
           )}
         </View>
 
-        <Animated.View
-          style={[
-            styles.content,
-            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
-          ]}
-        >
+        <ReAnimated.View style={[styles.content, contentStyle]}>
           <View style={[styles.iconCircle, { backgroundColor: step.iconBg }]}>
             <View style={styles.iconInner}>
               <Icon name={step.icon} size={80} color={step.iconColor} />
@@ -140,12 +147,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
           >
             {step.description}
           </Text>
-        </Animated.View>
+        </ReAnimated.View>
 
         <View style={styles.bottom}>
           <View style={styles.dots}>
             {steps.map((_, index) => (
-              <Animated.View
+              <View
                 key={index}
                 style={[
                   styles.dot,

@@ -31,6 +31,7 @@ export interface User {
   badgesEarned: number;
   countriesVisited: number;
   citiesVisited: number;
+  totalCarePoints: number;
   
   // Daily learning tracking
   lessonsCompletedToday?: number;
@@ -72,6 +73,9 @@ export interface Visby {
   
   // Expression/Mood
   currentMood: VisbyMood;
+  
+  // Tamagotchi-style needs
+  needs: VisbyNeeds;
 }
 
 export interface VisbyAppearance {
@@ -98,7 +102,19 @@ export type VisbyMood =
   | 'sleepy'
   | 'proud'
   | 'adventurous'
-  | 'cozy';
+  | 'cozy'
+  | 'hungry'
+  | 'bored'
+  | 'confused'
+  | 'sick';
+
+export interface VisbyNeeds {
+  hunger: number;    // 0-100
+  happiness: number; // 0-100
+  energy: number;    // 0-100
+  knowledge: number; // 0-100
+  lastUpdated: string; // ISO timestamp
+}
 
 // ===================================
 // COSMETICS

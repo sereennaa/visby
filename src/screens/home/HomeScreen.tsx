@@ -36,9 +36,9 @@ import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { StampMini } from '../../components/collectibles/StampCard';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
-import { useStore } from '../../store/useStore';
+import { useStore, DEFAULT_NEEDS } from '../../store/useStore';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
-import { RootStackParamList, StampType } from '../../types';
+import { RootStackParamList, StampType, VisbyNeeds } from '../../types';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 10;
@@ -129,14 +129,68 @@ const AdventureCard: React.FC<{
   );
 };
 
+/* ─── Needs HUD ─── */
+const NEED_CONFIG: { key: keyof Omit<VisbyNeeds, 'lastUpdated'>; icon: IconName; label: string; color: string; bgColor: string; action: string }[] = [
+  { key: 'hunger', icon: 'food', label: 'Hunger', color: '#E8A04E', bgColor: '#FFEAD0', action: 'Feed' },
+  { key: 'happiness', icon: 'heart', label: 'Happy', color: '#E07A8A', bgColor: '#FFE0E8', action: 'Play' },
+  { key: 'energy', icon: 'flash', label: 'Energy', color: '#5EA0D4', bgColor: '#E0F0FF', action: 'Rest' },
+  { key: 'knowledge', icon: 'book', label: 'Knowledge', color: '#8B6FC0', bgColor: '#EDE3FA', action: 'Study' },
+];
+
+const NeedsHUD: React.FC<{
+  getVisbyNeeds: () => VisbyNeeds;
+  feedVisby: () => void;
+  playWithVisby: () => void;
+  restVisby: () => void;
+  studyWithVisby: () => void;
+}> = ({ getVisbyNeeds, feedVisby, playWithVisby, restVisby, studyWithVisby }) => {
+  const needs = getVisbyNeeds();
+  const actions = [feedVisby, playWithVisby, restVisby, studyWithVisby];
+
+  return (
+    <View style={styles.needsContainer}>
+      {NEED_CONFIG.map((need, i) => {
+        const value = needs[need.key] as number;
+        const isLow = value < 30;
+        return (
+          <TouchableOpacity
+            key={need.key}
+            style={styles.needItem}
+            onPress={actions[i]}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${need.action} Visby, ${need.label} at ${value}%`}
+          >
+            <View style={[styles.needIconWrap, { backgroundColor: need.bgColor }]}>
+              <Icon name={need.icon} size={14} color={need.color} />
+            </View>
+            <View style={styles.needBarTrack}>
+              <View
+                style={[
+                  styles.needBarFill,
+                  {
+                    width: `${value}%` as any,
+                    backgroundColor: isLow ? colors.status.error : need.color,
+                  },
+                ]}
+              />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, feedVisby, playWithVisby, restVisby, studyWithVisby } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const visbyFloat = useSharedValue(0);
 
   useEffect(() => {
     dailyCheckIn();
+    updateVisbyNeeds();
   }, []);
 
   useEffect(() => {
@@ -309,7 +363,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       <VisbyCharacter
                         appearance={defaultAppearance}
                         equipped={visby?.equipped}
-                        mood={user?.currentStreak && user.currentStreak > 0 ? 'excited' : 'happy'}
+                        mood={visby?.currentMood || 'happy'}
                         size={110}
                         animated={true}
                       />
@@ -339,6 +393,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </LinearGradient>
               </MagicBorder>
             </TouchableOpacity>
+          </Animated.View>
+
+          {/* ──── VISBY NEEDS ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(300)}>
+            <NeedsHUD
+              getVisbyNeeds={getVisbyNeeds}
+              feedVisby={feedVisby}
+              playWithVisby={playWithVisby}
+              restVisby={restVisby}
+              studyWithVisby={studyWithVisby}
+            />
           </Animated.View>
 
           {/* ──── QUICK STATS ──── */}
@@ -818,6 +883,46 @@ const styles = StyleSheet.create({
   adventureSub: {
     fontSize: 10,
     color: colors.text.muted,
+  },
+
+  /* Needs HUD */
+  needsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: spacing.xl,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: spacing.md,
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: 'rgba(0,0,0,0.05)',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 1,
+      shadowRadius: 8,
+      elevation: 2,
+    } : {}),
+  },
+  needItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  needIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  needBarTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F0EDF5',
+    overflow: 'hidden',
+  },
+  needBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 
   bottomSpacer: { height: 20 },

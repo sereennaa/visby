@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions, StatusBar } from 'react-native';
+import { View, StyleSheet, Dimensions, StatusBar, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -279,9 +279,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Baloo2-ExtraBold',
     fontSize: 54,
     color: '#EDE4FF',
-    textShadowColor: 'rgba(184, 165, 224, 0.7)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 24,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0 0 24px rgba(184, 165, 224, 0.7)' }
+      : { textShadowColor: 'rgba(184, 165, 224, 0.7)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 24 }
+    ) as any,
     letterSpacing: 3,
   },
   tagline: {
@@ -314,9 +315,10 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     color: '#FFFFFF',
     marginBottom: spacing.sm,
-    textShadowColor: 'rgba(184, 165, 224, 0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 12,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0 2px 12px rgba(184, 165, 224, 0.4)' }
+      : { textShadowColor: 'rgba(184, 165, 224, 0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 }
+    ) as any,
   },
   welcomeText: {
     color: 'rgba(255, 255, 255, 0.55)',

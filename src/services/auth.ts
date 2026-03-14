@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../config/supabase';
 import { User, Visby, VisbyAppearance } from '../types';
+import { DEFAULT_NEEDS } from '../store/useStore';
 
 const DEFAULT_VISBY_APPEARANCE: VisbyAppearance = {
   skinTone: '#FFBA6B',
@@ -36,6 +37,7 @@ function createDemoUser(email: string, password: string, username: string): { us
     badgesEarned: 0,
     countriesVisited: 0,
     citiesVisited: 0,
+    totalCarePoints: 0,
     settings: {
       notifications: true,
       locationTracking: true,
@@ -54,6 +56,7 @@ function createDemoUser(email: string, password: string, username: string): { us
     equipped: { hat: 'viking_helmet' },
     ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet'],
     currentMood: 'happy',
+    needs: { ...DEFAULT_NEEDS },
   };
 
   demoUsers.set(email.toLowerCase(), { user, password, visby });

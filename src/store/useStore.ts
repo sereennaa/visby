@@ -2,9 +2,50 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
+
+export const DEFAULT_NEEDS: VisbyNeeds = {
+  hunger: 80,
+  happiness: 80,
+  energy: 80,
+  knowledge: 50,
+  lastUpdated: new Date().toISOString(),
+};
+
+const DECAY_RATES = {
+  hunger: 2.0,     // per hour
+  happiness: 1.5,
+  energy: 1.0,
+  knowledge: 0.5,
+};
+
+function calculateDecay(needs: VisbyNeeds): VisbyNeeds {
+  const now = Date.now();
+  const last = new Date(needs.lastUpdated).getTime();
+  const hoursElapsed = Math.min(24, (now - last) / (1000 * 60 * 60));
+  if (hoursElapsed < 0.01) return needs;
+  return {
+    hunger: Math.max(0, Math.round(needs.hunger - DECAY_RATES.hunger * hoursElapsed)),
+    happiness: Math.max(0, Math.round(needs.happiness - DECAY_RATES.happiness * hoursElapsed)),
+    energy: Math.max(0, Math.round(needs.energy - DECAY_RATES.energy * hoursElapsed)),
+    knowledge: Math.max(0, Math.round(needs.knowledge - DECAY_RATES.knowledge * hoursElapsed)),
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
+function deriveVisbyMood(needs: VisbyNeeds): import('../types').VisbyMood {
+  if (needs.hunger === 0 || needs.happiness === 0 || needs.energy === 0 || needs.knowledge === 0) return 'sick';
+  const min = Math.min(needs.hunger, needs.happiness, needs.energy, needs.knowledge);
+  if (min > 70) return 'excited';
+  if (min > 50) return 'happy';
+  if (needs.energy < 30) return 'sleepy';
+  if (needs.hunger < 30) return 'hungry';
+  if (needs.happiness < 30) return 'bored';
+  if (needs.knowledge < 30) return 'confused';
+  return 'happy';
+}
 
 interface AppStore {
   // Auth State
@@ -79,6 +120,14 @@ interface AppStore {
   // Actions - Badges
   checkAndAwardBadges: (extra?: { quizPerfect?: boolean }) => void;
 
+  // Actions - Visby Needs
+  updateVisbyNeeds: () => void;
+  feedVisby: () => void;
+  playWithVisby: () => void;
+  restVisby: () => void;
+  studyWithVisby: () => void;
+  getVisbyNeeds: () => VisbyNeeds;
+
   // Actions - Settings
   updateSettings: (settings: Partial<AppStore['settings']>) => void;
 }
@@ -152,11 +201,13 @@ export const useStore = create<AppStore>()(
       setStamps: (stamps) => set({ stamps }),
       addStamp: (stamp) => {
         set((state) => ({ stamps: [...state.stamps, stamp] }));
+        get().playWithVisby();
         get().checkAndAwardBadges();
       },
       setBites: (bites) => set({ bites }),
       addBite: (bite) => {
         set((state) => ({ bites: [...state.bites, bite] }));
+        get().feedVisby();
         get().checkAndAwardBadges();
       },
       setBadges: (badges) => set({ badges }),
@@ -244,6 +295,19 @@ export const useStore = create<AppStore>()(
               totalAuraEarned: user.totalAuraEarned + 10,
             },
           });
+        }
+
+        // Partially restore Visby's energy on daily check-in
+        const { visby } = get();
+        if (visby) {
+          const needs = visby.needs || DEFAULT_NEEDS;
+          const updated = {
+            ...needs,
+            energy: Math.min(100, needs.energy + 10),
+            lastUpdated: new Date().toISOString(),
+          };
+          const mood = deriveVisbyMood(updated);
+          set({ visby: { ...visby, needs: updated, currentMood: mood } });
         }
 
         get().checkAndAwardBadges();
@@ -355,6 +419,75 @@ export const useStore = create<AppStore>()(
           set((s) => ({ badges: [...s.badges, userBadge] }));
           get().addAura(RARITY_AURA[badge.rarity] ?? 0);
         }
+      },
+
+      // Visby Needs Actions
+      updateVisbyNeeds: () => {
+        const { visby } = get();
+        if (!visby) return;
+        const needs = visby.needs || DEFAULT_NEEDS;
+        const updated = calculateDecay(needs);
+        const mood = deriveVisbyMood(updated);
+        set({ visby: { ...visby, needs: updated, currentMood: mood } });
+      },
+      feedVisby: () => {
+        const { visby, user } = get();
+        if (!visby) return;
+        const needs = visby.needs || DEFAULT_NEEDS;
+        const updated = {
+          ...needs,
+          hunger: Math.min(100, needs.hunger + 25),
+          lastUpdated: new Date().toISOString(),
+        };
+        const mood = deriveVisbyMood(updated);
+        set({ visby: { ...visby, needs: updated, currentMood: mood } });
+        if (user) set({ user: { ...user, totalCarePoints: (user.totalCarePoints || 0) + 1 } });
+      },
+      playWithVisby: () => {
+        const { visby, user } = get();
+        if (!visby) return;
+        const needs = visby.needs || DEFAULT_NEEDS;
+        const updated = {
+          ...needs,
+          happiness: Math.min(100, needs.happiness + 20),
+          energy: Math.max(0, needs.energy - 5),
+          lastUpdated: new Date().toISOString(),
+        };
+        const mood = deriveVisbyMood(updated);
+        set({ visby: { ...visby, needs: updated, currentMood: mood } });
+        if (user) set({ user: { ...user, totalCarePoints: (user.totalCarePoints || 0) + 1 } });
+      },
+      restVisby: () => {
+        const { visby, user } = get();
+        if (!visby) return;
+        const needs = visby.needs || DEFAULT_NEEDS;
+        const updated = {
+          ...needs,
+          energy: Math.min(100, needs.energy + 30),
+          lastUpdated: new Date().toISOString(),
+        };
+        const mood = deriveVisbyMood(updated);
+        set({ visby: { ...visby, needs: updated, currentMood: mood } });
+        if (user) set({ user: { ...user, totalCarePoints: (user.totalCarePoints || 0) + 1 } });
+      },
+      studyWithVisby: () => {
+        const { visby, user } = get();
+        if (!visby) return;
+        const needs = visby.needs || DEFAULT_NEEDS;
+        const updated = {
+          ...needs,
+          knowledge: Math.min(100, needs.knowledge + 20),
+          energy: Math.max(0, needs.energy - 3),
+          lastUpdated: new Date().toISOString(),
+        };
+        const mood = deriveVisbyMood(updated);
+        set({ visby: { ...visby, needs: updated, currentMood: mood } });
+        if (user) set({ user: { ...user, totalCarePoints: (user.totalCarePoints || 0) + 1 } });
+      },
+      getVisbyNeeds: () => {
+        const { visby } = get();
+        if (!visby?.needs) return DEFAULT_NEEDS;
+        return calculateDecay(visby.needs);
       },
 
       // Settings Actions

@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -46,10 +47,18 @@ export const Input: React.FC<InputProps> = ({
   const borderColor = useSharedValue(colors.base.parchment);
   const shadowOpacity = useSharedValue(0);
 
-  const animatedContainerStyle = useAnimatedStyle(() => ({
-    borderColor: borderColor.value,
-    shadowOpacity: shadowOpacity.value,
-  }));
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    if (Platform.OS === 'web') {
+      return {
+        borderColor: borderColor.value,
+        boxShadow: `0 0 12px rgba(184, 165, 224, ${shadowOpacity.value})`,
+      } as any;
+    }
+    return {
+      borderColor: borderColor.value,
+      shadowOpacity: shadowOpacity.value,
+    };
+  });
 
   const handleFocus = (e: any) => {
     setIsFocused(true);
@@ -149,10 +158,10 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.lg,
     borderWidth: 2,
     borderColor: colors.base.parchment,
-    shadowColor: colors.primary.wisteria,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 12,
-    elevation: 0,
+    ...(Platform.OS === 'web'
+      ? {}
+      : { shadowColor: colors.primary.wisteria, shadowOffset: { width: 0, height: 0 }, shadowRadius: 12, elevation: 0 }
+    ),
   },
   errorContainer: {
     borderColor: colors.status.error,
