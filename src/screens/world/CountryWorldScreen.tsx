@@ -19,6 +19,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { COUNTRIES } from '../../config/constants';
+import { COUNTRY_SOUVENIRS, COSMETICS_CATALOG, isCosmeticLocked } from '../../config/cosmetics';
 import { RootStackParamList, UserHouse } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
@@ -35,10 +36,11 @@ type ConfirmModal = {
 };
 
 export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigation }) => {
-  const { user, userHouses, spendAura, addUserHouse, incrementCountriesVisited, getStreakMultiplier } = useStore();
+  const { user, userHouses, spendAura, addUserHouse, incrementCountriesVisited, getStreakMultiplier, visitCountry } = useStore();
   const aura = user?.aura ?? 0;
   const streak = user?.currentStreak ?? 0;
   const multiplier = getStreakMultiplier();
+  const visitedCountries = user?.visitedCountries ?? [];
 
   const [modal, setModal] = useState<ConfirmModal>({
     visible: false,
@@ -56,6 +58,18 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     visible: false, countryId: '', countryName: '',
   });
   const [houseName, setHouseName] = useState('');
+  const [souvenirModal, setSouvenirModal] = useState<{
+    visible: boolean;
+    countryName: string;
+    souvenirName: string;
+    unlockedCount: number;
+  }>({ visible: false, countryName: '', souvenirName: '', unlockedCount: 0 });
+
+  const getUnlockedItemCount = (countryId: string) => {
+    const country = COUNTRIES.find(c => c.id === countryId);
+    if (!country) return 0;
+    return COSMETICS_CATALOG.filter(c => c.country === country.name).length;
+  };
 
   const hasHouse = (countryId: string) =>
     userHouses.some((h) => h.countryId === countryId);
@@ -86,16 +100,36 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       return;
     }
 
+    const isFirstVisit = !visitedCountries.includes(countryId);
+    const souvenir = COUNTRY_SOUVENIRS[countryId];
+    const unlockCount = getUnlockedItemCount(countryId);
+
+    const visitMessage = isFirstVisit && souvenir
+      ? `Spend ${cost} Aura to visit and explore.\n\nFirst visit bonus: You'll receive a free ${souvenir.name} and unlock ${unlockCount} items from ${country.name} in the shop!`
+      : `Spend ${cost} Aura to visit and explore. Take quizzes and read facts to earn Aura while you're there!`;
+
     showConfirm(
       `Visit ${country.flagEmoji} ${country.name}?`,
-      `Spend ${cost} Aura to visit and explore. Take quizzes and read facts to earn Aura while you're there!`,
+      visitMessage,
       'Visit!',
       () => {
         if (spendAura(cost)) {
           incrementCountriesVisited();
-          navigation.navigate('CountryRoom', { countryId });
+          const grantedSouvenir = visitCountry(countryId);
+          setModal((m) => ({ ...m, visible: false }));
+          if (grantedSouvenir && souvenir) {
+            setSouvenirModal({
+              visible: true,
+              countryName: country.name,
+              souvenirName: souvenir.name,
+              unlockedCount: unlockCount,
+            });
+          } else {
+            navigation.navigate('CountryRoom', { countryId });
+          }
+        } else {
+          setModal((m) => ({ ...m, visible: false }));
         }
-        setModal((m) => ({ ...m, visible: false }));
       }
     );
   };
@@ -131,17 +165,32 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
 
   const finishBuyHouse = () => {
     const name = houseName.trim() || `My ${nameModal.countryName} Home`;
+    const cid = nameModal.countryId;
+    const cname = nameModal.countryName;
     const newHouse: UserHouse = {
       id: `house_${Date.now()}`,
       userId: user?.id || '',
-      countryId: nameModal.countryId,
+      countryId: cid,
       purchasedAt: new Date(),
       houseName: name,
     };
     addUserHouse(newHouse);
     incrementCountriesVisited();
+
+    const grantedSouvenir = visitCountry(cid);
+    const souvenir = COUNTRY_SOUVENIRS[cid];
     setNameModal({ visible: false, countryId: '', countryName: '' });
-    navigation.navigate('CountryRoom', { countryId: nameModal.countryId });
+
+    if (grantedSouvenir && souvenir) {
+      setSouvenirModal({
+        visible: true,
+        countryName: cname,
+        souvenirName: souvenir.name,
+        unlockedCount: getUnlockedItemCount(cid),
+      });
+    } else {
+      navigation.navigate('CountryRoom', { countryId: cid });
+    }
   };
 
   return (
@@ -195,6 +244,8 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
 
           {COUNTRIES.map((country) => {
             const owned = hasHouse(country.id);
+            const visited = visitedCountries.includes(country.id);
+            const itemCount = getUnlockedItemCount(country.id);
             return (
               <Card
                 key={country.id}
@@ -210,7 +261,16 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                     <View style={styles.countryNameRow}>
                       <Text variant="h2">{country.name}</Text>
                       {owned && <Text style={styles.ownedBadge}>Owned</Text>}
+                      {!visited && !owned && <Text style={styles.newBadge}>NEW</Text>}
                     </View>
+                    {!visited && itemCount > 0 && (
+                      <View style={styles.unlockPreview}>
+                        <Icon name="shirt" size={12} color={colors.reward.amber} />
+                        <Text style={styles.unlockPreviewText}>
+                          Unlocks {itemCount} item{itemCount !== 1 ? 's' : ''} + free souvenir
+                        </Text>
+                      </View>
+                    )}
                     {owned && (() => {
                       const house = userHouses.find((h) => h.countryId === country.id);
                       return house?.houseName ? (
@@ -317,6 +377,54 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Souvenir Reward Modal */}
+      <Modal visible={souvenirModal.visible} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.souvenirContent} onPress={(e) => e.stopPropagation()}>
+            <LinearGradient
+              colors={['#FFF8E0', '#FFF0F5', '#F0ECFF']}
+              style={styles.souvenirGradient}
+            >
+              <Text style={styles.souvenirEmoji}>🎁</Text>
+              <Heading level={2}>Souvenir Unlocked!</Heading>
+              <Text variant="body" align="center" style={styles.souvenirBody}>
+                Welcome to {souvenirModal.countryName}! You received a free{'\n'}
+                <Text variant="body" style={styles.souvenirItemName}>{souvenirModal.souvenirName}</Text>
+              </Text>
+              {souvenirModal.unlockedCount > 1 && (
+                <View style={styles.souvenirUnlockRow}>
+                  <Icon name="shirt" size={16} color={colors.primary.wisteriaDark} />
+                  <Text variant="caption" color={colors.primary.wisteriaDark}>
+                    {souvenirModal.unlockedCount} items from {souvenirModal.countryName} are now available in the shop!
+                  </Text>
+                </View>
+              )}
+              <View style={styles.souvenirActions}>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  title="Explore!"
+                  onPress={() => {
+                    const cid = COUNTRIES.find(c => c.name === souvenirModal.countryName)?.id;
+                    setSouvenirModal(s => ({ ...s, visible: false }));
+                    if (cid) navigation.navigate('CountryRoom', { countryId: cid });
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="reward"
+                  title="Visit Shop"
+                  onPress={() => {
+                    setSouvenirModal(s => ({ ...s, visible: false }));
+                    navigation.navigate('CosmeticShop');
+                  }}
+                />
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -358,6 +466,9 @@ const styles = StyleSheet.create({
   countryInfo: { flex: 1 },
   countryNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ownedBadge: { fontFamily: 'Nunito-Bold', fontSize: 12, color: '#4CAF50', backgroundColor: 'rgba(76,175,80,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, overflow: 'hidden' },
+  newBadge: { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.reward.amber, backgroundColor: 'rgba(255,191,0,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, overflow: 'hidden', letterSpacing: 1 },
+  unlockPreview: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  unlockPreviewText: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.reward.amber },
   houseNameText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.primary.wisteriaDark, fontStyle: 'italic', marginTop: 2 },
   countryMeta: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   factCount: { fontFamily: 'Nunito-Medium', fontSize: 12, color: colors.text.muted },
@@ -389,5 +500,45 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: colors.primary.wisteriaFaded,
     borderRadius: 16, padding: spacing.md, marginBottom: spacing.lg,
     backgroundColor: '#FAFAFE',
+  },
+
+  // Souvenir Modal
+  souvenirContent: {
+    maxWidth: 360,
+    width: '100%',
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  souvenirGradient: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    paddingTop: spacing.xxl,
+  },
+  souvenirEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  souvenirBody: {
+    marginTop: spacing.sm,
+    lineHeight: 22,
+  },
+  souvenirItemName: {
+    fontWeight: '700',
+    color: colors.primary.wisteriaDark,
+  },
+  souvenirUnlockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    backgroundColor: 'rgba(184, 165, 224, 0.1)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.radius.lg,
+  },
+  souvenirActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
 });

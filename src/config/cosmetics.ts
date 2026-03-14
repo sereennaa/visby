@@ -74,6 +74,46 @@ export const RARITY_LABELS: Record<CosmeticRarity, string> = {
 // Default cosmetics every new user gets
 export const DEFAULT_OWNED = ['viking_helmet', 'sword'];
 
+// Maps the display country name on cosmetics → in-game country ID from COUNTRIES config.
+// Cosmetics whose country is NOT in this map are always available (their country isn't in the game yet).
+export const COUNTRY_NAME_TO_ID: Record<string, string> = {
+  'Japan': 'jp',
+  'France': 'fr',
+  'Mexico': 'mx',
+  'Italy': 'it',
+  'United Kingdom': 'gb',
+  'Brazil': 'br',
+};
+
+// Set of country IDs that exist in-game
+export const IN_GAME_COUNTRY_IDS = new Set(Object.values(COUNTRY_NAME_TO_ID));
+
+// One souvenir cosmetic per country -- gifted FREE on first visit as a keepsake
+export const COUNTRY_SOUVENIRS: Record<string, { cosmeticId: string; name: string }> = {
+  'jp': { cosmeticId: 'samurai_helmet', name: 'Samurai Kabuto' },
+  'fr': { cosmeticId: 'beret', name: 'French Beret' },
+  'mx': { cosmeticId: 'sombrero', name: 'Sombrero' },
+  'it': { cosmeticId: 'toga', name: 'Roman Toga' },
+  'gb': { cosmeticId: 'top_hat', name: 'Top Hat' },
+  'br': { cosmeticId: 'feather_headdress', name: 'Feather Headdress' },
+};
+
+/** Check if a cosmetic is locked for a user based on their visited countries */
+export function isCosmeticLocked(cosmetic: ShopCosmetic, visitedCountries: string[]): boolean {
+  if (!cosmetic.country) return false;
+  const countryId = COUNTRY_NAME_TO_ID[cosmetic.country];
+  if (!countryId) return false; // country not in game yet → always available
+  return !visitedCountries.includes(countryId);
+}
+
+/** Get the country name that needs visiting to unlock a cosmetic, or null */
+export function getUnlockCountryName(cosmetic: ShopCosmetic): string | null {
+  if (!cosmetic.country) return null;
+  const countryId = COUNTRY_NAME_TO_ID[cosmetic.country];
+  if (!countryId) return null;
+  return cosmetic.country;
+}
+
 // Membership tiers
 export interface MembershipTier {
   id: string;

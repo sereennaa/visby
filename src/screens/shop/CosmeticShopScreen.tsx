@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Pressable, Dimensions } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  useWindowDimensions,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,18 +22,29 @@ import { Icon } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList, CosmeticType } from '../../types';
-import { COSMETICS_CATALOG, COSMETIC_TYPES, RARITY_COLORS, RARITY_LABELS, ShopCosmetic } from '../../config/cosmetics';
+import {
+  COSMETICS_CATALOG,
+  COSMETIC_TYPES,
+  RARITY_COLORS,
+  RARITY_LABELS,
+  ShopCosmetic,
+  isCosmeticLocked,
+  getUnlockCountryName,
+} from '../../config/cosmetics';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
-const { width } = Dimensions.get('window');
-const COLUMN_GAP = spacing.md;
-const CARD_WIDTH = (width - spacing.screenPadding * 2 - COLUMN_GAP) / 2;
+const SIDE_PAD = spacing.screenPadding;
+const GAP = 12;
+const NUM_COLS = 2;
 
 type CosmeticShopScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
 export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigation }) => {
+  const { width: screenW } = useWindowDimensions();
+  const cardW = (screenW - SIDE_PAD * 2 - GAP * (NUM_COLS - 1)) / NUM_COLS;
+
   const { user, visby, spendAura, equipCosmetic, checkAndAwardBadges } = useStore();
 
   const [selectedType, setSelectedType] = useState<CosmeticType>('hat');
@@ -31,12 +52,13 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
 
   const ownedCosmetics = visby?.ownedCosmetics ?? [];
   const equipped = visby?.equipped ?? {};
+  const visitedCountries = user?.visitedCountries ?? [];
 
   const [buyModalVisible, setBuyModalVisible] = useState(false);
   const [buyModalItem, setBuyModalItem] = useState<ShopCosmetic | null>(null);
   const [buyModalError, setBuyModalError] = useState<string | null>(null);
 
-  const defaultAppearance = visby?.appearance ?? {
+  const appearance = visby?.appearance ?? {
     skinTone: colors.visby.skin.light,
     hairColor: colors.visby.hair.brown,
     hairStyle: 'default',
@@ -48,23 +70,33 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
     ? { ...equipped, [previewItem.type]: previewItem.id }
     : equipped;
 
-  const filteredItems = COSMETICS_CATALOG.filter((c) => c.type === selectedType);
+  const filteredItems = useMemo(
+    () => COSMETICS_CATALOG.filter((c) => c.type === selectedType),
+    [selectedType],
+  );
 
-  const isOwned = (id: string) => ownedCosmetics.includes(id);
-  const isEquipped = (cosmetic: ShopCosmetic) => equipped[cosmetic.type] === cosmetic.id;
+  const isOwned = useCallback(
+    (id: string) => ownedCosmetics.includes(id),
+    [ownedCosmetics],
+  );
 
-  const handleBuy = (cosmetic: ShopCosmetic) => {
-    if (isOwned(cosmetic.id)) return;
+  const isEquipped = useCallback(
+    (cosmetic: ShopCosmetic) => equipped[cosmetic.type] === cosmetic.id,
+    [equipped],
+  );
+
+  const handleBuy = useCallback((cosmetic: ShopCosmetic) => {
+    if (ownedCosmetics.includes(cosmetic.id)) return;
     setBuyModalItem(cosmetic);
     setBuyModalError(null);
     setBuyModalVisible(true);
-  };
+  }, [ownedCosmetics]);
 
-  const confirmBuy = () => {
+  const confirmBuy = useCallback(() => {
     if (!buyModalItem) return;
     const success = spendAura(buyModalItem.price);
     if (!success) {
-      setBuyModalError('Not enough Aura. Keep exploring to earn more!');
+      setBuyModalError('Not enough Aura! Keep exploring to earn more.');
       return;
     }
     const { visby: currentVisby } = useStore.getState();
@@ -79,81 +111,136 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
     checkAndAwardBadges();
     setBuyModalVisible(false);
     setBuyModalItem(null);
-  };
+  }, [buyModalItem, spendAura, checkAndAwardBadges]);
 
-  const handleEquip = (cosmetic: ShopCosmetic) => {
-    if (isEquipped(cosmetic)) {
-      equipCosmetic(cosmetic.type, undefined);
+  const handleEquip = useCallback(
+    (cosmetic: ShopCosmetic) => {
+      equipCosmetic(
+        cosmetic.type,
+        equipped[cosmetic.type] === cosmetic.id ? undefined : cosmetic.id,
+      );
       setPreviewItem(null);
-    } else {
-      equipCosmetic(cosmetic.type, cosmetic.id);
-      setPreviewItem(null);
-    }
-  };
+    },
+    [equipped, equipCosmetic],
+  );
 
-  const handlePreview = (cosmetic: ShopCosmetic) => {
-    setPreviewItem((prev) => (prev?.id === cosmetic.id ? null : cosmetic));
-  };
+  const handlePreview = useCallback(
+    (cosmetic: ShopCosmetic) =>
+      setPreviewItem((prev) => (prev?.id === cosmetic.id ? null : cosmetic)),
+    [],
+  );
 
+  const miniEquippedFor = useCallback(
+    (item: ShopCosmetic) => ({ ...equipped, [item.type]: item.id }),
+    [equipped],
+  );
+
+  // ----- Item Card -----
   const renderItem = ({ item }: { item: ShopCosmetic }) => {
     const owned = isOwned(item.id);
-    const currentlyEquipped = isEquipped(item);
-    const isPreviewing = previewItem?.id === item.id;
+    const active = isEquipped(item);
+    const previewing = previewItem?.id === item.id;
+    const locked = !owned && isCosmeticLocked(item, visitedCountries);
+    const unlockCountry = getUnlockCountryName(item);
+    const rarityColor = RARITY_COLORS[item.rarity];
 
     return (
       <TouchableOpacity
-        style={[styles.itemCard, isPreviewing && styles.itemCardActive]}
-        onPress={() => handlePreview(item)}
-        activeOpacity={0.8}
+        style={[
+          styles.card,
+          { width: cardW },
+          previewing && styles.cardPreviewing,
+          locked && styles.cardLocked,
+        ]}
+        onPress={() => (locked ? undefined : handlePreview(item))}
+        activeOpacity={locked ? 1 : 0.85}
+        accessibilityLabel={`${item.name}, ${RARITY_LABELS[item.rarity]}${locked ? ', locked' : ''}`}
       >
-        <View style={styles.itemEmojiContainer}>
-          <Icon name={item.icon} size={28} color={colors.primary.wisteriaDark} />
+        {/* Mini character preview */}
+        <View style={[styles.previewBubble, locked && styles.previewBubbleLocked]}>
+          <VisbyCharacter
+            appearance={appearance}
+            equipped={miniEquippedFor(item)}
+            mood="happy"
+            size={80}
+            animated={false}
+          />
+          {locked && (
+            <View style={styles.lockOverlay}>
+              <View style={styles.lockCircle}>
+                <Icon name="lock" size={14} color="#FFFFFF" />
+              </View>
+            </View>
+          )}
         </View>
 
-        <Text variant="bodySmall" style={styles.itemName} numberOfLines={1}>
+        {/* Name */}
+        <Text
+          variant="body"
+          style={[styles.itemName, locked && styles.textLocked]}
+          numberOfLines={1}
+        >
           {item.name}
         </Text>
 
-        <View style={styles.rarityRow}>
-          <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[item.rarity] }]} />
-          <Caption color={RARITY_COLORS[item.rarity]}>{RARITY_LABELS[item.rarity]}</Caption>
+        {/* Rarity + Country */}
+        <View style={styles.metaRow}>
+          <View
+            style={[
+              styles.rarityPill,
+              { backgroundColor: locked ? 'rgba(0,0,0,0.05)' : `${rarityColor}20` },
+            ]}
+          >
+            <View
+              style={[styles.rarityDot, { backgroundColor: locked ? colors.text.light : rarityColor }]}
+            />
+            <Text
+              variant="caption"
+              color={locked ? colors.text.light : rarityColor}
+              style={styles.rarityLabel}
+            >
+              {RARITY_LABELS[item.rarity]}
+            </Text>
+          </View>
+          {item.country && (
+            <Text variant="caption" color={locked ? colors.text.light : colors.text.muted} style={styles.countryLabel}>
+              {item.country}
+            </Text>
+          )}
         </View>
 
-        {item.country && (
-          <Caption color={colors.text.muted} style={styles.countryLabel}>
-            {item.country}
-          </Caption>
-        )}
-
-        <View style={styles.itemFooter}>
-          {item.membersOnly && !owned ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Icon name="crown" size={14} color={colors.reward.gold} />
-              <Text variant="caption" style={styles.membersLabel}>Members Only</Text>
+        {/* Footer */}
+        <View style={styles.cardFooter}>
+          {locked ? (
+            <View style={styles.lockedRow}>
+              <Icon name="globe" size={14} color={colors.primary.wisteriaDark} />
+              <Text variant="body" color={colors.primary.wisteriaDark} style={styles.lockedLabel}>
+                Visit {unlockCountry}
+              </Text>
+            </View>
+          ) : item.membersOnly && !owned ? (
+            <View style={styles.membersRow}>
+              <Icon name="crown" size={16} color={colors.reward.gold} />
+              <Text variant="body" color={colors.reward.gold} style={styles.membersLabel}>
+                Members Only
+              </Text>
             </View>
           ) : owned ? (
-            currentlyEquipped ? (
-              <Button
-                title="Equipped"
-                size="sm"
-                variant="secondary"
-                onPress={() => handleEquip(item)}
-                fullWidth
-              />
-            ) : (
-              <Button
-                title="Equip"
-                size="sm"
-                variant="primary"
-                onPress={() => handleEquip(item)}
-                fullWidth
-              />
-            )
+            <Button
+              title={active ? 'Equipped' : 'Equip'}
+              size="sm"
+              variant={active ? 'secondary' : 'primary'}
+              onPress={() => handleEquip(item)}
+              fullWidth
+            />
           ) : (
-            <>
-              <Text variant="caption" style={styles.priceText}>
-                {item.price === 0 ? 'Free' : `${item.price}`}
-              </Text>
+            <View style={styles.buyRow}>
+              <View style={styles.pricePill}>
+                <Icon name="sparkles" size={12} color={colors.reward.gold} />
+                <Text variant="body" style={styles.priceText}>
+                  {item.price === 0 ? 'Free' : item.price}
+                </Text>
+              </View>
               <Button
                 title="Buy"
                 size="sm"
@@ -162,74 +249,103 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
                 fullWidth
                 disabled={item.membersOnly}
               />
-            </>
+            </View>
           )}
         </View>
+
+        {/* Equipped check */}
+        {active && (
+          <View style={[styles.equippedBadge, { backgroundColor: rarityColor }]}>
+            <Icon name="check" size={11} color="#FFFFFF" />
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
 
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded, colors.reward.peachLight]}
+      colors={['#FAF8FF', '#EDE4FF', '#FFF3EE', '#FAF8FF']}
+      locations={[0, 0.3, 0.65, 1]}
       style={styles.container}
-      locations={[0, 0.5, 1]}
     >
-      <FloatingParticles count={6} variant="sparkle" opacity={0.2} speed="slow" />
+      <FloatingParticles count={8} variant="mixed" opacity={0.25} speed="slow" />
+
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Icon name="chevronLeft" size={22} color={colors.text.primary} />
           </TouchableOpacity>
-          <Heading level={2}>Cosmetic Shop</Heading>
-          <View style={styles.auraDisplay}>
-            <Icon name="sparkles" size={18} color={colors.reward.gold} />
-            <Text variant="body" style={styles.auraText}>{user?.aura ?? 0}</Text>
+          <View style={styles.headerCenter}>
+            <Text variant="caption" color={colors.primary.wisteriaDark} style={styles.headerSub}>
+              Browse &amp; Equip
+            </Text>
+            <Heading level={1}>Shop</Heading>
+          </View>
+          <View style={styles.auraPill}>
+            <Icon name="sparkles" size={16} color={colors.reward.gold} />
+            <Text variant="body" style={styles.auraAmount}>{user?.aura ?? 0}</Text>
           </View>
         </View>
 
-        {/* Character Preview */}
-        <View style={styles.previewContainer}>
-          <Card
-            variant="gradient"
-            gradientColors={[colors.primary.wisteriaFaded, colors.base.cream]}
-            style={styles.previewCard}
+        {/* Live Character Preview */}
+        <View style={styles.livePreview}>
+          <LinearGradient
+            colors={['#F5F0FF', '#FFF6EE', '#F0ECFF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.livePreviewGradient}
           >
             <VisbyCharacter
-              appearance={defaultAppearance}
+              appearance={appearance}
               equipped={previewEquipped}
               mood="happy"
-              size={120}
+              size={140}
               animated
             />
-            {previewItem && (
-              <View style={styles.previewLabel}>
-                <Text variant="caption" color={colors.primary.wisteriaDark}>
-                  Previewing: {previewItem.name}
+            {previewItem ? (
+              <View style={styles.previewTag}>
+                <Icon name="sparkles" size={12} color={colors.primary.wisteriaDark} />
+                <Text variant="body" color={colors.primary.wisteriaDark} style={styles.previewTagText}>
+                  {previewItem.name}
                 </Text>
               </View>
+            ) : (
+              <Text variant="caption" color={colors.text.muted} style={styles.previewHint}>
+                Tap an item to preview
+              </Text>
             )}
-          </Card>
+          </LinearGradient>
         </View>
 
         {/* Type Tabs */}
-        <View style={styles.tabsContainer}>
+        <View style={styles.tabs}>
           {COSMETIC_TYPES.map((ct) => {
-            const active = selectedType === ct.type;
+            const on = selectedType === ct.type;
             return (
               <TouchableOpacity
                 key={ct.type}
-                style={[styles.tab, active && styles.tabActive]}
+                style={[styles.tab, on && styles.tabOn]}
                 onPress={() => {
                   setSelectedType(ct.type);
                   setPreviewItem(null);
                 }}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
               >
+                <Icon
+                  name={ct.icon}
+                  size={16}
+                  color={on ? '#FFFFFF' : colors.text.muted}
+                />
                 <Text
                   variant="body"
-                  style={[styles.tabText, active && styles.tabTextActive]}
+                  style={[styles.tabLabel, on && styles.tabLabelOn]}
                 >
                   {ct.label}
                 </Text>
@@ -243,38 +359,64 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
           data={filteredItems}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          numColumns={2}
-          columnWrapperStyle={styles.gridRow}
+          numColumns={NUM_COLS}
+          columnWrapperStyle={[styles.gridRow, { gap: GAP }]}
           contentContainerStyle={styles.gridContent}
           showsVerticalScrollIndicator={false}
         />
       </SafeAreaView>
 
+      {/* Buy Modal */}
       <Modal
         visible={buyModalVisible}
         transparent
         animationType="fade"
         onRequestClose={() => setBuyModalVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setBuyModalVisible(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+        <Pressable style={styles.overlay} onPress={() => setBuyModalVisible(false)}>
+          <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
             {buyModalError ? (
               <>
+                <Text style={styles.modalEmoji}>😢</Text>
                 <Heading level={3}>Not Enough Aura</Heading>
                 <Text variant="body" style={styles.modalBody}>{buyModalError}</Text>
-                <View style={styles.modalActions}>
-                  <Button size="sm" variant="primary" title="OK" onPress={() => setBuyModalVisible(false)} />
+                <View style={styles.modalRow}>
+                  <Button size="sm" variant="secondary" title="OK" onPress={() => setBuyModalVisible(false)} />
+                  <Button
+                    size="sm"
+                    variant="reward"
+                    title="Get Aura"
+                    onPress={() => { setBuyModalVisible(false); navigation.navigate('AuraStore'); }}
+                  />
                 </View>
               </>
             ) : buyModalItem ? (
               <>
+                <View style={styles.modalPreview}>
+                  <VisbyCharacter
+                    appearance={appearance}
+                    equipped={miniEquippedFor(buyModalItem)}
+                    mood="excited"
+                    size={110}
+                    animated
+                  />
+                </View>
                 <Heading level={3}>Buy {buyModalItem.name}?</Heading>
-                <Text variant="body" style={styles.modalBody}>
-                  Cost: {buyModalItem.price} Aura{'\n'}Your balance: {user?.aura ?? 0} Aura
+                <View style={styles.modalPriceRow}>
+                  <Icon name="sparkles" size={16} color={colors.reward.gold} />
+                  <Text variant="h3" color={colors.reward.amber}>{buyModalItem.price} Aura</Text>
+                </View>
+                <Text variant="body" color={colors.text.secondary} align="center">
+                  Your balance: {user?.aura ?? 0} Aura
                 </Text>
-                <View style={styles.modalActions}>
+                {buyModalItem.country && (
+                  <Text variant="caption" color={colors.text.muted} align="center" style={styles.modalCountry}>
+                    From {buyModalItem.country}
+                  </Text>
+                )}
+                <View style={styles.modalRow}>
                   <Button size="sm" variant="secondary" title="Cancel" onPress={() => setBuyModalVisible(false)} />
-                  <Button size="sm" variant="reward" title="Buy" onPress={confirmBuy} />
+                  <Button size="sm" variant="reward" title="Buy Now" onPress={confirmBuy} />
                 </View>
               </>
             ) : null}
@@ -286,207 +428,254 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.md,
+    paddingHorizontal: SIDE_PAD,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: spacing.radius.round,
-    backgroundColor: colors.base.cream,
+  headerCenter: { alignItems: 'center' },
+  headerSub: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 1 },
+  backBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...(Platform.OS !== 'web'
+      ? { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 }
+      : {}),
   },
-  auraDisplay: {
+  auraPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.base.cream,
+    gap: 5,
+    backgroundColor: 'rgba(255,215,0,0.12)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: spacing.radius.round,
-    gap: spacing.xs,
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  auraText: {
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
+  auraAmount: { fontWeight: '800', color: colors.reward.amber, fontSize: 15 },
 
-  // Preview
-  previewContainer: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.screenPadding,
+  // Live preview
+  livePreview: {
+    marginHorizontal: SIDE_PAD,
+    borderRadius: 22,
+    overflow: 'hidden',
     marginBottom: spacing.md,
   },
-  previewCard: {
+  livePreviewGradient: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
-    width: '100%',
   },
-  previewLabel: {
+  previewTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     marginTop: spacing.sm,
-    backgroundColor: colors.primary.wisteriaLight,
+    backgroundColor: 'rgba(184, 165, 224, 0.15)',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xs + 1,
     borderRadius: spacing.radius.round,
   },
+  previewTagText: { fontWeight: '700', fontSize: 13 },
+  previewHint: { marginTop: spacing.sm },
 
   // Tabs
-  tabsContainer: {
+  tabs: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.screenPadding,
-    marginBottom: spacing.md,
+    paddingHorizontal: SIDE_PAD,
     gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: spacing.radius.xl,
-    backgroundColor: colors.base.cream,
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: colors.shadow.light,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 1,
-    shadowRadius: 2,
-    elevation: 1,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: spacing.radius.round,
+    backgroundColor: colors.base.cream,
+    borderWidth: 1,
+    borderColor: 'rgba(184,165,224,0.15)',
   },
-  tabActive: {
-    backgroundColor: colors.primary.wisteria,
-    shadowColor: colors.shadow.colored,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 3,
+  tabOn: {
+    backgroundColor: colors.primary.wisteriaDark,
+    borderColor: colors.primary.wisteriaDark,
   },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text.secondary,
-  },
-  tabTextActive: {
-    color: colors.text.inverse,
-  },
+  tabLabel: { fontSize: 14, fontWeight: '600', color: colors.text.secondary },
+  tabLabelOn: { color: '#FFFFFF', fontWeight: '700' },
 
   // Grid
   gridRow: {
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.screenPadding,
-    marginBottom: COLUMN_GAP,
+    paddingHorizontal: SIDE_PAD,
+    marginBottom: GAP,
   },
   gridContent: {
-    paddingBottom: spacing.xxxl,
+    paddingBottom: spacing.xxxl * 2,
   },
 
-  // Item Card
-  itemCard: {
-    width: CARD_WIDTH,
+  // Card
+  card: {
     backgroundColor: colors.base.cream,
-    borderRadius: spacing.radius.xl,
+    borderRadius: 22,
     padding: spacing.md,
     alignItems: 'center',
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 3,
     borderWidth: 2,
     borderColor: 'transparent',
+    position: 'relative',
+    ...(Platform.OS !== 'web'
+      ? { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 2 }
+      : {}),
   },
-  itemCardActive: {
+  cardPreviewing: {
     borderColor: colors.primary.wisteria,
     backgroundColor: colors.primary.wisteriaFaded,
   },
-  itemEmojiContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: spacing.radius.round,
+  cardLocked: {
+    opacity: 0.6,
     backgroundColor: colors.base.parchment,
+  },
+
+  // Mini preview
+  previewBubble: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(184, 165, 224, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
+    overflow: 'hidden',
   },
-  itemName: {
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: spacing.xxs,
+  previewBubbleLocked: {
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
-  rarityRow: {
-    flexDirection: 'row',
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xxs,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
-  rarityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  countryLabel: {
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  itemFooter: {
-    width: '100%',
-    marginTop: 'auto',
-    paddingTop: spacing.sm,
-    gap: spacing.xs,
+  lockCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     alignItems: 'center',
-  },
-  priceText: {
-    fontWeight: '700',
-    color: colors.reward.amber,
-    textAlign: 'center',
-  },
-  membersLabel: {
-    fontWeight: '600',
-    color: colors.reward.gold,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
+    justifyContent: 'center',
   },
 
-  modalOverlay: {
+  // Item text
+  itemName: {
+    fontWeight: '700',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  textLocked: { color: colors.text.muted },
+
+  // Meta row
+  metaRow: {
+    alignItems: 'center',
+    gap: 3,
+    marginBottom: spacing.sm,
+  },
+  rarityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  rarityDot: { width: 6, height: 6, borderRadius: 3 },
+  rarityLabel: { fontSize: 11, fontWeight: '600' },
+  countryLabel: { fontSize: 11, marginTop: 1 },
+
+  // Card footer
+  cardFooter: {
+    width: '100%',
+    marginTop: 'auto',
+    paddingTop: spacing.xs,
+  },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: spacing.sm,
+  },
+  lockedLabel: { fontSize: 12, fontWeight: '700' },
+  membersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: spacing.sm,
+  },
+  membersLabel: { fontSize: 13, fontWeight: '700' },
+  buyRow: { gap: spacing.xs },
+  pricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  priceText: { fontWeight: '800', color: colors.reward.amber, fontSize: 15 },
+  equippedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Modal
+  overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
   },
-  modalContent: {
+  modal: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 28,
     padding: spacing.xl,
-    maxWidth: 360,
+    maxWidth: 380,
     width: '100%',
+    alignItems: 'center',
   },
-  modalBody: {
+  modalEmoji: { fontSize: 40, marginBottom: spacing.sm },
+  modalPreview: {
+    marginBottom: spacing.md,
+  },
+  modalPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
   },
-  modalActions: {
+  modalCountry: { marginTop: spacing.xs, marginBottom: spacing.xs },
+  modalBody: { marginTop: spacing.sm, marginBottom: spacing.lg, textAlign: 'center' },
+  modalRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    justifyContent: 'flex-end',
+    marginTop: spacing.lg,
   },
 });
 

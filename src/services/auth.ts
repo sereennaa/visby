@@ -38,6 +38,7 @@ function createDemoUser(email: string, password: string, username: string): { us
     countriesVisited: 0,
     citiesVisited: 0,
     totalCarePoints: 0,
+    visitedCountries: [],
     settings: {
       notifications: true,
       locationTracking: true,

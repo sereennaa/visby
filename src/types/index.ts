@@ -33,6 +33,9 @@ export interface User {
   citiesVisited: number;
   totalCarePoints: number;
   
+  // Countries the user has visited at least once (country IDs)
+  visitedCountries: string[];
+  
   // Daily learning tracking
   lessonsCompletedToday?: number;
   lastLessonDate?: string;

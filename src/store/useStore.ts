@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
+import { COUNTRY_SOUVENIRS } from '../config/cosmetics';
 
 export const DEFAULT_NEEDS: VisbyNeeds = {
   hunger: 80,
@@ -104,9 +105,11 @@ interface AppStore {
   getStreakMultiplier: () => number;
   incrementCountriesVisited: () => void;
 
-  // Actions - Houses
+  // Actions - Houses & Country Visits
   setUserHouses: (houses: UserHouse[]) => void;
   addUserHouse: (house: UserHouse) => void;
+  /** Record first visit to a country. Returns souvenir cosmetic ID if one was granted. */
+  visitCountry: (countryId: string) => string | null;
   
   // Actions - Learning
   setLessonProgress: (progress: UserLessonProgress[]) => void;
@@ -370,11 +373,38 @@ export const useStore = create<AppStore>()(
       // Location Actions
       setLocation: (currentLocation) => set({ currentLocation }),
 
-      // Houses Actions
+      // Houses & Country Visit Actions
       setUserHouses: (userHouses) => set({ userHouses }),
       addUserHouse: (house) => {
         set((state) => ({ userHouses: [...state.userHouses, house] }));
         get().checkAndAwardBadges();
+      },
+      visitCountry: (countryId) => {
+        const { user, visby } = get();
+        if (!user || !visby) return null;
+
+        const visited = user.visitedCountries || [];
+        if (visited.includes(countryId)) return null;
+
+        set({
+          user: {
+            ...user,
+            visitedCountries: [...visited, countryId],
+          },
+        });
+
+        const souvenir = COUNTRY_SOUVENIRS[countryId];
+        if (souvenir && !visby.ownedCosmetics.includes(souvenir.cosmeticId)) {
+          const currentVisby = get().visby!;
+          set({
+            visby: {
+              ...currentVisby,
+              ownedCosmetics: [...currentVisby.ownedCosmetics, souvenir.cosmeticId],
+            },
+          });
+          return souvenir.cosmeticId;
+        }
+        return null;
       },
 
       // Badge Actions
