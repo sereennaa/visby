@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
 import { COUNTRY_SOUVENIRS } from '../config/cosmetics';
@@ -131,6 +131,13 @@ interface AppStore {
   studyWithVisby: () => void;
   getVisbyNeeds: () => VisbyNeeds;
 
+  // Actions - Furniture & Room Decoration
+  ownedFurniture: string[];
+  buyFurniture: (furnitureId: string, price: number) => boolean;
+  placeFurniture: (countryId: string, roomId: string, item: PlacedFurniture) => void;
+  removePlacedFurniture: (countryId: string, roomId: string, placedId: string) => void;
+  updateRoomColors: (countryId: string, roomId: string, wallColor?: string, floorColor?: string) => void;
+
   // Actions - Settings
   updateSettings: (settings: Partial<AppStore['settings']>) => void;
 }
@@ -149,6 +156,7 @@ export const useStore = create<AppStore>()(
       lessonProgress: [],
       currentLocation: null,
       userHouses: [],
+      ownedFurniture: [],
       settings: {
         notifications: true,
         locationTracking: true,
@@ -520,6 +528,60 @@ export const useStore = create<AppStore>()(
         return calculateDecay(visby.needs);
       },
 
+      // Furniture & Room Decoration Actions
+      buyFurniture: (furnitureId, price) => {
+        const { user, ownedFurniture } = get();
+        if (!user || user.aura < price) return false;
+        set({
+          ownedFurniture: [...ownedFurniture, furnitureId],
+          user: { ...user, aura: user.aura - price },
+        });
+        return true;
+      },
+      placeFurniture: (countryId, roomId, item) => {
+        const { userHouses } = get();
+        const idx = userHouses.findIndex(h => h.countryId === countryId);
+        if (idx < 0) return;
+        const house = { ...userHouses[idx] };
+        const customizations = { ...(house.roomCustomizations || {}) };
+        const room: RoomCustomization = { ...(customizations[roomId] || { placedFurniture: [] }) };
+        room.placedFurniture = [...room.placedFurniture, item];
+        customizations[roomId] = room;
+        house.roomCustomizations = customizations;
+        const updated = [...userHouses];
+        updated[idx] = house;
+        set({ userHouses: updated });
+      },
+      removePlacedFurniture: (countryId, roomId, placedId) => {
+        const { userHouses } = get();
+        const idx = userHouses.findIndex(h => h.countryId === countryId);
+        if (idx < 0) return;
+        const house = { ...userHouses[idx] };
+        const customizations = { ...(house.roomCustomizations || {}) };
+        const room: RoomCustomization = { ...(customizations[roomId] || { placedFurniture: [] }) };
+        room.placedFurniture = room.placedFurniture.filter(f => f.id !== placedId);
+        customizations[roomId] = room;
+        house.roomCustomizations = customizations;
+        const updated = [...userHouses];
+        updated[idx] = house;
+        set({ userHouses: updated });
+      },
+      updateRoomColors: (countryId, roomId, wallColor, floorColor) => {
+        const { userHouses } = get();
+        const idx = userHouses.findIndex(h => h.countryId === countryId);
+        if (idx < 0) return;
+        const house = { ...userHouses[idx] };
+        const customizations = { ...(house.roomCustomizations || {}) };
+        const room: RoomCustomization = { ...(customizations[roomId] || { placedFurniture: [] }) };
+        if (wallColor) room.wallColor = wallColor;
+        if (floorColor) room.floorColor = floorColor;
+        customizations[roomId] = room;
+        house.roomCustomizations = customizations;
+        const updated = [...userHouses];
+        updated[idx] = house;
+        set({ userHouses: updated });
+      },
+
       // Settings Actions
       updateSettings: (newSettings) => set((state) => ({
         settings: { ...state.settings, ...newSettings },
@@ -536,6 +598,7 @@ export const useStore = create<AppStore>()(
         badges: state.badges,
         lessonProgress: state.lessonProgress,
         userHouses: state.userHouses,
+        ownedFurniture: state.ownedFurniture,
         settings: state.settings,
         isAuthenticated: state.isAuthenticated,
       }),

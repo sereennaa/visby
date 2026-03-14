@@ -505,6 +505,35 @@ export interface UserHouse {
   houseName?: string;
   /** Last time they visited this room */
   lastVisitedAt?: Date;
+  roomCustomizations?: Record<string, RoomCustomization>;
+}
+
+export interface FurnitureItem {
+  id: string;
+  name: string;
+  icon: string;
+  imageUrl?: string;
+  category: 'wall' | 'floor' | 'furniture' | 'decor' | 'outdoor';
+  countryOrigin?: string;
+  price: number;
+  width: number;
+  height: number;
+  rarity: CosmeticRarity;
+}
+
+export interface PlacedFurniture {
+  id: string;
+  furnitureId: string;
+  roomId: string;
+  x: number;
+  y: number;
+  rotation: number;
+}
+
+export interface RoomCustomization {
+  wallColor?: string;
+  floorColor?: string;
+  placedFurniture: PlacedFurniture[];
 }
 
 /** Avatar position in the walk-through room (percentage 0-100) */

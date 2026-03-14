@@ -24,8 +24,9 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { COUNTRIES } from '../../config/constants';
 import { useStore } from '../../store/useStore';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, PlacedFurniture } from '../../types';
 import type { CountryFact } from '../../types';
+import { FURNITURE_CATALOG, WALLPAPER_OPTIONS, FLOORING_OPTIONS } from '../../config/furniture';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { getCountryQuiz, QuizQuestion } from '../../config/learningContent';
 import { COUNTRY_HOUSES, RoomObject, HouseRoom } from '../../config/countryRooms';
@@ -45,7 +46,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const { countryId } = route.params;
   const country = COUNTRIES.find((c) => c.id === countryId);
   const houseData = COUNTRY_HOUSES[countryId];
-  const { visby, user, addAura, getStreakMultiplier, userHouses } = useStore();
+  const { visby, user, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, spendAura } = useStore();
 
   const isOwner = userHouses.some((h) => h.countryId === countryId);
   const rooms = houseData?.rooms ?? [];
@@ -70,6 +71,20 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const [quizScore, setQuizScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
+
+  // Edit / Decorate mode
+  const [editMode, setEditMode] = useState(false);
+  const [showFurniturePanel, setShowFurniturePanel] = useState(false);
+  const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
+  const [showFlooringPanel, setShowFlooringPanel] = useState(false);
+  const [selectedPlacedItem, setSelectedPlacedItem] = useState<string | null>(null);
+  const [activeEditTab, setActiveEditTab] = useState<'furniture' | 'wallpaper' | 'flooring' | null>(null);
+
+  const house = userHouses.find(h => h.countryId === countryId);
+  const roomCustomization = house?.roomCustomizations?.[currentRoom?.id ?? ''];
+  const placedItems = roomCustomization?.placedFurniture ?? [];
+  const effectiveWallColor = roomCustomization?.wallColor || currentRoom?.wallColor || '#FFF8F0';
+  const effectiveFloorColor = roomCustomization?.floorColor || currentRoom?.floorColor || '#D4C5A0';
 
   // Avatar walk
   const avatarX = useSharedValue(SCREEN_WIDTH / 2 - AVATAR_SIZE / 2);
@@ -198,7 +213,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[country.accentColor + '30', currentRoom?.wallColor ?? colors.base.cream, colors.base.parchment]}
+        colors={[country.accentColor + '30', effectiveWallColor, colors.base.parchment]}
         style={StyleSheet.absoluteFill}
         locations={[0, 0.45, 1]}
       />
@@ -252,14 +267,30 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
           {/* Room View */}
           {currentRoom && (
-            <View style={[styles.roomContainer, { backgroundColor: currentRoom.wallColor }]}>
-              {/* Room name */}
+            <View style={[styles.roomContainer, { backgroundColor: effectiveWallColor }]}>
+              {/* Room name + edit toggle */}
               <View style={styles.roomNameRow}>
                 <View style={styles.roomNameInner}>
                   <Icon name={currentRoom.icon as IconName} size={16} color={colors.text.primary} />
                   <Text style={styles.roomNameText}>{currentRoom.name}</Text>
+                  {isOwner && (
+                    <TouchableOpacity
+                      style={[styles.editToggleBtn, editMode && styles.editToggleBtnActive]}
+                      onPress={() => {
+                        setEditMode((v) => !v);
+                        setSelectedPlacedItem(null);
+                        setActiveEditTab(null);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name="edit" size={14} color={editMode ? '#FFFFFF' : colors.primary.wisteriaDark} />
+                      <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 11, color: editMode ? '#FFFFFF' : colors.primary.wisteriaDark }}>
+                        {editMode ? 'Done' : 'Edit'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                {totalInteractive > 0 && (
+                {!editMode && totalInteractive > 0 && (
                   <View style={styles.roomProgressChip}>
                     <Text style={styles.roomProgressText}>{roomInteracted}/{totalInteractive} discovered</Text>
                   </View>
@@ -277,13 +308,13 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                         styles.roomObject,
                         { left: `${obj.x}%` as any, top: `${obj.y}%` as any },
                       ]}
-                      onPress={() => obj.interactive ? handleObjectTap(obj) : undefined}
-                      activeOpacity={obj.interactive ? 0.7 : 1}
-                      disabled={!obj.interactive}
+                      onPress={() => obj.interactive && !editMode ? handleObjectTap(obj) : undefined}
+                      activeOpacity={obj.interactive && !editMode ? 0.7 : 1}
+                      disabled={!obj.interactive || editMode}
                     >
                       <Icon name={obj.icon as IconName} size={30} color={colors.text.primary} />
                       <Text style={wasInteracted ? { ...styles.objectLabel, ...styles.objectLabelDone } : styles.objectLabel}>{obj.label}</Text>
-                      {obj.interactive && !wasInteracted && (
+                      {obj.interactive && !wasInteracted && !editMode && (
                         <View style={styles.interactiveDot} />
                       )}
                       {obj.interactive && wasInteracted && (
@@ -292,30 +323,99 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     </TouchableOpacity>
                   );
                 })}
+
+                {/* Placed furniture items */}
+                {placedItems.map((placed) => {
+                  const catalogItem = FURNITURE_CATALOG.find(f => f.id === placed.furnitureId);
+                  if (!catalogItem) return null;
+                  return (
+                    <TouchableOpacity
+                      key={placed.id}
+                      style={[
+                        styles.placedFurnitureItem,
+                        { left: `${placed.x}%` as any, top: `${placed.y}%` as any },
+                        selectedPlacedItem === placed.id && styles.placedFurnitureItemSelected,
+                      ]}
+                      onPress={() => {
+                        if (editMode) {
+                          setSelectedPlacedItem(selectedPlacedItem === placed.id ? null : placed.id);
+                        }
+                      }}
+                      activeOpacity={editMode ? 0.7 : 1}
+                      disabled={!editMode}
+                    >
+                      <Icon name={catalogItem.icon as IconName} size={28} color={colors.text.primary} />
+                      <Text style={styles.placedFurnitureLabel}>{catalogItem.name}</Text>
+                      {editMode && selectedPlacedItem === placed.id && (
+                        <View style={styles.placedFurniturePopup}>
+                          <TouchableOpacity
+                            style={styles.removeBtn}
+                            onPress={() => {
+                              removePlacedFurniture(countryId, currentRoom.id, placed.id);
+                              setSelectedPlacedItem(null);
+                            }}
+                          >
+                            <Icon name="close" size={12} color="#FFFFFF" />
+                            <Text style={styles.removeBtnText}>Remove</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              {/* Avatar on the floor */}
-              <Animated.View style={[styles.avatarContainer, avatarStyle]}>
-                <VisbyCharacter
-                  appearance={defaultAppearance}
-                  equipped={visby?.equipped}
-                  mood="curious"
-                  size={AVATAR_SIZE}
-                  animated
-                />
-              </Animated.View>
+              {/* Avatar on the floor (hidden in edit mode) */}
+              {!editMode && (
+                <Animated.View style={[styles.avatarContainer, avatarStyle]}>
+                  <VisbyCharacter
+                    appearance={defaultAppearance}
+                    equipped={visby?.equipped}
+                    mood="curious"
+                    size={AVATAR_SIZE}
+                    animated
+                  />
+                </Animated.View>
+              )}
 
-              {/* Walk controls + floor */}
-              <View style={[styles.floor, { backgroundColor: currentRoom.floorColor }]}>
-                <View style={styles.walkControls}>
-                  <TouchableOpacity style={styles.walkBtn} onPress={moveLeft} activeOpacity={0.8}>
-                    <Icon name="chevronLeft" size={28} color={colors.primary.wisteriaDark} />
-                  </TouchableOpacity>
-                  <Text variant="caption" color={colors.text.muted}>Walk</Text>
-                  <TouchableOpacity style={styles.walkBtn} onPress={moveRight} activeOpacity={0.8}>
-                    <Icon name="chevronRight" size={28} color={colors.primary.wisteriaDark} />
-                  </TouchableOpacity>
-                </View>
+              {/* Walk controls + floor / Edit toolbar */}
+              <View style={[styles.floor, { backgroundColor: effectiveFloorColor }]}>
+                {editMode ? (
+                  <View style={styles.editToolbar}>
+                    {(['furniture', 'wallpaper', 'flooring'] as const).map((tab) => (
+                      <TouchableOpacity
+                        key={tab}
+                        style={[styles.editToolbarBtn, activeEditTab === tab && styles.editToolbarBtnActive]}
+                        onPress={() => {
+                          setActiveEditTab(tab);
+                          if (tab === 'furniture') setShowFurniturePanel(true);
+                          else if (tab === 'wallpaper') setShowWallpaperPanel(true);
+                          else setShowFlooringPanel(true);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Icon
+                          name={tab === 'furniture' ? 'home' : tab === 'wallpaper' ? 'edit' : 'culture'}
+                          size={20}
+                          color={activeEditTab === tab ? '#FFFFFF' : colors.primary.wisteriaDark}
+                        />
+                        <Text style={[styles.editToolbarLabel, activeEditTab === tab && styles.editToolbarLabelActive]}>
+                          {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.walkControls}>
+                    <TouchableOpacity style={styles.walkBtn} onPress={moveLeft} activeOpacity={0.8}>
+                      <Icon name="chevronLeft" size={28} color={colors.primary.wisteriaDark} />
+                    </TouchableOpacity>
+                    <Text variant="caption" color={colors.text.muted}>Walk</Text>
+                    <TouchableOpacity style={styles.walkBtn} onPress={moveRight} activeOpacity={0.8}>
+                      <Icon name="chevronRight" size={28} color={colors.primary.wisteriaDark} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               {/* Room nav arrows */}
@@ -453,6 +553,129 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 </View>
               </>
             )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Furniture Panel */}
+      <Modal visible={showFurniturePanel} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowFurniturePanel(false)}>
+          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.panelHeader}>
+              <Heading level={3}>Furniture</Heading>
+              <TouchableOpacity onPress={() => setShowFurniturePanel(false)}>
+                <Icon name="close" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.furnitureGrid}>
+              {FURNITURE_CATALOG.map((item) => {
+                const owned = ownedFurniture.includes(item.id);
+                return (
+                  <View key={item.id} style={styles.furnitureCard}>
+                    <View style={styles.furnitureIconWrap}>
+                      <Icon name={item.icon as IconName} size={32} color={colors.text.primary} />
+                    </View>
+                    <Text style={styles.furnitureName} numberOfLines={1}>{item.name}</Text>
+                    <Caption style={styles.furnitureRarity}>{item.rarity}</Caption>
+                    {owned ? (
+                      <TouchableOpacity
+                        style={styles.placeBtn}
+                        onPress={() => {
+                          if (!currentRoom) return;
+                          const placed: PlacedFurniture = {
+                            id: `${item.id}_${Date.now()}`,
+                            furnitureId: item.id,
+                            roomId: currentRoom.id,
+                            x: 50,
+                            y: 50,
+                            rotation: 0,
+                          };
+                          placeFurniture(countryId, currentRoom.id, placed);
+                          setShowFurniturePanel(false);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.placeBtnText}>Place</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.buyBtn}
+                        onPress={() => {
+                          buyFurniture(item.id, item.price);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.buyBtnText}>{item.price} Aura</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Wallpaper Panel */}
+      <Modal visible={showWallpaperPanel} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowWallpaperPanel(false)}>
+          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.panelHeader}>
+              <Heading level={3}>Wallpaper</Heading>
+              <TouchableOpacity onPress={() => setShowWallpaperPanel(false)}>
+                <Icon name="close" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.colorSwatchGrid}>
+              {WALLPAPER_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: opt.color },
+                    effectiveWallColor === opt.color && styles.colorSwatchActive,
+                  ]}
+                  onPress={() => {
+                    if (currentRoom) updateRoomColors(countryId, currentRoom.id, opt.color, undefined);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.swatchLabel}>{opt.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Flooring Panel */}
+      <Modal visible={showFlooringPanel} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowFlooringPanel(false)}>
+          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.panelHeader}>
+              <Heading level={3}>Flooring</Heading>
+              <TouchableOpacity onPress={() => setShowFlooringPanel(false)}>
+                <Icon name="close" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.colorSwatchGrid}>
+              {FLOORING_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: opt.color },
+                    effectiveFloorColor === opt.color && styles.colorSwatchActive,
+                  ]}
+                  onPress={() => {
+                    if (currentRoom) updateRoomColors(countryId, currentRoom.id, undefined, opt.color);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.swatchLabel}>{opt.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -728,4 +951,118 @@ const styles = StyleSheet.create({
   quizRewardMultiplier: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.reward.gold, marginTop: 4 },
   quizResultActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   quizResultBtn: { minWidth: 100 },
+
+  // Edit mode toggle
+  editToggleBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginLeft: spacing.sm, paddingVertical: 4, paddingHorizontal: 10,
+    borderRadius: 14, borderWidth: 1.5,
+    borderColor: colors.primary.wisteria, backgroundColor: 'rgba(184, 165, 224, 0.1)',
+  },
+  editToggleBtnActive: {
+    backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark,
+  },
+
+  // Edit toolbar (replaces walk controls)
+  editToolbar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  editToolbarBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 6, paddingHorizontal: 12,
+    borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.8)',
+    borderWidth: 1.5, borderColor: 'transparent',
+  },
+  editToolbarBtnActive: {
+    backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark,
+  },
+  editToolbarLabel: {
+    fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark,
+  },
+  editToolbarLabelActive: {
+    color: '#FFFFFF',
+  },
+
+  // Placed furniture
+  placedFurnitureItem: {
+    position: 'absolute', alignItems: 'center',
+    transform: [{ translateX: -22 }, { translateY: -14 }],
+    padding: 2, borderRadius: 10,
+  },
+  placedFurnitureItemSelected: {
+    backgroundColor: 'rgba(184, 165, 224, 0.25)',
+    borderWidth: 1.5, borderColor: colors.primary.wisteria, borderStyle: 'dashed' as any,
+  },
+  placedFurnitureLabel: {
+    fontFamily: 'Nunito-Medium', fontSize: 8, color: colors.text.secondary,
+    textAlign: 'center', maxWidth: 56,
+  },
+  placedFurniturePopup: {
+    position: 'absolute', top: -32, alignSelf: 'center',
+    zIndex: 20,
+  },
+  removeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#E53935', paddingVertical: 4, paddingHorizontal: 10,
+    borderRadius: 12, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3,
+  },
+  removeBtnText: { fontFamily: 'Nunito-Bold', fontSize: 10, color: '#FFFFFF' },
+
+  // Panel (shared by furniture / wallpaper / flooring)
+  panelContent: {
+    backgroundColor: '#FFFFFF', borderRadius: 28,
+    padding: spacing.xl, maxWidth: 400, width: '100%', maxHeight: '75%',
+  },
+  panelHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+
+  // Furniture grid
+  furnitureGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  furnitureCard: {
+    width: '30%' as any, alignItems: 'center', padding: spacing.sm,
+    backgroundColor: colors.base.cream, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.15)',
+  },
+  furnitureIconWrap: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 4,
+  },
+  furnitureName: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.text.primary, textAlign: 'center' },
+  furnitureRarity: { fontSize: 9, color: colors.text.muted, textTransform: 'capitalize' as any, marginBottom: 4 },
+  placeBtn: {
+    paddingVertical: 4, paddingHorizontal: 14,
+    backgroundColor: colors.primary.wisteria, borderRadius: 12,
+  },
+  placeBtnText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: '#FFFFFF' },
+  buyBtn: {
+    paddingVertical: 4, paddingHorizontal: 10,
+    backgroundColor: colors.reward.peach, borderRadius: 12,
+  },
+  buyBtnText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.reward.gold },
+
+  // Color swatch grid
+  colorSwatchGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+    justifyContent: 'center', paddingBottom: spacing.md,
+  },
+  colorSwatch: {
+    width: 68, height: 68, borderRadius: 16,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: 'transparent',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 2, elevation: 1,
+  },
+  colorSwatchActive: {
+    borderColor: colors.primary.wisteria, borderWidth: 3,
+    shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
+  },
+  swatchLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 9, color: colors.text.secondary, textAlign: 'center' },
 });
