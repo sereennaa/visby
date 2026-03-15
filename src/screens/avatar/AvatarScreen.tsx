@@ -28,7 +28,7 @@ import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore } from '../../store/useStore';
-import { RootStackParamList, VisbyMood, CosmeticType } from '../../types';
+import { RootStackParamList, CosmeticType } from '../../types';
 import {
   COSMETICS_CATALOG,
   RARITY_COLORS,
@@ -42,15 +42,19 @@ type AvatarScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
 };
 
-const MOODS: { mood: VisbyMood; label: string; emoji: string; color: string; bg: string }[] = [
-  { mood: 'happy', label: 'Happy', emoji: '😊', color: '#FFB020', bg: '#FFF6E0' },
-  { mood: 'excited', label: 'Excited', emoji: '🤩', color: '#FF6B8A', bg: '#FFF0F3' },
-  { mood: 'curious', label: 'Curious', emoji: '🧐', color: '#6B9BD9', bg: '#EDF4FF' },
-  { mood: 'sleepy', label: 'Sleepy', emoji: '😴', color: '#9B8EC4', bg: '#F0ECF9' },
-  { mood: 'proud', label: 'Proud', emoji: '😎', color: '#5CB85C', bg: '#EEFAEE' },
-  { mood: 'adventurous', label: 'Adventure', emoji: '⚔️', color: '#E07040', bg: '#FFF0E8' },
-  { mood: 'cozy', label: 'Cozy', emoji: '🧸', color: '#D4886B', bg: '#FFF4EE' },
-];
+const MOOD_INFO_MAP: Record<string, { label: string; icon: IconName; color: string; bg: string }> = {
+  happy: { label: 'Happy', icon: 'heart', color: '#FFB020', bg: '#FFF6E0' },
+  excited: { label: 'Excited', icon: 'star', color: '#FF6B8A', bg: '#FFF0F3' },
+  curious: { label: 'Curious', icon: 'compass', color: '#6B9BD9', bg: '#EDF4FF' },
+  sleepy: { label: 'Sleepy', icon: 'star', color: '#9B8EC4', bg: '#F0ECF9' },
+  proud: { label: 'Proud', icon: 'trophy', color: '#5CB85C', bg: '#EEFAEE' },
+  adventurous: { label: 'Adventure', icon: 'rocket', color: '#E07040', bg: '#FFF0E8' },
+  cozy: { label: 'Cozy', icon: 'home', color: '#D4886B', bg: '#FFF4EE' },
+  hungry: { label: 'Hungry', icon: 'food', color: '#E8A04E', bg: '#FFEAD0' },
+  bored: { label: 'Bored', icon: 'time', color: '#9898AC', bg: '#F0EDF5' },
+  confused: { label: 'Confused', icon: 'quiz', color: '#8B6FC0', bg: '#EDE3FA' },
+  sick: { label: 'Sick', icon: 'flash', color: '#F06060', bg: '#FFF0F0' },
+};
 
 const SKIN_TONES: { color: string; label: string }[] = [
   { color: '#FFDAB9', label: 'Peach' },
@@ -82,27 +86,31 @@ const EYE_COLORS: { color: string; label: string }[] = [
   { color: '#40E0D0', label: 'Aqua' },
 ];
 
-const HAIR_STYLES: { id: string; label: string; icon: string }[] = [
-  { id: 'default', label: 'Viking', icon: '⚔️' },
-  { id: 'short', label: 'Short', icon: '✂️' },
-  { id: 'long', label: 'Long', icon: '🧜' },
-  { id: 'curly', label: 'Curly', icon: '🌀' },
-  { id: 'braids', label: 'Braids', icon: '🎀' },
-  { id: 'bun', label: 'Bun', icon: '🍡' },
+const HAIR_STYLES: { id: string; label: string }[] = [
+  { id: 'default', label: 'Classic' },
+  { id: 'short', label: 'Short' },
+  { id: 'long', label: 'Long' },
+  { id: 'curly', label: 'Curly' },
+  { id: 'spiky', label: 'Spiky' },
+  { id: 'braids', label: 'Braids' },
+  { id: 'bun', label: 'Bun' },
 ];
 
-const EYE_SHAPES: { id: string; label: string; icon: string }[] = [
-  { id: 'round', label: 'Round', icon: '⭕' },
-  { id: 'almond', label: 'Almond', icon: '🌰' },
-  { id: 'big', label: 'Big', icon: '👀' },
-  { id: 'sleepy', label: 'Sleepy', icon: '😌' },
-  { id: 'sparkle', label: 'Sparkle', icon: '✨' },
+const EYE_SHAPES: { id: string; label: string }[] = [
+  { id: 'round', label: 'Round' },
+  { id: 'almond', label: 'Almond' },
+  { id: 'big', label: 'Big' },
+  { id: 'sleepy', label: 'Sleepy' },
+  { id: 'sparkle', label: 'Sparkle' },
 ];
 
 const WARDROBE_TABS: { type: CosmeticType; label: string; icon: IconName }[] = [
   { type: 'hat', label: 'Hats', icon: 'crown' },
   { type: 'outfit', label: 'Outfits', icon: 'shirt' },
   { type: 'accessory', label: 'Items', icon: 'viking' },
+  { type: 'shoes', label: 'Shoes', icon: 'footsteps' },
+  { type: 'backpack', label: 'Packs', icon: 'backpack' },
+  { type: 'companion', label: 'Pets', icon: 'heart' },
 ];
 
 const RARITY_GLOW: Record<string, string> = {
@@ -114,9 +122,10 @@ const RARITY_GLOW: Record<string, string> = {
 };
 
 export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
-  const { visby, updateVisbyAppearance, equipCosmetic, setVisbyMood } = useStore();
-  const [selectedMood, setSelectedMood] = useState<VisbyMood>(visby?.currentMood || 'happy');
+  const { visby, updateVisbyAppearance, equipCosmetic } = useStore();
   const [wardrobeTab, setWardrobeTab] = useState<CosmeticType>('hat');
+
+  const currentMoodInfo = MOOD_INFO_MAP[visby?.currentMood || 'happy'] || MOOD_INFO_MAP.happy;
 
   const appearance = visby?.appearance || {
     skinTone: colors.visby.skin.light,
@@ -143,11 +152,6 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
       equipCosmetic(item.type, item.id);
     }
   }, [equipped, equipCosmetic]);
-
-  const handleMoodSelect = useCallback((mood: VisbyMood) => {
-    setSelectedMood(mood);
-    setVisbyMood(mood);
-  }, [setVisbyMood]);
 
   const renderColorSwatches = (
     swatches: { color: string; label: string }[],
@@ -238,7 +242,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                 <VisbyCharacter
                   appearance={appearance}
                   equipped={equipped}
-                  mood={selectedMood}
+                  mood={visby?.currentMood || 'happy'}
                   size={220}
                   animated={true}
                 />
@@ -257,41 +261,22 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
             </LinearGradient>
           </MagicBorder>
 
-          {/* Mood Selector */}
-          <SectionHeader icon="sparkles" title="Mood" />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.moodScroll}
-          >
-            {MOODS.map(({ mood, label, emoji, color, bg }) => {
-              const active = selectedMood === mood;
-              return (
-                <TouchableOpacity
-                  key={mood}
-                  onPress={() => handleMoodSelect(mood)}
-                  style={[
-                    styles.moodChip,
-                    { backgroundColor: active ? bg : colors.base.cream },
-                    active && { borderColor: color },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Set mood to ${label}`}
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text style={styles.moodEmoji}>{emoji}</Text>
-                  <Text
-                    variant="caption"
-                    color={active ? color : colors.text.secondary}
-                    style={active ? styles.moodLabelActive : undefined}
-                  >
-                    {label}
-                  </Text>
-                  {active && <View style={[styles.moodDot, { backgroundColor: color }]} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          {/* Current Mood (auto-derived from needs) */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Icon name="heart" size={18} color={colors.primary.wisteriaDark} />
+              <Text variant="h3" style={styles.sectionTitle}>Current Mood</Text>
+            </View>
+            <View style={styles.moodDisplay}>
+              <View style={[styles.moodDisplayCircle, { backgroundColor: currentMoodInfo.bg }]}>
+                <Icon name={currentMoodInfo.icon} size={24} color={currentMoodInfo.color} />
+              </View>
+              <View>
+                <Text variant="body" style={{ fontFamily: 'Nunito-Bold' }}>{currentMoodInfo.label}</Text>
+                <Caption>Based on your Visby's needs</Caption>
+              </View>
+            </View>
+          </View>
 
           {/* Wardrobe */}
           <View style={styles.wardrobeHeader}>
@@ -467,7 +452,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                     accessibilityLabel={`Select ${style.label} hair style`}
                     accessibilityState={{ selected: active }}
                   >
-                    <Text style={styles.styleEmoji}>{style.icon}</Text>
+                    <View style={[styles.styleDot, active && styles.styleDotActive]} />
                     <Caption color={active ? colors.primary.wisteriaDark : colors.text.secondary}>
                       {style.label}
                     </Caption>
@@ -507,7 +492,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                     accessibilityLabel={`Select ${shape.label} eye shape`}
                     accessibilityState={{ selected: active }}
                   >
-                    <Text style={styles.styleEmoji}>{shape.icon}</Text>
+                    <View style={[styles.styleDot, active && styles.styleDotActive]} />
                     <Caption color={active ? colors.primary.wisteriaDark : colors.text.secondary}>
                       {shape.label}
                     </Caption>
@@ -646,32 +631,29 @@ const styles = StyleSheet.create({
   },
   auraText: { fontWeight: '700' },
 
-  // Mood
-  moodScroll: {
-    paddingBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  moodChip: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
+  // Mood (read-only display)
+  sectionCard: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: spacing.radius.xl,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 72,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
-  moodEmoji: {
-    fontSize: 22,
-    marginBottom: 2,
+  sectionTitle: {
+    marginBottom: 0,
+    marginLeft: spacing.xs,
   },
-  moodLabelActive: {
-    fontWeight: '700',
+  moodDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  moodDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginTop: 4,
+  moodDisplayCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Section Header
@@ -875,8 +857,14 @@ const styles = StyleSheet.create({
     borderColor: colors.primary.wisteria,
     backgroundColor: colors.primary.wisteriaFaded,
   },
-  styleEmoji: {
-    fontSize: 18,
+  styleDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(184, 165, 224, 0.3)',
+  },
+  styleDotActive: {
+    backgroundColor: colors.primary.wisteria,
   },
 
   // Quick Links

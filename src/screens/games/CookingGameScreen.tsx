@@ -194,7 +194,7 @@ const IngredientButton: React.FC<IngredientButtonProps> = ({ name, onPress, disa
 };
 
 export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation }) => {
-  const { addAura, feedVisby, addSkillPoints } = useStore();
+  const { addAura, feedVisby, addSkillPoints, incrementGameStat } = useStore();
 
   const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * RECIPES.length));
   const recipe = RECIPES[recipeIndex];
@@ -255,6 +255,10 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             addAura(finalScore);
             feedVisby();
             addSkillPoints('cooking', 5);
+            incrementGameStat('gamesPlayed');
+            if (lives === 3) {
+              incrementGameStat('perfectCookingGames');
+            }
           }, 600);
         }
       } else {
@@ -276,7 +280,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
         }
       }
     },
-    [gamePhase, recipe, nextCorrectIndex, lives, score, addAura, feedVisby, potScale],
+    [gamePhase, recipe, nextCorrectIndex, lives, score, addAura, feedVisby, addSkillPoints, incrementGameStat, potScale],
   );
 
   const handlePlayAgain = () => {

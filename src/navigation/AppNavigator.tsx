@@ -47,6 +47,7 @@ import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { CosmeticShopScreen } from '../screens/shop/CosmeticShopScreen';
 import { MembershipScreen } from '../screens/shop/MembershipScreen';
 import { AuraStoreScreen } from '../screens/shop/AuraStoreScreen';
+import { FurnitureShopScreen } from '../screens/shop/FurnitureShopScreen';
 
 // Learn Screens
 import { LessonCategoryScreen } from '../screens/learn/LessonCategoryScreen';
@@ -249,6 +250,7 @@ export const AppNavigator = () => {
 
         {/* Shop & Membership */}
         <Stack.Screen name="CosmeticShop" component={CosmeticShopScreen} />
+        <Stack.Screen name="FurnitureShop" component={FurnitureShopScreen} />
         <Stack.Screen name="AuraStore" component={AuraStoreScreen} />
         <Stack.Screen name="Membership" component={MembershipScreen} />
       </Stack.Navigator>

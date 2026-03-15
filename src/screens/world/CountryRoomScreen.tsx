@@ -28,7 +28,7 @@ import { RootStackParamList, PlacedFurniture } from '../../types';
 import type { CountryFact } from '../../types';
 import { FURNITURE_CATALOG, WALLPAPER_OPTIONS, FLOORING_OPTIONS } from '../../config/furniture';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
-import { getCountryQuiz, QuizQuestion } from '../../config/learningContent';
+import { getCountryQuiz, QuizQuestion, getCountryLocations, CountryLocation } from '../../config/learningContent';
 import { COUNTRY_HOUSES, RoomObject, HouseRoom } from '../../config/countryRooms';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -46,7 +46,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const { countryId } = route.params;
   const country = COUNTRIES.find((c) => c.id === countryId);
   const houseData = COUNTRY_HOUSES[countryId];
-  const { visby, user, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, spendAura } = useStore();
+  const { visby, user, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, spendAura, addSkillPoints } = useStore();
 
   const isOwner = userHouses.some((h) => h.countryId === countryId);
   const rooms = houseData?.rooms ?? [];
@@ -74,6 +74,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
   // Games modal
   const [showGamesModal, setShowGamesModal] = useState(false);
+
+  // Locations ("Stops to Visit")
+  const [showLocationsModal, setShowLocationsModal] = useState(false);
+  const [visitedLocations, setVisitedLocations] = useState<Set<string>>(new Set());
+  const locations = getCountryLocations(countryId);
 
   // Edit / Decorate mode
   const [editMode, setEditMode] = useState(false);
@@ -198,6 +203,29 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       }
     }, 800);
   }, [quizSelected, quizIndex, quizQuestions, quizScore, addAura]);
+
+  const handleVisitLocation = useCallback((location: CountryLocation) => {
+    if (visitedLocations.has(location.id)) return;
+    setVisitedLocations(prev => new Set(prev).add(location.id));
+    addAura(location.learningPoints);
+    const skillMap: Record<string, keyof import('../../types').SkillProgress> = {
+      landmark: 'geography',
+      food: 'cooking',
+      nature: 'exploration',
+      culture: 'culture',
+      hidden_gem: 'exploration',
+    };
+    const skill = skillMap[location.category];
+    if (skill) addSkillPoints(skill, 2);
+  }, [visitedLocations, addAura, addSkillPoints]);
+
+  const LOCATION_CATEGORY_ICONS: Record<CountryLocation['category'], IconName> = {
+    landmark: 'city',
+    food: 'food',
+    nature: 'nature',
+    culture: 'culture',
+    hidden_gem: 'compass',
+  };
 
   const totalInteractive = currentRoom?.objects.filter((o) => o.interactive).length ?? 0;
   const roomInteracted = currentRoom?.objects.filter((o) => o.interactive && interactedObjects.has(o.id)).length ?? 0;
@@ -470,6 +498,15 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 <Text style={styles.actionSub}>{isOwner ? 'Edit your room' : 'Buy a house here'}</Text>
               </TouchableOpacity>
             </View>
+            {locations.length > 0 && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity style={styles.actionCard} onPress={() => setShowLocationsModal(true)}>
+                  <Icon name="compass" size={28} color={colors.primary.wisteriaDark} />
+                  <Text style={styles.actionLabel}>Explore Stops</Text>
+                  <Text style={styles.actionSub}>{visitedLocations.size}/{locations.length}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Fun Facts scroll */}
@@ -807,6 +844,55 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           </View>
         </Pressable>
       </Modal>
+      {/* Locations Modal */}
+      <Modal visible={showLocationsModal} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLocationsModal(false)}>
+          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.panelHeader}>
+              <Heading level={3}>Stops to Visit</Heading>
+              <TouchableOpacity onPress={() => setShowLocationsModal(false)}>
+                <Icon name="close" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.locationsGrid}>
+              {locations.map((loc) => {
+                const visited = visitedLocations.has(loc.id);
+                const catIcon = LOCATION_CATEGORY_ICONS[loc.category];
+                return (
+                  <TouchableOpacity
+                    key={loc.id}
+                    style={[styles.locationCard, visited && styles.locationCardVisited]}
+                    onPress={() => handleVisitLocation(loc)}
+                    activeOpacity={visited ? 1 : 0.8}
+                  >
+                    <View style={styles.locationIconWrap}>
+                      <Icon name={catIcon} size={36} color={visited ? '#4CAF50' : colors.text.primary} />
+                    </View>
+                    <View style={styles.locationInfo}>
+                      <View style={styles.locationNameRow}>
+                        <Text style={styles.locationName} numberOfLines={1}>{loc.name}</Text>
+                        {visited && <Icon name="check" size={16} color="#4CAF50" />}
+                      </View>
+                      <Text style={styles.locationDesc} numberOfLines={2}>{loc.description}</Text>
+                      <View style={styles.locationMeta}>
+                        <View style={styles.locationCategoryChip}>
+                          <Icon name={catIcon} size={12} color={colors.text.secondary} />
+                          <Text style={styles.locationCategoryText}>{loc.category.replace('_', ' ')}</Text>
+                        </View>
+                        <View style={[styles.locationLpBadge, visited && styles.locationLpBadgeVisited]}>
+                          <Text style={[styles.locationLpText, visited && styles.locationLpTextVisited]}>
+                            {visited ? 'Visited' : `+${loc.learningPoints} LP`}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -1136,4 +1222,90 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
   },
   swatchLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 9, color: colors.text.secondary, textAlign: 'center' },
+
+  // Locations
+  locationsGrid: {
+    gap: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  locationCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.base.cream,
+    borderRadius: 16,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.15)',
+    gap: spacing.sm,
+  },
+  locationCardVisited: {
+    backgroundColor: 'rgba(200, 230, 200, 0.3)',
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  locationIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  locationNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  locationName: {
+    fontFamily: 'Baloo2-SemiBold',
+    fontSize: 14,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  locationDesc: {
+    fontFamily: 'Nunito-Medium',
+    fontSize: 11,
+    color: colors.text.secondary,
+    lineHeight: 15,
+  },
+  locationMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  locationCategoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(184, 165, 224, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  locationCategoryText: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 10,
+    color: colors.text.secondary,
+    textTransform: 'capitalize' as any,
+  },
+  locationLpBadge: {
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  locationLpBadgeVisited: {
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  locationLpText: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 11,
+    color: '#D4760A',
+  },
+  locationLpTextVisited: {
+    color: '#4CAF50',
+  },
 });

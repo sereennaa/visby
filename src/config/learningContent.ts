@@ -704,3 +704,119 @@ export function getCountryQuiz(countryId: string, count: number = 8): QuizQuesti
   const pool = COUNTRY_QUIZ_QUESTIONS[countryId] || [];
   return shuffleArray(pool).slice(0, count);
 }
+
+// ─── COUNTRY LOCATIONS ("Stops to Visit") ───
+
+export interface CountryLocation {
+  id: string;
+  name: string;
+  description: string;
+  category: 'landmark' | 'food' | 'nature' | 'culture' | 'hidden_gem';
+  learningPoints: number;
+  imageUrl?: string;
+}
+
+const COUNTRY_LOCATIONS: Record<string, CountryLocation[]> = {
+  jp: [
+    { id: 'jp_loc1', name: 'Tokyo Tower', description: 'A 333-meter communications tower inspired by the Eiffel Tower, lit up beautifully at night.', category: 'landmark', learningPoints: 10 },
+    { id: 'jp_loc2', name: 'Fushimi Inari Shrine', description: 'Thousands of bright orange torii gates line a winding trail up a sacred mountain in Kyoto.', category: 'culture', learningPoints: 12 },
+    { id: 'jp_loc3', name: 'Tsukiji Outer Market', description: 'A bustling Tokyo market where you can try the freshest sushi and street food in the world.', category: 'food', learningPoints: 8 },
+    { id: 'jp_loc4', name: 'Arashiyama Bamboo Grove', description: 'Walk through towering bamboo stalks that sway and whisper in the wind near Kyoto.', category: 'nature', learningPoints: 10 },
+    { id: 'jp_loc5', name: 'Senso-ji Temple', description: 'Tokyo\'s oldest Buddhist temple, with a giant red lantern at the Thunder Gate entrance.', category: 'culture', learningPoints: 10 },
+  ],
+  fr: [
+    { id: 'fr_loc1', name: 'Eiffel Tower', description: 'The iconic iron lattice tower with 1,665 steps and a sparkling light show every night.', category: 'landmark', learningPoints: 10 },
+    { id: 'fr_loc2', name: 'Louvre Museum', description: 'The world\'s largest art museum, home to the Mona Lisa and 38,000 other artworks.', category: 'culture', learningPoints: 12 },
+    { id: 'fr_loc3', name: 'Mont Saint-Michel', description: 'A fairy-tale abbey perched on a rocky island that becomes surrounded by the sea at high tide.', category: 'landmark', learningPoints: 15 },
+    { id: 'fr_loc4', name: 'Palace of Versailles', description: 'A breathtaking royal palace with 2,300 rooms and the stunning Hall of Mirrors.', category: 'culture', learningPoints: 12 },
+    { id: 'fr_loc5', name: 'Nice Beach', description: 'The sparkling Côte d\'Azur beach with blue Mediterranean waters and colorful pebbles.', category: 'nature', learningPoints: 8 },
+  ],
+  mx: [
+    { id: 'mx_loc1', name: 'Chichén Itzá', description: 'An ancient Mayan pyramid where shadows create a serpent shape during the equinox.', category: 'landmark', learningPoints: 15 },
+    { id: 'mx_loc2', name: 'Oaxaca Markets', description: 'Colorful markets overflowing with mole, chapulines, mezcal, and handmade crafts.', category: 'food', learningPoints: 10 },
+    { id: 'mx_loc3', name: 'Cenote Ik Kil', description: 'A natural sinkhole swimming pool surrounded by hanging vines and lush jungle.', category: 'nature', learningPoints: 12 },
+    { id: 'mx_loc4', name: 'Frida Kahlo Museum', description: 'The bright blue house where famous artist Frida Kahlo lived and created her masterpieces.', category: 'culture', learningPoints: 10 },
+    { id: 'mx_loc5', name: 'Monarch Butterfly Sanctuary', description: 'A hidden forest where millions of orange monarch butterflies rest during winter migration.', category: 'hidden_gem', learningPoints: 15 },
+  ],
+  it: [
+    { id: 'it_loc1', name: 'Colosseum', description: 'The massive ancient Roman arena where gladiators once fought before 50,000 spectators.', category: 'landmark', learningPoints: 12 },
+    { id: 'it_loc2', name: 'Venice Canals', description: 'A magical floating city where gondolas glide through winding waterways instead of streets.', category: 'landmark', learningPoints: 10 },
+    { id: 'it_loc3', name: 'Pompeii', description: 'An ancient Roman city frozen in time after being buried by a volcanic eruption in 79 AD.', category: 'culture', learningPoints: 15 },
+    { id: 'it_loc4', name: 'Amalfi Coast', description: 'Colorful cliffside villages overlooking sparkling turquoise waters along Italy\'s southern coast.', category: 'nature', learningPoints: 10 },
+    { id: 'it_loc5', name: 'Trevi Fountain', description: 'A stunning Baroque fountain — toss a coin to make a wish and ensure your return to Rome!', category: 'hidden_gem', learningPoints: 8 },
+  ],
+  gb: [
+    { id: 'gb_loc1', name: 'Big Ben & Parliament', description: 'London\'s iconic clock tower chimes on the hour beside the Houses of Parliament.', category: 'landmark', learningPoints: 10 },
+    { id: 'gb_loc2', name: 'Stonehenge', description: 'A mysterious prehistoric circle of giant stones that has puzzled people for 5,000 years.', category: 'culture', learningPoints: 15 },
+    { id: 'gb_loc3', name: 'Lake District', description: 'Rolling green hills and sparkling lakes that inspired poet William Wordsworth.', category: 'nature', learningPoints: 10 },
+    { id: 'gb_loc4', name: 'Borough Market', description: 'London\'s oldest and most famous food market with treats from around the world.', category: 'food', learningPoints: 8 },
+    { id: 'gb_loc5', name: 'Shambles, York', description: 'A medieval cobbled street that inspired Diagon Alley in Harry Potter!', category: 'hidden_gem', learningPoints: 12 },
+  ],
+  br: [
+    { id: 'br_loc1', name: 'Christ the Redeemer', description: 'The giant statue of Jesus with open arms standing atop Corcovado Mountain in Rio.', category: 'landmark', learningPoints: 12 },
+    { id: 'br_loc2', name: 'Copacabana Beach', description: 'A world-famous crescent beach in Rio where locals play soccer and samba on the sand.', category: 'nature', learningPoints: 8 },
+    { id: 'br_loc3', name: 'Amazon Rainforest', description: 'The world\'s largest tropical rainforest, home to 10% of all species on Earth.', category: 'nature', learningPoints: 15 },
+    { id: 'br_loc4', name: 'Iguazu Falls', description: 'A breathtaking chain of 275 waterfalls straddling the border with Argentina.', category: 'nature', learningPoints: 12 },
+    { id: 'br_loc5', name: 'São Paulo Food Scene', description: 'The largest city in South America, famous for its incredible mix of cuisines.', category: 'food', learningPoints: 10 },
+  ],
+  kr: [
+    { id: 'kr_loc1', name: 'Gyeongbokgung Palace', description: 'A grand royal palace in Seoul where you can wear a hanbok and feel like royalty!', category: 'culture', learningPoints: 12 },
+    { id: 'kr_loc2', name: 'Bukchon Hanok Village', description: 'Traditional Korean houses with curved rooftops lining narrow hilltop alleys in Seoul.', category: 'culture', learningPoints: 10 },
+    { id: 'kr_loc3', name: 'Jeju Island', description: 'A volcanic island with lava tubes, waterfalls, and friendly stone grandfather statues.', category: 'nature', learningPoints: 12 },
+    { id: 'kr_loc4', name: 'Gwangjang Market', description: 'Seoul\'s oldest market where you can try bindaetteok pancakes and fresh kimbap rolls.', category: 'food', learningPoints: 8 },
+    { id: 'kr_loc5', name: 'DMZ Peace Trail', description: 'A unique hike along the border between North and South Korea through pristine nature.', category: 'hidden_gem', learningPoints: 15 },
+  ],
+  th: [
+    { id: 'th_loc1', name: 'Grand Palace', description: 'A dazzling complex of golden spires, temples, and the sacred Emerald Buddha in Bangkok.', category: 'landmark', learningPoints: 12 },
+    { id: 'th_loc2', name: 'Phi Phi Islands', description: 'Crystal-clear turquoise waters, limestone cliffs, and colorful coral reefs.', category: 'nature', learningPoints: 10 },
+    { id: 'th_loc3', name: 'Chiang Mai Night Bazaar', description: 'A sprawling evening market full of Thai street food, crafts, and live music.', category: 'food', learningPoints: 8 },
+    { id: 'th_loc4', name: 'Wat Arun', description: 'The "Temple of Dawn" covered in sparkling porcelain and seashells along the river.', category: 'culture', learningPoints: 10 },
+    { id: 'th_loc5', name: 'Erawan Waterfall', description: 'A seven-tiered waterfall in emerald-green pools where fish nibble your toes!', category: 'hidden_gem', learningPoints: 12 },
+  ],
+  ma: [
+    { id: 'ma_loc1', name: 'Jemaa el-Fnaa', description: 'Marrakech\'s main square that transforms into a carnival of storytellers and food stalls at night.', category: 'culture', learningPoints: 10 },
+    { id: 'ma_loc2', name: 'Sahara Desert Camp', description: 'Sleep under a million stars in a Berber tent after riding camels over golden dunes.', category: 'nature', learningPoints: 15 },
+    { id: 'ma_loc3', name: 'Chefchaouen', description: 'An entire mountain town painted in every shade of blue — a photographer\'s dream!', category: 'hidden_gem', learningPoints: 12 },
+    { id: 'ma_loc4', name: 'Fez Medina', description: 'The world\'s largest car-free urban area with 9,000 winding alleyways and ancient tanneries.', category: 'landmark', learningPoints: 12 },
+    { id: 'ma_loc5', name: 'Moroccan Cooking Class', description: 'Learn to make tagine and couscous with fresh spices from the souk.', category: 'food', learningPoints: 10 },
+  ],
+  pe: [
+    { id: 'pe_loc1', name: 'Machu Picchu', description: 'The lost Inca city in the clouds, one of the New Seven Wonders of the World.', category: 'landmark', learningPoints: 15 },
+    { id: 'pe_loc2', name: 'Rainbow Mountain', description: 'A stunning mountain striped with bands of red, gold, lavender, and turquoise minerals.', category: 'nature', learningPoints: 12 },
+    { id: 'pe_loc3', name: 'Lake Titicaca', description: 'The highest navigable lake in the world, with floating islands made entirely of reeds.', category: 'nature', learningPoints: 12 },
+    { id: 'pe_loc4', name: 'Lima Ceviche Trail', description: 'Taste Peru\'s famous raw fish dish at the best cevicherías in the capital.', category: 'food', learningPoints: 10 },
+    { id: 'pe_loc5', name: 'Moray Terraces', description: 'Mysterious circular Inca farming terraces that look like an ancient amphitheater.', category: 'hidden_gem', learningPoints: 12 },
+  ],
+  ke: [
+    { id: 'ke_loc1', name: 'Maasai Mara', description: 'Witness the Great Migration as millions of wildebeest thunder across the golden savanna.', category: 'nature', learningPoints: 15 },
+    { id: 'ke_loc2', name: 'Mount Kenya', description: 'Africa\'s second-highest peak with glaciers, alpine lakes, and unique high-altitude plants.', category: 'nature', learningPoints: 12 },
+    { id: 'ke_loc3', name: 'Nairobi National Park', description: 'The only national park inside a capital city — see giraffes with skyscrapers behind them!', category: 'hidden_gem', learningPoints: 10 },
+    { id: 'ke_loc4', name: 'Lamu Old Town', description: 'A UNESCO World Heritage Swahili town with donkey taxis and hand-carved wooden doors.', category: 'culture', learningPoints: 12 },
+    { id: 'ke_loc5', name: 'Carnivore Restaurant', description: 'A famous Nairobi restaurant where you can try unique grilled meats from a Maasai sword.', category: 'food', learningPoints: 8 },
+  ],
+  no: [
+    { id: 'no_loc1', name: 'Geirangerfjord', description: 'A UNESCO fjord with cascading waterfalls, emerald water, and towering cliffs.', category: 'nature', learningPoints: 15 },
+    { id: 'no_loc2', name: 'Northern Lights, Tromsø', description: 'Watch the sky dance with green, purple, and pink curtains of light above the Arctic.', category: 'nature', learningPoints: 12 },
+    { id: 'no_loc3', name: 'Viking Ship Museum', description: 'See real 1,000-year-old Viking longships excavated from burial mounds in Oslo.', category: 'culture', learningPoints: 10 },
+    { id: 'no_loc4', name: 'Trolltunga', description: 'A dramatic rock formation that juts out like a tongue 700 meters above a lake.', category: 'landmark', learningPoints: 12 },
+    { id: 'no_loc5', name: 'Bergen Fish Market', description: 'Try the freshest salmon, king crab, and fish cakes at this harbour-side market.', category: 'food', learningPoints: 8 },
+  ],
+  tr: [
+    { id: 'tr_loc1', name: 'Hagia Sophia', description: 'A 1,500-year-old architectural marvel that has been a church, a mosque, and a museum.', category: 'landmark', learningPoints: 12 },
+    { id: 'tr_loc2', name: 'Cappadocia Balloons', description: 'Float in a hot air balloon over fairy chimneys and ancient cave homes at sunrise.', category: 'nature', learningPoints: 15 },
+    { id: 'tr_loc3', name: 'Grand Bazaar', description: 'One of the world\'s oldest and largest covered markets with over 4,000 glittering shops.', category: 'culture', learningPoints: 10 },
+    { id: 'tr_loc4', name: 'Pamukkale', description: 'Terraces of white mineral-rich hot springs that look like frozen waterfalls made of cotton.', category: 'hidden_gem', learningPoints: 12 },
+    { id: 'tr_loc5', name: 'Istanbul Street Food Tour', description: 'Try simit bread rings, balik ekmek fish sandwiches, and warm Turkish tea.', category: 'food', learningPoints: 8 },
+  ],
+  gr: [
+    { id: 'gr_loc1', name: 'Acropolis of Athens', description: 'The ancient hilltop citadel with the Parthenon temple, symbol of democracy and civilization.', category: 'landmark', learningPoints: 15 },
+    { id: 'gr_loc2', name: 'Santorini Sunset', description: 'Watch the sun dip into the Aegean Sea from the white-and-blue cliffs of Oia village.', category: 'nature', learningPoints: 10 },
+    { id: 'gr_loc3', name: 'Olympia', description: 'The birthplace of the Olympic Games — run on the same track athletes used in 776 BC!', category: 'culture', learningPoints: 12 },
+    { id: 'gr_loc4', name: 'Meteora Monasteries', description: 'Ancient monasteries built on top of towering natural rock pillars reaching into the sky.', category: 'landmark', learningPoints: 12 },
+    { id: 'gr_loc5', name: 'Athens Central Market', description: 'A lively market overflowing with olives, feta cheese, fresh fish, and Greek pastries.', category: 'food', learningPoints: 8 },
+  ],
+};
+
+export function getCountryLocations(countryId: string): CountryLocation[] {
+  return COUNTRY_LOCATIONS[countryId] || [];
+}

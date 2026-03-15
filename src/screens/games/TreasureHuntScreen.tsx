@@ -192,7 +192,7 @@ type TreasureHuntScreenProps = {
 };
 
 export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigation }) => {
-  const { addAura, playWithVisby } = useStore();
+  const { addAura, playWithVisby, incrementGameStat, addSkillPoints } = useStore();
 
   const [huntIndex, setHuntIndex] = useState(() => Math.floor(Math.random() * TREASURE_HUNTS.length));
   const hunt = TREASURE_HUNTS[huntIndex];
@@ -229,10 +229,13 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
           setGamePhase('complete');
           addAura(totalAura);
           playWithVisby();
+          incrementGameStat('gamesPlayed');
+          incrementGameStat('treasureHuntsCompleted');
+          addSkillPoints('exploration', 3);
         }, 500);
       }
     },
-    [gamePhase, foundItems, hunt, addAura, playWithVisby],
+    [gamePhase, foundItems, hunt, addAura, playWithVisby, incrementGameStat],
   );
 
   const handlePlayAgain = () => {

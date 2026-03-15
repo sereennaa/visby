@@ -12,21 +12,43 @@ interface Location {
   latitude: number;
   longitude: number;
   image_url: string;
+  country_id: string;
+  category: string;
+  learning_points: number;
 }
 
 const emptyLocation: Location = {
   id: '', name: '', type: 'city', description: '', distance_km: 0,
-  latitude: 0, longitude: 0, image_url: '',
+  latitude: 0, longitude: 0, image_url: '', country_id: '', category: 'landmark', learning_points: 10,
 };
 
 const locationTypes = ['city', 'landmark', 'park', 'beach', 'museum', 'market', 'temple', 'mountain', 'restaurant'];
+const locationCategories = ['landmark', 'food', 'nature', 'culture', 'hidden_gem'];
+
+const COUNTRY_OPTIONS = [
+  { id: '', label: 'No country' },
+  { id: 'jp', label: 'Japan' },
+  { id: 'fr', label: 'France' },
+  { id: 'mx', label: 'Mexico' },
+  { id: 'it', label: 'Italy' },
+  { id: 'gb', label: 'United Kingdom' },
+  { id: 'br', label: 'Brazil' },
+  { id: 'kr', label: 'South Korea' },
+  { id: 'th', label: 'Thailand' },
+  { id: 'ma', label: 'Morocco' },
+  { id: 'pe', label: 'Peru' },
+  { id: 'ke', label: 'Kenya' },
+  { id: 'no', label: 'Norway' },
+  { id: 'tr', label: 'Turkey' },
+  { id: 'gr', label: 'Greece' },
+];
 
 const demoLocations: Location[] = [
-  { id: '1', name: 'Tokyo Tower', type: 'landmark', description: 'Iconic communications tower in Tokyo', distance_km: 0, latitude: 35.6586, longitude: 139.7454, image_url: '' },
-  { id: '2', name: 'Shibuya Crossing', type: 'landmark', description: 'Famous pedestrian scramble crossing', distance_km: 2.5, latitude: 35.6595, longitude: 139.7004, image_url: '' },
-  { id: '3', name: 'Ueno Park', type: 'park', description: 'Large public park with museums and a zoo', distance_km: 5.1, latitude: 35.7146, longitude: 139.7734, image_url: '' },
-  { id: '4', name: 'Eiffel Tower', type: 'landmark', description: 'Iron lattice tower on the Champ de Mars', distance_km: 0, latitude: 48.8584, longitude: 2.2945, image_url: '' },
-  { id: '5', name: 'Copacabana Beach', type: 'beach', description: 'Famous beach in Rio de Janeiro', distance_km: 0, latitude: -22.9711, longitude: -43.1863, image_url: '' },
+  { id: '1', name: 'Tokyo Tower', type: 'landmark', description: 'Iconic communications tower in Tokyo', distance_km: 0, latitude: 35.6586, longitude: 139.7454, image_url: '', country_id: 'jp', category: 'landmark', learning_points: 10 },
+  { id: '2', name: 'Shibuya Crossing', type: 'landmark', description: 'Famous pedestrian scramble crossing', distance_km: 2.5, latitude: 35.6595, longitude: 139.7004, image_url: '', country_id: 'jp', category: 'culture', learning_points: 8 },
+  { id: '3', name: 'Ueno Park', type: 'park', description: 'Large public park with museums and a zoo', distance_km: 5.1, latitude: 35.7146, longitude: 139.7734, image_url: '', country_id: 'jp', category: 'nature', learning_points: 8 },
+  { id: '4', name: 'Eiffel Tower', type: 'landmark', description: 'Iron lattice tower on the Champ de Mars', distance_km: 0, latitude: 48.8584, longitude: 2.2945, image_url: '', country_id: 'fr', category: 'landmark', learning_points: 10 },
+  { id: '5', name: 'Copacabana Beach', type: 'beach', description: 'Famous beach in Rio de Janeiro', distance_km: 0, latitude: -22.9711, longitude: -43.1863, image_url: '', country_id: 'br', category: 'nature', learning_points: 8 },
 ];
 
 export default function LocationsPage() {
@@ -36,6 +58,7 @@ export default function LocationsPage() {
   const [editing, setEditing] = useState<Location | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [filterType, setFilterType] = useState('all');
+  const [filterCountry, setFilterCountry] = useState('all');
   const [search, setSearch] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -103,8 +126,9 @@ export default function LocationsPage() {
 
   const filtered = locations.filter(l => {
     const matchesType = filterType === 'all' || l.type === filterType;
+    const matchesCountry = filterCountry === 'all' || l.country_id === filterCountry;
     const matchesSearch = l.name.toLowerCase().includes(search.toLowerCase());
-    return matchesType && matchesSearch;
+    return matchesType && matchesCountry && matchesSearch;
   });
 
   const mapBounds = {
@@ -129,6 +153,10 @@ export default function LocationsPage() {
 
       <div className="toolbar">
         <input className="search-input" placeholder="Search locations..." value={search} onChange={e => setSearch(e.target.value)} />
+        <select className="filter-select" value={filterCountry} onChange={e => setFilterCountry(e.target.value)}>
+          <option value="all">All Countries</option>
+          {COUNTRY_OPTIONS.filter(c => c.id).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
         <select className="filter-select" value={filterType} onChange={e => setFilterType(e.target.value)}>
           <option value="all">All Types</option>
           {locationTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
@@ -182,23 +210,25 @@ export default function LocationsPage() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Country</th>
+              <th>Category</th>
               <th>Type</th>
+              <th>LP</th>
               <th>Description</th>
-              <th>Distance</th>
-              <th>Coordinates</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No locations found</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No locations found</td></tr>
             ) : filtered.map(loc => (
               <tr key={loc.id}>
                 <td style={{ fontWeight: 600 }}>{loc.name}</td>
+                <td>{COUNTRY_OPTIONS.find(c => c.id === loc.country_id)?.label || '-'}</td>
+                <td><span className="pill pill-rare">{loc.category || loc.type}</span></td>
                 <td><span className={`pill ${loc.type === 'landmark' ? 'pill-legendary' : loc.type === 'park' ? 'pill-uncommon' : loc.type === 'beach' ? 'pill-rare' : 'pill-common'}`}>{loc.type}</span></td>
+                <td style={{ textAlign: 'center' }}>{loc.learning_points || 0}</td>
                 <td style={{ color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.description}</td>
-                <td>{loc.distance_km} km</td>
-                <td style={{ fontSize: 12, color: 'var(--muted)' }}>{loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}</td>
                 <td>
                   <div className="btn-group">
                     <button className="btn btn-secondary btn-small" onClick={() => { setEditing({ ...loc }); setIsNew(false); }}>Edit</button>
@@ -221,10 +251,28 @@ export default function LocationsPage() {
             </div>
             <div className="form-row">
               <div className="form-group">
+                <label>Country</label>
+                <select className="form-select" value={editing.country_id} onChange={e => setEditing({ ...editing, country_id: e.target.value })}>
+                  {COUNTRY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Category (for learning)</label>
+                <select className="form-select" value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })}>
+                  {locationCategories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1).replace('_', ' ')}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
                 <label>Type</label>
                 <select className="form-select" value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })}>
                   {locationTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                 </select>
+              </div>
+              <div className="form-group">
+                <label>Learning Points</label>
+                <input className="form-input" type="number" value={editing.learning_points} onChange={e => setEditing({ ...editing, learning_points: Number(e.target.value) })} />
               </div>
               <div className="form-group">
                 <label>Distance (km)</label>

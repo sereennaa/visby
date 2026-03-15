@@ -198,4 +198,46 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     rarity: 'uncommon',
     category: 'avatar',
   },
+
+  // ── Mini-Games ──
+  {
+    id: 'first_game',
+    name: 'First Game',
+    description: 'Play your first mini-game',
+    icon: 'sparkles',
+    rarity: 'common',
+    category: 'learning',
+  },
+  {
+    id: 'game_ten',
+    name: 'Game Lover',
+    description: 'Play 10 mini-games',
+    icon: 'star',
+    rarity: 'uncommon',
+    category: 'learning',
+  },
+  {
+    id: 'cooking_master',
+    name: 'Master Chef',
+    description: 'Complete 5 cooking games without losing a life',
+    icon: 'food',
+    rarity: 'rare',
+    category: 'food',
+  },
+  {
+    id: 'word_wizard',
+    name: 'Word Wizard',
+    description: 'Get 100% accuracy in Word Match 3 times',
+    icon: 'book',
+    rarity: 'rare',
+    category: 'learning',
+  },
+  {
+    id: 'treasure_finder',
+    name: 'Eagle Eye',
+    description: 'Complete 5 treasure hunts',
+    icon: 'globe',
+    rarity: 'uncommon',
+    category: 'exploration',
+  },
 ];

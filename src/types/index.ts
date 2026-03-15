@@ -40,6 +40,12 @@ export interface User {
   lessonsCompletedToday?: number;
   lastLessonDate?: string;
 
+  // Mini-game stats
+  gamesPlayed: number;
+  perfectCookingGames: number;
+  perfectWordMatches: number;
+  treasureHuntsCompleted: number;
+
   // Avatar Reference
   visbyId: string;
   
@@ -638,6 +644,7 @@ export type RootStackParamList = {
 
   // Shop & Membership
   CosmeticShop: undefined;
+  FurnitureShop: undefined;
   AuraStore: undefined;
   Membership: undefined;
 }

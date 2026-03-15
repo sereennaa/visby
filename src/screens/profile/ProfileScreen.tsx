@@ -89,6 +89,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { icon: 'globe', label: 'Countries', value: user?.countriesVisited || 0 },
     { icon: 'city', label: 'Cities', value: user?.citiesVisited || 0 },
     { icon: 'flame', label: 'Best Streak', value: user?.longestStreak || 0 },
+    { icon: 'sparkles', label: 'Games', value: user?.gamesPlayed || 0 },
   ];
 
   const skills = user?.skills || DEFAULT_SKILLS;
@@ -107,6 +108,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
     { icon: 'shirt', label: 'Wardrobe & Avatar', screen: 'Avatar' },
     { icon: 'sparkles', label: 'Cosmetic Shop', screen: 'CosmeticShop' },
+    { icon: 'home', label: 'Furniture Shop', screen: 'FurnitureShop' },
     { icon: 'trophy', label: 'Membership', screen: 'Membership' },
     { icon: 'settings', label: 'Settings', screen: 'Settings' },
   ];
@@ -221,6 +223,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               </View>
             </Card>
           )}
+
+          {/* Game Stats */}
+          <Card style={styles.gameStatsCard}>
+            <View style={styles.sectionHeader}>
+              <Heading level={2}>Game Stats</Heading>
+              <Caption>Your mini-game achievements</Caption>
+            </View>
+            <View style={styles.gameStatsGrid}>
+              {([
+                { icon: 'sparkles' as IconName, label: 'Games Played', value: user?.gamesPlayed || 0, color: '#6B9BD9' },
+                { icon: 'language' as IconName, label: 'Perfect Words', value: user?.perfectWordMatches || 0, color: '#8B6FC0' },
+                { icon: 'food' as IconName, label: 'Perfect Cooking', value: user?.perfectCookingGames || 0, color: '#E8A04E' },
+                { icon: 'compass' as IconName, label: 'Treasures Found', value: user?.treasureHuntsCompleted || 0, color: '#48B048' },
+              ]).map((stat, i) => (
+                <View key={i} style={styles.gameStatItem}>
+                  <View style={[styles.gameStatIcon, { backgroundColor: stat.color + '20' }]}>
+                    <Icon name={stat.icon} size={18} color={stat.color} />
+                  </View>
+                  <Text variant="h3" style={styles.gameStatValue}>{stat.value}</Text>
+                  <Caption style={styles.gameStatLabel}>{stat.label}</Caption>
+                </View>
+              ))}
+            </View>
+          </Card>
 
           {/* Skills Radar */}
           <Card style={styles.skillsCard}>
@@ -433,6 +459,38 @@ const styles = StyleSheet.create({
   },
   streakInfo: {
     flex: 1,
+  },
+  gameStatsCard: {
+    marginBottom: spacing.lg,
+  },
+  gameStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  gameStatItem: {
+    flex: 1,
+    minWidth: '45%' as unknown as number,
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.base.parchment,
+    borderRadius: spacing.md,
+  },
+  gameStatIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  gameStatValue: {
+    fontFamily: 'Baloo2-Bold',
+  },
+  gameStatLabel: {
+    textAlign: 'center',
+    fontSize: 11,
   },
   skillsCard: {
     marginBottom: spacing.lg,

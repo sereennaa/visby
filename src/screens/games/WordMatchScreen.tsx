@@ -295,7 +295,7 @@ const AuraPopup: React.FC<{ visible: boolean }> = ({ visible }) => {
 };
 
 export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, addSkillPoints } = useStore();
+  const { addAura, studyWithVisby, addSkillPoints, incrementGameStat } = useStore();
   const [round, setRound] = useState(() => pickRound());
   const [selectedForeign, setSelectedForeign] = useState<number | null>(null);
   const [foreignStates, setForeignStates] = useState<CardState[]>(
@@ -388,6 +388,11 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
           setEndTime(finishTime);
           studyWithVisby();
           addSkillPoints('language', 5);
+          incrementGameStat('gamesPlayed');
+          const finalAccuracy = (newMatched / (newMatched + wrongAttempts)) * 100;
+          if (finalAccuracy >= 100) {
+            incrementGameStat('perfectWordMatches');
+          }
           setTimeout(() => setIsFinished(true), 600);
         }
         setTimeout(() => {
@@ -415,7 +420,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
         }, 600);
       }
     },
-    [selectedForeign, englishStates, round, matchedCount, haptic, addAura, studyWithVisby],
+    [selectedForeign, englishStates, round, matchedCount, wrongAttempts, haptic, addAura, studyWithVisby, addSkillPoints, incrementGameStat],
   );
 
   const handlePlayAgain = useCallback(() => {

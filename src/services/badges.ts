@@ -13,6 +13,10 @@ export interface BadgeCheckContext {
   cuisinesCount: number;
   quizPerfect: boolean;
   earnedBadgeIds: string[];
+  gamesPlayed?: number;
+  perfectCookingGames?: number;
+  perfectWordMatches?: number;
+  treasureHuntsCompleted?: number;
 }
 
 export interface BadgeProgress {
@@ -59,6 +63,13 @@ const BADGE_REQUIREMENTS: Record<string, BadgeRequirement> = {
   // Avatar
   first_cosmetic: { getValue: (c) => c.cosmeticsOwned, target: 1, label: 'cosmetics' },
   five_cosmetics: { getValue: (c) => c.cosmeticsOwned, target: 5, label: 'cosmetics' },
+
+  // Mini-Games
+  first_game:      { getValue: (c) => c.gamesPlayed ?? 0, target: 1, label: 'games' },
+  game_ten:        { getValue: (c) => c.gamesPlayed ?? 0, target: 10, label: 'games' },
+  cooking_master:  { getValue: (c) => c.perfectCookingGames ?? 0, target: 5, label: 'perfect cooking games' },
+  word_wizard:     { getValue: (c) => c.perfectWordMatches ?? 0, target: 3, label: 'perfect word matches' },
+  treasure_finder: { getValue: (c) => c.treasureHuntsCompleted ?? 0, target: 5, label: 'treasure hunts' },
 };
 
 export function checkNewBadges(context: BadgeCheckContext): BadgeDefinition[] {

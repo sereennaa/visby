@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -39,7 +39,7 @@ import { StampMini } from '../../components/collectibles/StampCard';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore, DEFAULT_NEEDS } from '../../store/useStore';
-import { LEVEL_THRESHOLDS } from '../../config/constants';
+import { LEVEL_THRESHOLDS, COUNTRIES } from '../../config/constants';
 import { RootStackParamList, StampType, VisbyNeeds, VisbyGrowthStage } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -209,15 +209,23 @@ const NeedsHUD: React.FC<{
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
   const [careHint, setCareHint] = React.useState<typeof NEED_CONFIG[number] | null>(null);
+  const [showDailyReward, setShowDailyReward] = useState(false);
+  const [dailyRewardAmount, setDailyRewardAmount] = useState(0);
 
   const visbyFloat = useSharedValue(0);
 
   useEffect(() => {
+    const prevAura = user?.aura || 0;
     dailyCheckIn();
     updateVisbyNeeds();
+    const newAura = useStore.getState().user?.aura || 0;
+    if (newAura > prevAura) {
+      setDailyRewardAmount(newAura - prevAura);
+      setShowDailyReward(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -317,6 +325,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     { icon: 'book' as IconName, label: 'Learn', subtitle: 'Study', gradient: ['#E8F4FF', '#D6ECFF'] as [string, string], iconBg: '#5EA0D4', onPress: () => navigation.navigate('Learn') },
     { icon: 'trophy' as IconName, label: 'Badges', subtitle: 'Earn', gradient: ['#E8FFE8', '#D4F7D4'] as [string, string], iconBg: '#48B048', onPress: () => navigation.navigate('Badges') },
     { icon: 'shirt' as IconName, label: 'Shop', subtitle: 'Style', gradient: ['#FFF0F7', '#FFE0ED'] as [string, string], iconBg: '#D46B9B', onPress: () => navigation.navigate('CosmeticShop') },
+    { icon: 'home' as IconName, label: 'Furniture', subtitle: 'Decorate', gradient: ['#F0EDF5', '#E8E0F0'] as [string, string], iconBg: '#8B7BA8', onPress: () => navigation.navigate('FurnitureShop') },
   ];
 
   return (
@@ -478,6 +487,44 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </Animated.View>
           )}
 
+          {/* ──── MY HOUSES ──── */}
+          {userHouses.length > 0 && (
+            <Animated.View entering={FadeInDown.duration(500).delay(530)} style={styles.myHousesSection}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Icon name="home" size={18} color={colors.primary.wisteriaDark} />
+                  <Heading level={2} style={styles.sectionTitle}>My Houses</Heading>
+                </View>
+                <TouchableOpacity onPress={() => navigation.navigate('CountryWorld')} accessibilityRole="button" accessibilityLabel="Visit world">
+                  <Text variant="bodySmall" color={colors.primary.wisteriaDark}>Visit World</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myHousesScroll}>
+                {userHouses.map((house) => {
+                  const country = COUNTRIES.find((c) => c.id === house.countryId);
+                  return (
+                    <TouchableOpacity
+                      key={house.id}
+                      style={styles.myHouseCard}
+                      onPress={() => navigation.navigate('CountryRoom', { countryId: house.countryId })}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Visit ${house.houseName}`}
+                    >
+                      <LinearGradient colors={['#F5EFFF', '#EDE3FA']} style={styles.myHouseGradient}>
+                        <View style={styles.myHouseIconWrap}>
+                          <Icon name="home" size={24} color={colors.primary.wisteriaDark} />
+                        </View>
+                        <Text variant="body" style={styles.myHouseName} numberOfLines={1}>{house.houseName}</Text>
+                        <Caption style={styles.myHouseCountry}>{country?.name ?? house.countryId}</Caption>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </Animated.View>
+          )}
+
           {/* ──── LOCATION ──── */}
           <Animated.View entering={FadeInDown.duration(500).delay(550)}>
             <TouchableOpacity
@@ -636,6 +683,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
+
+      {/* Daily Reward Modal */}
+      <Modal visible={showDailyReward} transparent animationType="fade">
+        <Pressable style={styles.careOverlay} onPress={() => setShowDailyReward(false)}>
+          <Pressable style={styles.careModal} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.careIconCircle, { backgroundColor: '#FFF3E0' }]}>
+              <Icon name="flame" size={36} color="#FF6B3D" />
+            </View>
+            <Heading level={2} style={styles.careTitle}>Daily Check-in!</Heading>
+            <Text style={styles.dailyRewardText}>+{dailyRewardAmount} Aura</Text>
+            {user?.currentStreak && user.currentStreak > 1 && (
+              <Caption style={{ textAlign: 'center', marginTop: 4 }}>
+                {user.currentStreak}-day streak! {getStreakMultiplier().toFixed(1)}x bonus!
+              </Caption>
+            )}
+            <Button title="Collect!" onPress={() => setShowDailyReward(false)} variant="primary" style={{ marginTop: spacing.lg }} />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Care Hint Modal */}
       <Modal visible={!!careHint} transparent animationType="fade">
@@ -891,6 +957,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF8C42',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  /* My Houses */
+  myHousesSection: {
+    marginBottom: spacing.lg,
+  },
+  myHousesScroll: {
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  myHouseCard: {
+    width: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  myHouseGradient: {
+    padding: spacing.md,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.2)',
+  },
+  myHouseIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(167, 139, 219, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  myHouseName: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 14,
+    color: colors.text.primary,
+  },
+  myHouseCountry: {
+    marginTop: 2,
+    fontSize: 11,
+    color: colors.text.muted,
   },
 
   /* Location */
@@ -1186,6 +1291,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-SemiBold',
     fontSize: 14,
     color: colors.text.muted,
+  },
+
+  dailyRewardText: {
+    fontFamily: 'Baloo2-Bold',
+    fontSize: 28,
+    color: '#FFB020',
+    textAlign: 'center' as const,
   },
 
   bottomSpacer: { height: 20 },

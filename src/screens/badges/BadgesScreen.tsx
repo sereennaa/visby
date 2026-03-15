@@ -45,6 +45,10 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
     cuisinesCount: new Set(bites.map((b) => b.cuisine)).size,
     quizPerfect: false,
     earnedBadgeIds: badges.map((b) => b.badgeId),
+    gamesPlayed: user?.gamesPlayed ?? 0,
+    perfectCookingGames: user?.perfectCookingGames ?? 0,
+    perfectWordMatches: user?.perfectWordMatches ?? 0,
+    treasureHuntsCompleted: user?.treasureHuntsCompleted ?? 0,
   };
 
   const renderBadge = ({ item }: { item: BadgeDefinition }) => {

@@ -38,6 +38,10 @@ function createDemoUser(email: string, password: string, username: string): { us
     countriesVisited: 0,
     citiesVisited: 0,
     totalCarePoints: 0,
+    gamesPlayed: 0,
+    perfectCookingGames: 0,
+    perfectWordMatches: 0,
+    treasureHuntsCompleted: 0,
     visitedCountries: [],
     skills: { ...DEFAULT_SKILLS },
     settings: {

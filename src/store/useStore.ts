@@ -155,6 +155,9 @@ interface AppStore {
   removePlacedFurniture: (countryId: string, roomId: string, placedId: string) => void;
   updateRoomColors: (countryId: string, roomId: string, wallColor?: string, floorColor?: string) => void;
 
+  // Actions - Game Stats
+  incrementGameStat: (stat: 'gamesPlayed' | 'perfectCookingGames' | 'perfectWordMatches' | 'treasureHuntsCompleted') => void;
+
   // Actions - Skills
   addSkillPoints: (skill: keyof SkillProgress, amount: number) => void;
 
@@ -456,6 +459,10 @@ export const useStore = create<AppStore>()(
           cuisinesCount: uniqueCuisines.size,
           quizPerfect: extra?.quizPerfect ?? false,
           earnedBadgeIds: badges.map((b) => b.badgeId),
+          gamesPlayed: user?.gamesPlayed ?? 0,
+          perfectCookingGames: user?.perfectCookingGames ?? 0,
+          perfectWordMatches: user?.perfectWordMatches ?? 0,
+          treasureHuntsCompleted: user?.treasureHuntsCompleted ?? 0,
         };
 
         const newBadges = checkNewBadges(context);
@@ -603,6 +610,14 @@ export const useStore = create<AppStore>()(
         const updated = [...userHouses];
         updated[idx] = house;
         set({ userHouses: updated });
+      },
+
+      // Game Stats
+      incrementGameStat: (stat) => {
+        const { user } = get();
+        if (!user) return;
+        set({ user: { ...user, [stat]: (user[stat] || 0) + 1 } });
+        get().checkAndAwardBadges();
       },
 
       // Growth Stage

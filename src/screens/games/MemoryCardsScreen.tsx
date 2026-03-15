@@ -204,7 +204,7 @@ const MemoryCard: React.FC<{
 };
 
 export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, playWithVisby } = useStore();
+  const { addAura, studyWithVisby, playWithVisby, incrementGameStat, addSkillPoints } = useStore();
   const [deck, setDeck] = useState(() => buildDeck());
   const [cardStates, setCardStates] = useState<FlipState[]>(
     () => Array(PAIRS_PER_GAME * 2).fill('down'),
@@ -294,6 +294,8 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
           }
           studyWithVisby();
           playWithVisby();
+          incrementGameStat('gamesPlayed');
+          addSkillPoints('culture', 3);
           setTimeout(() => setIsFinished(true), 500);
         }
       } else {
@@ -308,7 +310,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
         }, 900);
       }
     },
-    [firstFlip, cardStates, deck, matchedPairs, moves, haptic, addAura, studyWithVisby, playWithVisby],
+    [firstFlip, cardStates, deck, matchedPairs, moves, haptic, addAura, studyWithVisby, playWithVisby, incrementGameStat],
   );
 
   const handlePlayAgain = useCallback(() => {
