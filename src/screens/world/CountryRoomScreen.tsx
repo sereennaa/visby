@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,9 @@ import {
   Modal,
   Pressable,
   Image,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,6 +35,8 @@ import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { getCountryQuiz, QuizQuestion, getCountryLocations, CountryLocation } from '../../config/learningContent';
 import { COUNTRY_HOUSES, RoomObject, HouseRoom } from '../../config/countryRooms';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
+import { getCountryStampProgress } from '../../config/collectionGoals';
+import { getRoomEntryLine } from '../../config/visbyLines';
 import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
 import type { FurnitureInteractionType } from '../../types';
 
@@ -53,7 +58,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const { countryId, friendUserId } = route.params;
   const country = COUNTRIES.find((c) => c.id === countryId);
   const houseData = COUNTRY_HOUSES[countryId];
-  const { visby, user, friends, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, feedVisby, restVisby, playWithVisby, studyWithVisby, markFactRead, markQuizCompleted, getCountryProgress, chargeSocialBattery } = useStore();
+  const { visby, user, friends, stamps, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, feedVisby, restVisby, playWithVisby, studyWithVisby, markFactRead, markQuizCompleted, getCountryProgress, chargeSocialBattery, getPlaceChatMessages, addPlaceChatMessage, storyBeatsShown, markStoryBeatShown } = useStore();
 
   const friend = friendUserId ? friends.find((f) => f.userId === friendUserId) : null;
   const isViewingFriendHouse = !!friendUserId && !!friend;
@@ -64,6 +69,19 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   // Room navigation
   const [currentRoomIdx, setCurrentRoomIdx] = useState(0);
   const currentRoom: HouseRoom | undefined = rooms[currentRoomIdx];
+  const [roomDialogueLine, setRoomDialogueLine] = useState<string | null>(null);
+
+  // Reactive room dialogue (one-off when entering a room)
+  React.useEffect(() => {
+    if (!currentRoom || !countryId || isViewingFriendHouse) return;
+    const key = `room_${countryId}_${currentRoom.id}`;
+    if (storyBeatsShown.includes(key)) return;
+    const line = getRoomEntryLine(countryId);
+    setRoomDialogueLine(line);
+    markStoryBeatShown(key);
+    const t = setTimeout(() => setRoomDialogueLine(null), 4000);
+    return () => clearTimeout(t);
+  }, [countryId, currentRoom?.id, isViewingFriendHouse, storyBeatsShown, markStoryBeatShown]);
 
   // Interactive object modal
   const [activeObject, setActiveObject] = useState<RoomObject | null>(null);
@@ -104,6 +122,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   } | null>(null);
   /** Show "Not enough Aura" under a furniture item when buy fails */
   const [notEnoughAuraFor, setNotEnoughAuraFor] = useState<string | null>(null);
+
+  /** Place chat (Club Penguin style) */
+  const [showPlaceChatModal, setShowPlaceChatModal] = useState(false);
+  const [placeChatInput, setPlaceChatInput] = useState('');
+  const placeChatScrollRef = useRef<ScrollView>(null);
 
   const house = isViewingFriendHouse ? undefined : userHouses.find(h => h.countryId === countryId);
   const roomCustomization = house?.roomCustomizations?.[currentRoom?.id ?? ''];
@@ -417,6 +440,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                       </View>
                     )}
                   </View>
+                  {roomDialogueLine && (
+                    <View style={styles.roomDialogueBubble}>
+                      <Text style={styles.roomDialogueText}>Visby: "{roomDialogueLine}"</Text>
+                    </View>
+                  )}
 
                   {/* Interactive objects — in-world style */}
                   <View style={[styles.objectsLayer, { height: (WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 48 }]}>
@@ -647,10 +675,45 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 </TouchableOpacity>
               )}
             </ScrollView>
-            {/* Who's here + Chat (Club Penguin style): when real-time is connected, friends in the same place can chat */}
+            {/* Collection goal: X more stamps to complete this country's set */}
+            {!isViewingFriendHouse && country && (() => {
+              const progress = getCountryStampProgress(stamps, countryId);
+              if (!progress || progress.completed) return null;
+              return (
+                <TouchableOpacity
+                  style={[styles.collectionGoalCard, { borderLeftColor: country.accentColor }]}
+                  onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'quick' })}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="stamp" size={20} color={country.accentColor} />
+                  <View style={styles.collectionGoalText}>
+                    <Text variant="bodySmall" style={styles.collectionGoalTitle}>
+                      {progress.remaining} more stamp{progress.remaining !== 1 ? 's' : ''} to complete your {country.name} set
+                    </Text>
+                    <Caption style={styles.collectionGoalSub}>{progress.current}/{progress.target} collected</Caption>
+                  </View>
+                  <Icon name="chevronRight" size={18} color={colors.text.muted} />
+                </TouchableOpacity>
+              );
+            })()}
+            {/* Who's here + Chat (Club Penguin style) */}
             <View style={styles.liveStrip}>
-              <Icon name="people" size={14} color={colors.text.muted} />
-              <Caption style={styles.liveStripText}>When friends are here, you can see who's online and chat — Club Penguin style!</Caption>
+              <View style={styles.whosHereRow}>
+                <Icon name="people" size={14} color={colors.primary.wisteriaDark} />
+                <Caption style={styles.whosHereLabel}>Who's here: </Caption>
+                <View style={styles.whosHereYouChip}>
+                  <Text style={styles.whosHereYouText}>{user?.username || 'You'}</Text>
+                </View>
+                <Caption style={styles.liveStripText}> · When friends are in this room, they'll appear here</Caption>
+              </View>
+              <TouchableOpacity
+                style={styles.chatInRoomBtn}
+                onPress={() => setShowPlaceChatModal(true)}
+                activeOpacity={0.8}
+              >
+                <Icon name="chat" size={16} color={colors.primary.wisteriaDark} />
+                <Text style={styles.chatInRoomBtnText}>Chat</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -708,6 +771,76 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Place chat modal (Club Penguin style) */}
+      {currentRoom && (
+        <Modal visible={showPlaceChatModal} animationType="slide" transparent>
+          <KeyboardAvoidingView style={styles.placeChatModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+            <Pressable style={styles.placeChatModalBackdrop} onPress={() => setShowPlaceChatModal(false)} />
+            <View style={styles.placeChatModalCard}>
+              <View style={styles.placeChatModalHeader}>
+                <Text style={styles.placeChatModalTitle}>Chat in {currentRoom.name}</Text>
+                <TouchableOpacity onPress={() => setShowPlaceChatModal(false)} hitSlop={12}>
+                  <Icon name="close" size={22} color={colors.text.muted} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView
+                ref={placeChatScrollRef}
+                style={styles.placeChatMessageList}
+                contentContainerStyle={styles.placeChatMessageListContent}
+                onContentSizeChange={() => placeChatScrollRef.current?.scrollToEnd({ animated: true })}
+                keyboardShouldPersistTaps="handled"
+              >
+                {(getPlaceChatMessages(`room_${countryId}_${currentRoom.id}`) || []).map((msg) => {
+                  const isYou = msg.userId === user?.id;
+                  const createdAt = typeof msg.createdAt === 'string' ? new Date(msg.createdAt) : msg.createdAt;
+                  return (
+                    <View key={msg.id} style={[styles.placeChatBubbleRow, isYou && styles.placeChatBubbleRowYou]}>
+                      <View style={[styles.placeChatBubble, isYou ? styles.placeChatBubbleYou : styles.placeChatBubbleOther]}>
+                        {!isYou && <Caption style={styles.placeChatBubbleUsername}>{msg.username}</Caption>}
+                        <Text style={[styles.placeChatBubbleText, isYou && styles.placeChatBubbleTextYou]}>{msg.message}</Text>
+                        <Caption style={styles.placeChatBubbleTime}>
+                          {createdAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </Caption>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+              <View style={styles.placeChatInputRow}>
+                <TextInput
+                  style={styles.placeChatInput}
+                  placeholder="Say something..."
+                  placeholderTextColor={colors.text.light}
+                  value={placeChatInput}
+                  onChangeText={setPlaceChatInput}
+                  onSubmitEditing={() => {
+                    if (placeChatInput.trim()) {
+                      addPlaceChatMessage(`room_${countryId}_${currentRoom.id}`, placeChatInput.trim());
+                      setPlaceChatInput('');
+                    }
+                  }}
+                  returnKeyType="send"
+                  maxLength={300}
+                />
+                <TouchableOpacity
+                  style={[styles.placeChatSendBtn, !placeChatInput.trim() && styles.placeChatSendBtnDisabled]}
+                  onPress={() => {
+                    if (placeChatInput.trim()) {
+                      addPlaceChatMessage(`room_${countryId}_${currentRoom.id}`, placeChatInput.trim());
+                      setPlaceChatInput('');
+                    }
+                  }}
+                  disabled={!placeChatInput.trim()}
+                >
+                  <Icon name="send" size={20} color={placeChatInput.trim() ? colors.primary.wisteriaDark : colors.text.light} />
+                </TouchableOpacity>
+              </View>
+              <Caption style={styles.placeChatHint}>Chatting here fills your Visby's social battery!</Caption>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      )}
 
       {/* Object detail modal */}
       <Modal visible={!!activeObject} transparent animationType="fade">
@@ -1426,14 +1559,143 @@ const styles = StyleSheet.create({
   heroQuizLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 17, color: colors.text.primary },
   heroQuizSub: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.text.secondary, marginTop: 2 },
   actionsChipsRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
+  collectionGoalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface.card,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+  },
+  collectionGoalText: { flex: 1 },
+  collectionGoalTitle: { fontFamily: 'Nunito-SemiBold', color: colors.text.primary },
+  collectionGoalSub: { marginTop: 2, color: colors.text.muted },
+  roomDialogueBubble: {
+    alignSelf: 'center',
+    maxWidth: '90%',
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.primary.wisteria + '40',
+  },
+  roomDialogueText: {
+    fontFamily: 'Nunito-Regular',
+    fontSize: 13,
+    color: colors.text.primary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   liveStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.sm,
+    flexWrap: 'wrap',
   },
-  liveStripText: { flex: 1, color: colors.text.muted },
+  whosHereRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  whosHereLabel: { color: colors.text.muted },
+  whosHereYouChip: {
+    backgroundColor: colors.primary.wisteriaFaded,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  whosHereYouText: {
+    fontSize: 12,
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.primary.wisteriaDark,
+  },
+  liveStripText: { color: colors.text.muted, flex: 1 },
+  chatInRoomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.primary.wisteriaFaded,
+    borderRadius: 14,
+  },
+  chatInRoomBtnText: {
+    fontSize: 13,
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.primary.wisteriaDark,
+  },
+  placeChatModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  placeChatModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  placeChatModalCard: {
+    backgroundColor: colors.base.cream,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl + 20,
+    maxHeight: '75%',
+  },
+  placeChatModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  placeChatModalTitle: {
+    fontSize: 18,
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+  },
+  placeChatMessageList: { maxHeight: 280 },
+  placeChatMessageListContent: { paddingVertical: spacing.xs },
+  placeChatBubbleRow: { marginBottom: spacing.sm, alignItems: 'flex-start' },
+  placeChatBubbleRowYou: { alignItems: 'flex-end' },
+  placeChatBubble: {
+    maxWidth: '85%',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.primary.wisteriaFaded,
+  },
+  placeChatBubbleYou: { backgroundColor: colors.primary.wisteria },
+  placeChatBubbleUsername: { marginBottom: 2, color: colors.primary.wisteriaDark },
+  placeChatBubbleText: { fontSize: 14, color: colors.text.primary },
+  placeChatBubbleTextYou: { color: colors.text.inverse },
+  placeChatBubbleTime: { marginTop: 2, fontSize: 10, color: colors.text.muted },
+  placeChatInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.base.parchment,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: spacing.sm,
+  },
+  placeChatInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  placeChatSendBtn: { padding: 8 },
+  placeChatSendBtnDisabled: { opacity: 0.5 },
+  placeChatHint: { textAlign: 'center', marginTop: spacing.xs, color: colors.text.muted },
   actionChip: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -148,6 +149,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               toggle: true,
               toggleValue: settings.privateProfile,
             })}
+            {renderRow('volumeHigh', 'Sound effects', () => updateSettings({ soundEffects: !((settings as { soundEffects?: boolean }).soundEffects ?? true) }), {
+              toggle: true,
+              toggleValue: (settings as { soundEffects?: boolean }).soundEffects ?? true,
+            })}
           </Card>
 
           {/* About */}
@@ -158,6 +163,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             {renderRow('help', 'Help & Support', () =>
               setInfoModal({ title: 'Help & Support', message: 'For questions or issues, email support@visby.app.' }),
             )}
+            <View style={styles.separator} />
+            {renderRow('mailSend', 'Send feedback', async () => {
+              const url = 'mailto:feedback@visby.app?subject=Visby%20App%20Feedback';
+              try {
+                const can = await Linking.canOpenURL(url);
+                if (can) await Linking.openURL(url);
+                else setInfoModal({ title: 'Send feedback', message: 'Email us at feedback@visby.app — we\'d love to hear from you!' });
+              } catch {
+                setInfoModal({ title: 'Send feedback', message: 'Email us at feedback@visby.app — we\'d love to hear from you!' });
+              }
+            })}
             <View style={styles.separator} />
             {renderRow('info', 'About Visby', () =>
               setInfoModal({ title: 'Visby', message: 'Version 1.0.1\n\n4 tabs: Home, Explore, Inbox, Profile.' }),

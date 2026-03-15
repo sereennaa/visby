@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
+import { getGameOfTheDay } from '../../config/gameOfTheDay';
 import { RootStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { whimsicalCopy } from '../../theme/whimsical';
@@ -19,19 +20,62 @@ type InboxScreenProps = {
 
 type ActivityItem = {
   id: string;
-  type: 'streak' | 'badge' | 'stamp' | 'bite' | 'message';
+  type: 'streak' | 'badge' | 'stamp' | 'bite' | 'message' | 'friend_request' | 'mission' | 'game_of_the_day';
   icon: IconName;
   title: string;
   subtitle: string;
   color: string;
   bg: string;
+  onPress?: () => void;
 };
 
 export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
-  const { user, stamps, bites, badges } = useStore();
+  const { user, stamps, bites, badges, friendRequests, getDailyMission, dailyMissionCompletedAt } = useStore();
+
+  const incomingRequests = useMemo(() => friendRequests.filter((r) => r.toUserId === user?.id), [friendRequests, user?.id]);
+  const dailyMission = getDailyMission();
+  const showMissionPrompt = dailyMission && !dailyMissionCompletedAt;
 
   const activityItems = useMemo((): ActivityItem[] => {
     const items: ActivityItem[] = [];
+
+    if (incomingRequests.length > 0) {
+      items.push({
+        id: 'friend-requests',
+        type: 'friend_request',
+        icon: 'people',
+        title: 'Friend requests',
+        subtitle: `${incomingRequests.length} pending — tap to accept or reject`,
+        color: colors.primary.wisteriaDark,
+        bg: colors.primary.wisteriaFaded,
+        onPress: () => navigation.navigate('Friends'),
+      });
+    }
+
+    if (showMissionPrompt && dailyMission) {
+      items.push({
+        id: 'mission',
+        type: 'mission',
+        icon: 'target',
+        title: "Today's mission",
+        subtitle: dailyMission.label,
+        color: colors.reward.peachDark,
+        bg: colors.reward.peachLight,
+        onPress: () => navigation.navigate('Home'),
+      });
+    }
+
+    const gotd = getGameOfTheDay();
+    items.push({
+      id: 'game-of-the-day',
+      type: 'game_of_the_day',
+      icon: 'sparkles',
+      title: "Today's game",
+      subtitle: `${gotd.label} — play for +${gotd.bonusAura} Aura bonus`,
+      color: colors.reward.gold,
+      bg: colors.reward.peachLight,
+      onPress: () => (navigation as any).navigate(gotd.gameKey),
+    });
 
     if (user?.currentStreak && user.currentStreak > 0) {
       items.push({
@@ -42,6 +86,7 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         subtitle: 'Keep checking in to grow your streak',
         color: colors.status.streak,
         bg: colors.status.streakBg,
+        onPress: () => navigation.navigate('Home'),
       });
     }
 
@@ -55,6 +100,7 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         subtitle: latestBadge.badgeId.replace(/_/g, ' '),
         color: colors.reward.gold,
         bg: colors.reward.peachLight,
+        onPress: () => navigation.navigate('Badges'),
       });
     }
 
@@ -68,6 +114,7 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         subtitle: latestStamp.locationName || latestStamp.type,
         color: colors.primary.wisteriaDark,
         bg: colors.surface.lavender,
+        onPress: () => navigation.navigate('Stamps'),
       });
     }
 
@@ -81,11 +128,12 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         subtitle: latestBite.name || latestBite.cuisine,
         color: colors.reward.peachDark,
         bg: colors.surface.peach,
+        onPress: () => navigation.navigate('Bites'),
       });
     }
 
-    return items.slice(0, 8);
-  }, [user?.currentStreak, stamps, bites, badges]);
+    return items.slice(0, 10);
+  }, [user?.currentStreak, stamps, bites, badges, incomingRequests.length, showMissionPrompt, dailyMission, navigation]);
 
   return (
     <View style={styles.container}>
@@ -131,7 +179,12 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
                   key={item.id}
                   entering={FadeInDown.duration(400).delay(250 + i * 60)}
                 >
-                  <View style={[styles.activityCard, { backgroundColor: item.bg }]}>
+                  <TouchableOpacity
+                    style={[styles.activityCard, { backgroundColor: item.bg }]}
+                    onPress={item.onPress}
+                    activeOpacity={item.onPress ? 0.7 : 1}
+                    disabled={!item.onPress}
+                  >
                     <View style={[styles.activityIconWrap, { backgroundColor: item.color + '20' }]}>
                       <Icon name={item.icon} size={22} color={item.color} />
                     </View>
@@ -139,7 +192,8 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
                       <Text variant="body" style={styles.activityTitle}>{item.title}</Text>
                       <Caption numberOfLines={1}>{item.subtitle}</Caption>
                     </View>
-                  </View>
+                    {item.onPress && <Icon name="chevronRight" size={18} color={item.color} />}
+                  </TouchableOpacity>
                 </Animated.View>
               ))
             )}

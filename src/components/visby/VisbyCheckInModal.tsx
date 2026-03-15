@@ -96,6 +96,7 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
     chargeSocialBattery,
     getVisbyMemories,
     setLastVisbyCheckInAt,
+    checkDailyMissionCompletion,
   } = useStore();
   const [input, setInput] = useState('');
   const [greeting, setGreeting] = useState('');
@@ -120,6 +121,7 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
     setInput('');
     addVisbyChatMessage('user', text);
     chargeSocialBattery(SOCIAL_BATTERY_CHAT_USER);
+    checkDailyMissionCompletion('chat_with_visby', 1);
 
     const memorySummary = extractMemory(text);
     if (memorySummary) addVisbyMemory(memorySummary);

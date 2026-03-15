@@ -143,6 +143,8 @@ export const iconMap = {
   time: { family: 'Ionicons', name: 'time' },
   notification: { family: 'Ionicons', name: 'notifications' },
   notificationOutline: { family: 'Ionicons', name: 'notifications-outline' },
+  volumeHigh: { family: 'Ionicons', name: 'volume-high' },
+  volumeOff: { family: 'Ionicons', name: 'volume-mute' },
   info: { family: 'Ionicons', name: 'information-circle' },
   infoOutline: { family: 'Ionicons', name: 'information-circle-outline' },
   warning: { family: 'Ionicons', name: 'warning' },

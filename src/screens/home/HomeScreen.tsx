@@ -24,6 +24,7 @@ import Animated, {
   interpolate,
   FadeInDown,
   FadeInUp,
+  ZoomIn,
 } from 'react-native-reanimated';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -41,6 +42,8 @@ import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore, DEFAULT_NEEDS } from '../../store/useStore';
 import { LEVEL_THRESHOLDS, COUNTRIES } from '../../config/constants';
+import { getGameOfTheDay } from '../../config/gameOfTheDay';
+import { QUEST_DEFINITIONS } from '../../config/quests';
 import { RootStackParamList, StampType, VisbyNeeds, VisbyGrowthStage } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -211,12 +214,18 @@ const NeedsHUD: React.FC<{
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage, shouldShowVisbyCheckIn } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage, shouldShowVisbyCheckIn, getDailyMission, dailyMissionCompletedAt, dailyMissionProgress, trySurprise, pendingStreakFreezeOffer, useStreakFreeze, declineStreakFreezeOffer, streakFreezesRemaining, storyBeatsShown, markStoryBeatShown, getQuestProgress } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
   const [careHint, setCareHint] = React.useState<typeof NEED_CONFIG[number] | null>(null);
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [dailyRewardAmount, setDailyRewardAmount] = useState(0);
   const [showVisbyCheckIn, setShowVisbyCheckIn] = useState(false);
+  const [showSurpriseBonus, setShowSurpriseBonus] = useState(false);
+  const [surpriseAura, setSurpriseAura] = useState(0);
+  const [showStoryBeat, setShowStoryBeat] = useState(false);
+
+  const dailyMission = getDailyMission();
+  const showFirstCountryBeat = (user?.countriesVisited ?? 0) >= 1 && !storyBeatsShown.includes('first_country');
 
   const visbyFloat = useSharedValue(0);
 
@@ -233,7 +242,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const t = setTimeout(() => setShowVisbyCheckIn(true), 700);
       return () => clearTimeout(t);
     }
-  }, []);
+    const surprise = trySurprise();
+    if (surprise.granted && surprise.aura) {
+      setSurpriseAura(surprise.aura);
+      setShowSurpriseBonus(true);
+    }
+    if (showFirstCountryBeat) setShowStoryBeat(true);
+  }, [showFirstCountryBeat]);
 
   useEffect(() => {
     visbyFloat.value = withDelay(
@@ -476,6 +491,88 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             ))}
           </View>
 
+          {/* ──── DAILY MISSION ──── */}
+          {dailyMission && (
+            <Animated.View entering={FadeInDown.duration(500).delay(480)} style={styles.dailyMissionCard}>
+              <LinearGradient
+                colors={dailyMissionCompletedAt ? [colors.success.honeydew, colors.success.mint] : [colors.primary.wisteriaFaded, colors.calm.skyLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.dailyMissionGradient}
+              >
+                <View style={styles.dailyMissionLeft}>
+                  {dailyMissionCompletedAt ? (
+                    <Animated.View entering={ZoomIn.duration(350).springify()} style={[styles.dailyMissionIconWrap, { backgroundColor: colors.success.emerald + '30' }]}>
+                      <Icon name="checkCircle" size={24} color={colors.success.emerald} />
+                    </Animated.View>
+                  ) : (
+                    <View style={[styles.dailyMissionIconWrap, { backgroundColor: colors.primary.wisteria + '30' }]}>
+                      <Icon name="target" size={24} color={colors.primary.wisteriaDark} />
+                    </View>
+                  )}
+                  <View>
+                    <Text variant="body" style={styles.dailyMissionTitle}>
+                      {dailyMissionCompletedAt ? "Today's mission complete!" : "Today's mission"}
+                    </Text>
+                    <Caption style={styles.dailyMissionLabel}>
+                      {dailyMissionCompletedAt ? `+25 Aura` : `${dailyMission.label} • ${Math.min(dailyMissionProgress, dailyMission.target)}/${dailyMission.target}`}
+                    </Caption>
+                  </View>
+                </View>
+                {!dailyMissionCompletedAt && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (dailyMission.type === 'collect_stamp') navigation.navigate('CollectStamp', { locationId: 'quick' });
+                      else if (dailyMission.type === 'add_bite') navigation.navigate('AddBite');
+                      else if (dailyMission.type === 'play_minigame') (navigation as any).navigate('WordMatch');
+                      else if (dailyMission.type === 'chat_with_visby') setShowVisbyCheckIn(true);
+                      else if (dailyMission.type === 'read_facts' || dailyMission.type === 'complete_lesson') navigation.navigate('Learn');
+                    }}
+                    style={styles.dailyMissionCta}
+                  >
+                    <Text variant="bodySmall" style={styles.dailyMissionCtaText}>Do it</Text>
+                    <Icon name="chevronForward" size={14} color={colors.primary.wisteriaDark} />
+                  </TouchableOpacity>
+                )}
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {/* ──── QUESTS ──── */}
+          {QUEST_DEFINITIONS.length > 0 && (
+            <Animated.View entering={FadeInDown.duration(500).delay(490)} style={styles.questsCard}>
+              <View style={styles.sectionHeader}>
+                <Heading level={3} style={styles.questsTitle}>Quests</Heading>
+                <Caption>Bonus Aura for challenges</Caption>
+              </View>
+              {QUEST_DEFINITIONS.map((def) => {
+                const prog = getQuestProgress(def.id);
+                if (!prog) return null;
+                return (
+                  <TouchableOpacity
+                    key={def.id}
+                    style={[styles.questRow, prog.completed && styles.questRowDone]}
+                    onPress={() => {
+                      if (def.progressType === 'lessons_completed') navigation.navigate('Learn');
+                      else navigation.navigate('Stamps');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.questRowLeft}>
+                      <Text variant="body" style={styles.questLabel}>{def.label}</Text>
+                      <Caption style={styles.questSub}>{prog.completed ? `+${def.rewardAura} Aura earned` : `${prog.current}/${prog.target}`}</Caption>
+                    </View>
+                    {prog.completed ? (
+                      <Icon name="checkCircle" size={22} color={colors.success.emerald} />
+                    ) : (
+                      <Icon name="chevronRight" size={18} color={colors.text.muted} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </Animated.View>
+          )}
+
           {/* ──── STREAK ──── */}
           {user?.currentStreak !== undefined && user.currentStreak > 0 && (
             <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.streakCard}>
@@ -495,6 +592,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </Text>
                     <Caption color={colors.text.secondary}>
                       {getStreakMultiplier().toFixed(1)}x aura multiplier
+                      {streakFreezesRemaining > 0 && ` · ${streakFreezesRemaining} freeze${streakFreezesRemaining > 1 ? 's' : ''}`}
                     </Caption>
                   </View>
                 </View>
@@ -645,16 +743,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Heading level={2}>Play</Heading>
               <Caption>Learn while having fun</Caption>
             </View>
+            {(() => {
+              const gotd = getGameOfTheDay();
+              return (
+                <View style={styles.gameOfTheDayChipWrap}>
+                  <View style={styles.gameOfTheDayChip}>
+                    <Icon name="sparkles" size={16} color={colors.reward.gold} />
+                    <Text variant="bodySmall" style={styles.gameOfTheDayChipText}>
+                      Today's bonus: {gotd.shortLabel} +{gotd.bonusAura} Aura
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gamesScrollRow}>
               {([
                 { key: 'WordMatch', label: 'Word\nMatch', icon: 'language' as IconName, gradient: [colors.primary.wisteriaFaded, colors.primary.wisteriaLight] as [string, string], iconColor: colors.primary.wisteriaDark },
                 { key: 'MemoryCards', label: 'Memory\nCards', icon: 'flashcard' as IconName, gradient: [colors.calm.skyLight, colors.calm.sky] as [string, string], iconColor: colors.calm.ocean },
                 { key: 'CookingGame', label: 'World\nCooking', icon: 'food' as IconName, gradient: [colors.reward.peachLight, colors.reward.peach] as [string, string], iconColor: colors.reward.peachDark },
                 { key: 'TreasureHunt', label: 'Treasure\nHunt', icon: 'compass' as IconName, gradient: [colors.success.honeydew, colors.success.mint] as [string, string], iconColor: colors.success.emerald },
-              ] as const).map((game, i) => (
+              ] as const).map((game, i) => {
+                const gotd = getGameOfTheDay();
+                const isGameOfTheDay = gotd.gameKey === game.key;
+                return (
                 <Animated.View key={game.key} entering={FadeInDown.duration(400).delay(750 + i * 80)}>
                   <TouchableOpacity
-                    style={styles.gameHomeCard}
+                    style={[styles.gameHomeCard, isGameOfTheDay && styles.gameHomeCardHighlight]}
                     onPress={() => (navigation as any).navigate(game.key)}
                     activeOpacity={0.85}
                   >
@@ -662,6 +776,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       colors={game.gradient}
                       style={styles.gameHomeGradient}
                     >
+                      {isGameOfTheDay && <View style={styles.gameOfTheDayBadge}><Icon name="sparkles" size={12} color="#FFF" /></View>}
                       <View style={[styles.gameHomeIconWrap, { backgroundColor: game.iconColor + '20' }]}>
                         <Icon name={game.icon} size={28} color={game.iconColor} />
                       </View>
@@ -669,7 +784,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </LinearGradient>
                   </TouchableOpacity>
                 </Animated.View>
-              ))}
+              );
+              })}
             </ScrollView>
           </Animated.View>
 
@@ -722,6 +838,57 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       <VisbyCheckInModal visible={showVisbyCheckIn} onClose={() => setShowVisbyCheckIn(false)} />
+
+      {/* Story beat: Visby milestone message */}
+      <Modal visible={showStoryBeat} transparent animationType="fade">
+        <Pressable style={styles.careOverlay} onPress={() => { setShowStoryBeat(false); markStoryBeatShown('first_country'); }}>
+          <Pressable style={styles.careModal} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.careIconCircle, { backgroundColor: colors.primary.wisteriaFaded }]}>
+              <Icon name="heart" size={36} color={colors.primary.wisteriaDark} />
+            </View>
+            <Caption style={styles.storyBeatLabel}>Visby says</Caption>
+            <Heading level={2} style={styles.careTitle}>We're really going to see the world together!</Heading>
+            <Text variant="body" style={styles.careDesc}>You visited your first place. There's so much more to explore — and I'll be right there with you. 🌍</Text>
+            <Button title="Let's go!" onPress={() => { setShowStoryBeat(false); markStoryBeatShown('first_country'); }} variant="primary" style={{ marginTop: spacing.lg }} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Streak freeze offer: you missed a day, use a freeze? */}
+      <Modal visible={pendingStreakFreezeOffer} transparent animationType="fade">
+        <Pressable style={styles.careOverlay} onPress={() => {}}>
+          <Pressable style={styles.careModal} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.careIconCircle, { backgroundColor: colors.calm.skyLight }]}>
+              <Icon name="flame" size={36} color={colors.status.streak} />
+            </View>
+            <Heading level={2} style={styles.careTitle}>You missed a day!</Heading>
+            <Text variant="body" style={styles.careDesc}>
+              Use a streak freeze to keep your {user?.currentStreak ?? 0}-day streak? You have {streakFreezesRemaining} left this month.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg }}>
+              <Button title="Start over" onPress={() => { declineStreakFreezeOffer(); }} variant="secondary" style={{ flex: 1 }} />
+              <Button title="Use freeze" onPress={() => { useStreakFreeze(); }} variant="primary" style={{ flex: 1 }} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Surprise: Visby found a gift! */}
+      <Modal visible={showSurpriseBonus} transparent animationType="fade">
+        <Pressable style={styles.careOverlay} onPress={() => setShowSurpriseBonus(false)}>
+          <Animated.View entering={ZoomIn.duration(400).springify()}>
+            <Pressable style={styles.careModal} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.careIconCircle, { backgroundColor: colors.reward.peachLight }]}>
+              <Icon name="gift" size={36} color={colors.reward.peachDark} />
+            </View>
+            <Heading level={2} style={styles.careTitle}>Visby found a gift!</Heading>
+            <Text style={styles.dailyRewardText}>+{surpriseAura} Aura</Text>
+            <Caption style={{ textAlign: 'center', marginTop: 4 }}>Lucky you! Come back tomorrow for more surprises.</Caption>
+            <Button title="Yay!" onPress={() => setShowSurpriseBonus(false)} variant="primary" style={{ marginTop: spacing.lg }} />
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
       {/* Care Hint Modal */}
       <Modal visible={!!careHint} transparent animationType="fade">
@@ -950,6 +1117,71 @@ const styles = StyleSheet.create({
   },
 
   /* Streak */
+  dailyMissionCard: {
+    marginBottom: spacing.md,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  dailyMissionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderRadius: 20,
+  },
+  dailyMissionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dailyMissionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  dailyMissionTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+  },
+  dailyMissionLabel: {
+    marginTop: 2,
+  },
+  dailyMissionCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+  },
+  dailyMissionCtaText: {
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.primary.wisteriaDark,
+  },
+
+  questsCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+  },
+  questsTitle: { marginBottom: 2 },
+  questRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: 10,
+  },
+  questRowDone: { opacity: 0.85 },
+  questRowLeft: { flex: 1 },
+  questLabel: { fontFamily: 'Nunito-SemiBold', color: colors.text.primary },
+  questSub: { marginTop: 2, color: colors.text.muted },
   streakCard: {
     marginBottom: spacing.xl,
     borderRadius: 20,
@@ -1129,6 +1361,30 @@ const styles = StyleSheet.create({
   },
 
   /* Mini-games row */
+  gameOfTheDayChipWrap: { marginBottom: spacing.sm },
+  gameOfTheDayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: colors.reward.gold + '18',
+    borderRadius: 12,
+  },
+  gameOfTheDayChipText: { color: colors.reward.amber, fontFamily: 'Nunito-SemiBold' },
+  gameHomeCardHighlight: { borderWidth: 2, borderColor: colors.reward.gold },
+  gameOfTheDayBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.reward.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   gamesScrollRow: {
     marginHorizontal: -spacing.lg,
     paddingHorizontal: spacing.lg,
@@ -1296,6 +1552,12 @@ const styles = StyleSheet.create({
   careTitle: {
     textAlign: 'center',
     marginBottom: spacing.sm,
+  },
+  storyBeatLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: colors.primary.wisteriaDark,
+    marginBottom: spacing.xs,
   },
   careDesc: {
     textAlign: 'center',

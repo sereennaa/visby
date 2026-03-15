@@ -15,17 +15,17 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { BiteCard, BiteGridItem } from '../../components/collectibles/BiteCard';
+import { SkeletonCard } from '../../components/ui/SkeletonCard';
 import { useStore } from '../../store/useStore';
 import { BITE_CATEGORIES_INFO } from '../../config/constants';
 import { RootStackParamList, Bite, BiteCategory } from '../../types';
-import { whimsicalCopy } from '../../theme/whimsical';
 
 type BitesScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Bites'>;
 };
 
 export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
-  const { bites } = useStore();
+  const { bites, isLoading } = useStore();
   const [selectedCategory, setSelectedCategory] = useState<BiteCategory | 'all'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards');
 
@@ -187,7 +187,13 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
         )}
 
         {/* Bites List/Grid */}
-        {sortedBites.length > 0 ? (
+        {isLoading ? (
+          <View style={styles.skeletonGrid}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonCard key={i} width={160} height={180} />
+            ))}
+          </View>
+        ) : sortedBites.length > 0 ? (
           <FlatList
             data={sortedBites}
             renderItem={viewMode === 'cards' ? renderBiteCard : renderGridItem}
@@ -200,11 +206,13 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
           />
         ) : (
           <View style={styles.emptyState}>
-            <Icon name="food" size={64} color={colors.text.muted} />
+            <View style={styles.emptyIconWrap}>
+              <Icon name="food" size={64} color={colors.reward.peachDark} />
+            </View>
             <Text
               variant="h3"
               align="center"
-              color={colors.text.secondary}
+              color={colors.text.primary}
               style={styles.emptyTitle}
             >
               No bites yet!
@@ -215,13 +223,14 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
               color={colors.text.muted}
               style={styles.emptyText}
             >
-              {whimsicalCopy.noBites}
+              Log what you eat and feed your Visby. Add a bite from a restaurant, a recipe you made, or a snack — and earn Aura!
             </Text>
             <Button
-              title="Add Your First Bite"
+              title="Add your first bite"
               onPress={() => navigation.navigate('AddBite')}
               variant="primary"
               size="md"
+              style={styles.emptyPrimaryBtn}
               icon={<Icon name="add" size={20} color={colors.text.inverse} />}
             />
           </View>
@@ -322,6 +331,13 @@ const styles = StyleSheet.create({
   countTextSelected: {
     color: colors.text.inverse,
   },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
+  },
   bitesContent: {
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxxl,
@@ -335,12 +351,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  emptyIconWrap: {
+    marginBottom: spacing.sm,
+  },
   emptyTitle: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
   emptyText: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  emptyPrimaryBtn: {
+    marginBottom: spacing.sm,
   },
 });
 

@@ -20,6 +20,7 @@ import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { LESSON_CONTENT } from '../../config/learningContent';
 import { AURA_REWARDS } from '../../config/constants';
+import { getPostLessonLine } from '../../config/visbyLines';
 
 const DEFAULT_CONTENT = {
   title: 'Lesson',
@@ -37,7 +38,7 @@ type LessonScreenProps = {
 export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route }) => {
   const { lessonId } = route.params;
   const lesson = LESSON_CONTENT[lessonId] || DEFAULT_CONTENT;
-  const { addAura, updateLessonProgress, completeLessonToday, checkAndAwardBadges, studyWithVisby, addSkillPoints } = useStore();
+  const { addAura, updateLessonProgress, completeLessonToday, checkAndAwardBadges, studyWithVisby, addSkillPoints, getVisbyMood, addVisbyChatMessage } = useStore();
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -54,6 +55,7 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
       studyWithVisby();
       addSkillPoints('language', 3);
       addSkillPoints('culture', 2);
+      addVisbyChatMessage('visby', getPostLessonLine(getVisbyMood()));
       setIsFinished(true);
     } else {
       setCurrentSlide(prev => prev + 1);

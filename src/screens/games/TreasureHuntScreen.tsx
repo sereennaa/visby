@@ -5,6 +5,10 @@ import {
   TouchableOpacity,
   Platform,
   Dimensions,
+  ScrollView,
+  Modal,
+  Pressable,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,11 +17,9 @@ import { RouteProp } from '@react-navigation/native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withRepeat,
   withSequence,
   withTiming,
-  withDelay,
   FadeIn,
   FadeInDown,
   FadeInUp,
@@ -29,122 +31,24 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
+import * as Haptics from 'expo-haptics';
 import { useStore } from '../../store/useStore';
+import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { RootStackParamList } from '../../types';
-
-interface HuntItem {
-  id: string;
-  name: string;
-  icon: IconName;
-  x: number;
-  y: number;
-}
-
-interface DecorItem {
-  icon: IconName;
-  x: number;
-  y: number;
-  size: number;
-}
-
-interface TreasureHunt {
-  theme: string;
-  bgColor: string;
-  accentColor: string;
-  items: HuntItem[];
-  decor: DecorItem[];
-}
-
-const TREASURE_HUNTS: TreasureHunt[] = [
-  {
-    theme: 'Japan',
-    bgColor: '#FFF0E0',
-    accentColor: '#FF6B6B',
-    items: [
-      { id: 'fan', name: 'Paper Fan', icon: 'culture', x: 15, y: 30 },
-      { id: 'origami', name: 'Origami Crane', icon: 'star', x: 72, y: 55 },
-      { id: 'lantern', name: 'Paper Lantern', icon: 'flame', x: 45, y: 12 },
-      { id: 'chopsticks', name: 'Chopsticks', icon: 'food', x: 85, y: 70 },
-      { id: 'bonsai', name: 'Bonsai Tree', icon: 'nature', x: 30, y: 78 },
-    ],
-    decor: [
-      { icon: 'temple', x: 50, y: 5, size: 30 },
-      { icon: 'nature', x: 10, y: 60, size: 20 },
-      { icon: 'cafe', x: 80, y: 25, size: 16 },
-    ],
-  },
-  {
-    theme: 'France',
-    bgColor: '#F0F0FF',
-    accentColor: '#6B6BFF',
-    items: [
-      { id: 'baguette', name: 'Baguette', icon: 'food', x: 20, y: 45 },
-      { id: 'beret', name: 'Beret', icon: 'crown', x: 65, y: 20 },
-      { id: 'croissant', name: 'Croissant', icon: 'food', x: 80, y: 65 },
-      { id: 'perfume', name: 'Perfume Bottle', icon: 'sparkles', x: 40, y: 75 },
-      { id: 'painting', name: 'Painting', icon: 'edit', x: 55, y: 10 },
-    ],
-    decor: [
-      { icon: 'landmark', x: 50, y: 8, size: 28 },
-      { icon: 'cafe', x: 15, y: 70, size: 18 },
-      { icon: 'nature', x: 85, y: 40, size: 20 },
-    ],
-  },
-  {
-    theme: 'Mexico',
-    bgColor: '#FFF5E0',
-    accentColor: '#FF9F43',
-    items: [
-      { id: 'sombrero', name: 'Sombrero', icon: 'crown', x: 25, y: 15 },
-      { id: 'maracas', name: 'Maracas', icon: 'sparkles', x: 70, y: 40 },
-      { id: 'cactus', name: 'Cactus', icon: 'nature', x: 85, y: 75 },
-      { id: 'taco', name: 'Taco', icon: 'food', x: 40, y: 60 },
-      { id: 'guitar', name: 'Guitar', icon: 'sparkles', x: 15, y: 55 },
-    ],
-    decor: [
-      { icon: 'monument', x: 50, y: 5, size: 26 },
-      { icon: 'nature', x: 90, y: 30, size: 18 },
-    ],
-  },
-  {
-    theme: 'Egypt',
-    bgColor: '#FFF8E0',
-    accentColor: '#D4A843',
-    items: [
-      { id: 'scarab', name: 'Scarab Beetle', icon: 'star', x: 30, y: 50 },
-      { id: 'scroll', name: 'Papyrus Scroll', icon: 'book', x: 75, y: 30 },
-      { id: 'ankh', name: 'Ankh Symbol', icon: 'culture', x: 50, y: 70 },
-      { id: 'cat', name: 'Cat Statue', icon: 'star', x: 15, y: 65 },
-      { id: 'vase', name: 'Clay Vase', icon: 'home', x: 85, y: 55 },
-    ],
-    decor: [
-      { icon: 'landmark', x: 50, y: 5, size: 30 },
-      { icon: 'nature', x: 20, y: 25, size: 18 },
-    ],
-  },
-  {
-    theme: 'India',
-    bgColor: '#FFF0F5',
-    accentColor: '#E07B8A',
-    items: [
-      { id: 'elephant', name: 'Elephant Figure', icon: 'star', x: 20, y: 40 },
-      { id: 'spices', name: 'Spice Jar', icon: 'food', x: 75, y: 60 },
-      { id: 'sitar', name: 'Sitar', icon: 'sparkles', x: 40, y: 25 },
-      { id: 'lotus', name: 'Lotus Flower', icon: 'nature', x: 60, y: 75 },
-      { id: 'diya', name: 'Diya Lamp', icon: 'flame', x: 85, y: 20 },
-    ],
-    decor: [
-      { icon: 'temple', x: 50, y: 5, size: 28 },
-      { icon: 'culture', x: 10, y: 70, size: 18 },
-    ],
-  },
-];
+import { COUNTRIES } from '../../config/constants';
+import {
+  getRoomsForCountry,
+  getRandomRoomForCountry,
+  getRoomHuntForPlay,
+  getLocationHuntRound,
+  countryHasLocationHunt,
+  type RoomHuntItem,
+  type LocationHuntRound,
+} from '../../config/treasureHunt';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ROOM_HORIZONTAL_PADDING = spacing.screenPadding;
-const ROOM_WIDTH = SCREEN_WIDTH - ROOM_HORIZONTAL_PADDING * 2;
-const ROOM_HEIGHT = ROOM_WIDTH * 0.85;
-const AURA_PER_ITEM = 8;
+const AURA_PER_ITEM_FALLBACK = 8;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -152,103 +56,321 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-interface FoundItemGlowProps {
-  accentColor: string;
-}
-
-const FoundItemGlow: React.FC<FoundItemGlowProps> = ({ accentColor }) => {
-  const pulseScale = useSharedValue(1);
-
-  useEffect(() => {
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.5, { duration: 800 }),
-        withTiming(1, { duration: 800 }),
-      ),
-      -1,
-      true,
-    );
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: 1.5 - pulseScale.value,
+/** Countries that have at least one room for treasure hunt */
+function getCountriesWithRooms(): { id: string; name: string; flagEmoji: string; accentColor: string }[] {
+  return COUNTRIES.filter((c) => getRoomsForCountry(c.id).length > 0).map((c) => ({
+    id: c.id,
+    name: c.name,
+    flagEmoji: c.flagEmoji,
+    accentColor: c.accentColor,
   }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.glowRing,
-        { backgroundColor: accentColor },
-        animatedStyle,
-      ]}
-    />
-  );
-};
+}
 
 type TreasureHuntScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TreasureHunt'>;
   route: RouteProp<RootStackParamList, 'TreasureHunt'>;
 };
 
-export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigation }) => {
-  const { addAura, playWithVisby, incrementGameStat, addSkillPoints } = useStore();
+type GamePhase = 'picker' | 'room_hunt' | 'reveal' | 'complete' | 'location_hunt' | 'location_reveal' | 'location_complete';
+type HuntMode = 'room' | 'location';
 
-  const [huntIndex, setHuntIndex] = useState(() => Math.floor(Math.random() * TREASURE_HUNTS.length));
-  const hunt = TREASURE_HUNTS[huntIndex];
+export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigation, route }) => {
+  const initialCountryId = route.params?.countryId ?? null;
+  const {
+    addAura,
+    playWithVisby,
+    incrementGameStat,
+    addSkillPoints,
+    checkDailyMissionCompletion,
+    getTreasureHuntProgress,
+    completeTreasureHuntRoom,
+    completeTreasureHuntLocation,
+  } = useStore();
 
-  const [foundItems, setFoundItems] = useState<Set<string>>(new Set());
+  const countriesWithRooms = useMemo(() => getCountriesWithRooms(), []);
+
+  const [huntMode, setHuntMode] = useState<HuntMode>('room');
+  const [phase, setPhase] = useState<GamePhase>(initialCountryId ? 'room_hunt' : 'picker');
+  const [countryId, setCountryId] = useState<string | null>(initialCountryId);
+  const [roomHuntData, setRoomHuntData] = useState<{
+    room: { id: string; name: string; wallColor: string; floorColor: string; objects: { id: string; label: string; icon: string; x: number; y: number }[] };
+    items: RoomHuntItem[];
+  } | null>(null);
+  const [clueIndex, setClueIndex] = useState(0);
+  const [wrongTapMessage, setWrongTapMessage] = useState<string | null>(null);
+  const [revealItem, setRevealItem] = useState<RoomHuntItem | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [gamePhase, setGamePhase] = useState<'playing' | 'complete'>('playing');
+  const [foundItemsForSummary, setFoundItemsForSummary] = useState<RoomHuntItem[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [locationRounds, setLocationRounds] = useState<LocationHuntRound[]>([]);
+  const [locationRoundIndex, setLocationRoundIndex] = useState(0);
+  const [locationFoundForSummary, setLocationFoundForSummary] = useState<{ name: string; learningPoints: number }[]>([]);
+  const [locationReveal, setLocationReveal] = useState<LocationHuntRound['target'] | null>(null);
+
+  const country = countryId ? COUNTRIES.find((c) => c.id === countryId) : null;
+  const accentColor = country?.accentColor ?? colors.primary.wisteria;
+  const roomBgColor = roomHuntData?.room.wallColor ?? colors.base.cream;
+
   useEffect(() => {
-    if (gamePhase === 'playing') {
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
+    if (initialCountryId && !roomHuntData && phase === 'room_hunt') {
+      const progress = getTreasureHuntProgress(initialCountryId);
+      const room = getRandomRoomForCountry(initialCountryId, progress.completedRoomIds);
+      if (room) {
+        const hunt = getRoomHuntForPlay(initialCountryId, room.id, 5);
+        if (hunt) {
+          setCountryId(initialCountryId);
+          setRoomHuntData({ room, items: hunt.items });
+          setClueIndex(0);
+        } else {
+          setPhase('picker');
+          setCountryId(null);
+        }
+      } else {
+        setPhase('picker');
+        setCountryId(null);
+      }
+    }
+  }, [initialCountryId, phase, roomHuntData, getTreasureHuntProgress]);
+
+  useEffect(() => {
+    if (phase === 'room_hunt' && roomHuntData) {
+      timerRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gamePhase, huntIndex]);
+  }, [phase, roomHuntData]);
 
-  const handleItemFound = useCallback(
-    (itemId: string) => {
-      if (gamePhase !== 'playing') return;
-      if (foundItems.has(itemId)) return;
+  const startHuntInCountry = useCallback(
+    (cid: string) => {
+      setCountryId(cid);
+      setWrongTapMessage(null);
+      setElapsedSeconds(0);
 
-      const next = new Set(foundItems);
-      next.add(itemId);
-      setFoundItems(next);
-
-      if (next.size >= hunt.items.length) {
-        if (timerRef.current) clearInterval(timerRef.current);
-        const totalAura = hunt.items.length * AURA_PER_ITEM;
-        setTimeout(() => {
-          setGamePhase('complete');
-          addAura(totalAura);
-          playWithVisby();
-          incrementGameStat('gamesPlayed');
-          incrementGameStat('treasureHuntsCompleted');
-          addSkillPoints('exploration', 3);
-        }, 500);
+      if (huntMode === 'location') {
+        const rounds: LocationHuntRound[] = [];
+        for (let i = 0; i < 3; i++) {
+          const r = getLocationHuntRound(cid);
+          if (r) rounds.push(r);
+        }
+        if (rounds.length === 0) return;
+        setLocationRounds(rounds);
+        setLocationRoundIndex(0);
+        setLocationFoundForSummary([]);
+        setLocationReveal(null);
+        setPhase('location_hunt');
+      } else {
+        const progress = getTreasureHuntProgress(cid);
+        const room = getRandomRoomForCountry(cid, progress.completedRoomIds);
+        if (!room) return;
+        const hunt = getRoomHuntForPlay(cid, room.id, 5);
+        if (!hunt) return;
+        setRoomHuntData({ room, items: hunt.items });
+        setClueIndex(0);
+        setRevealItem(null);
+        setFoundItemsForSummary([]);
+        setPhase('room_hunt');
       }
     },
-    [gamePhase, foundItems, hunt, addAura, playWithVisby, incrementGameStat],
+    [getTreasureHuntProgress, huntMode]
   );
 
-  const handlePlayAgain = () => {
-    const newIndex = (huntIndex + 1) % TREASURE_HUNTS.length;
-    setHuntIndex(newIndex);
-    setFoundItems(new Set());
+  const handleObjectTap = useCallback(
+    (itemId: string) => {
+      if (!roomHuntData || phase !== 'room_hunt') return;
+      const currentTarget = roomHuntData.items[clueIndex];
+      if (!currentTarget) return;
+      if (itemId === currentTarget.id) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        setFoundItemsForSummary((prev) => [...prev, currentTarget]);
+        setRevealItem(currentTarget);
+        setPhase('reveal');
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        setWrongTapMessage('Not this one — try the clue again');
+        setTimeout(() => setWrongTapMessage(null), 1500);
+      }
+    },
+    [roomHuntData, phase, clueIndex]
+  );
+
+  const handleRevealNext = useCallback(() => {
+    if (!roomHuntData) return;
+    setRevealItem(null);
+    if (clueIndex + 1 >= roomHuntData.items.length) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      const totalAura = roomHuntData.items.reduce(
+        (sum, i) => sum + (i.auraReward ?? AURA_PER_ITEM_FALLBACK),
+        0
+      );
+      setPhase('complete');
+      addAura(totalAura);
+      const bonus = getGameOfTheDayBonusAura('TreasureHunt');
+      if (bonus > 0) addAura(bonus);
+      playWithVisby();
+      incrementGameStat('gamesPlayed');
+      checkDailyMissionCompletion?.('play_minigame', 1);
+      incrementGameStat('treasureHuntsCompleted');
+      addSkillPoints('exploration', 3);
+      if (countryId) completeTreasureHuntRoom(countryId, roomHuntData.room.id);
+    } else {
+      setClueIndex((i) => i + 1);
+      setPhase('room_hunt');
+    }
+  }, [roomHuntData, clueIndex, countryId, addAura, playWithVisby, incrementGameStat, addSkillPoints, completeTreasureHuntRoom, checkDailyMissionCompletion]);
+
+  const handleLocationCardTap = useCallback(
+    (locationId: string) => {
+      if (locationRounds.length === 0 || phase !== 'location_hunt') return;
+      const round = locationRounds[locationRoundIndex];
+      if (!round) return;
+      if (locationId === round.target.id) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        setLocationFoundForSummary((prev) => [...prev, { name: round.target.name, learningPoints: round.target.learningPoints }]);
+        addAura(round.target.learningPoints);
+        if (countryId) completeTreasureHuntLocation(countryId, round.target.id);
+        setLocationReveal(round.target);
+        setPhase('location_reveal');
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        setWrongTapMessage('Not this one — try the clue again');
+        setTimeout(() => setWrongTapMessage(null), 1500);
+      }
+    },
+    [locationRounds, locationRoundIndex, countryId, addAura, completeTreasureHuntLocation, phase]
+  );
+
+  const handleLocationRevealNext = useCallback(() => {
+    setLocationReveal(null);
+    if (locationRoundIndex + 1 >= locationRounds.length) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setPhase('location_complete');
+      const bonus = getGameOfTheDayBonusAura('TreasureHunt');
+      if (bonus > 0) addAura(bonus);
+      playWithVisby();
+      incrementGameStat('gamesPlayed');
+      checkDailyMissionCompletion?.('play_minigame', 1);
+      incrementGameStat('treasureHuntsCompleted');
+      addSkillPoints('exploration', 3);
+    } else {
+      setLocationRoundIndex((i) => i + 1);
+      setPhase('location_hunt');
+    }
+  }, [locationRoundIndex, locationRounds.length, playWithVisby, incrementGameStat, addSkillPoints, checkDailyMissionCompletion]);
+
+  const handleExploreAnotherRoom = useCallback(() => {
+    if (!countryId) {
+      setPhase('picker');
+      setCountryId(null);
+      setRoomHuntData(null);
+      return;
+    }
+    const progress = getTreasureHuntProgress(countryId);
+    const room = getRandomRoomForCountry(countryId, progress.completedRoomIds);
+    if (!room) {
+      setPhase('picker');
+      setCountryId(null);
+      setRoomHuntData(null);
+      return;
+    }
+    const hunt = getRoomHuntForPlay(countryId, room.id, 5);
+    if (!hunt) {
+      setPhase('picker');
+      setCountryId(null);
+      setRoomHuntData(null);
+      return;
+    }
+    setRoomHuntData({ room, items: hunt.items });
+    setClueIndex(0);
+    setWrongTapMessage(null);
+    setRevealItem(null);
+    setFoundItemsForSummary([]);
     setElapsedSeconds(0);
-    setGamePhase('playing');
-  };
+    setPhase('room_hunt');
+  }, [countryId, getTreasureHuntProgress]);
 
-  const totalAura = hunt.items.length * AURA_PER_ITEM;
+  const totalAura = roomHuntData?.items.reduce(
+    (sum, i) => sum + (i.auraReward ?? AURA_PER_ITEM_FALLBACK),
+    0
+  ) ?? 0;
 
-  if (gamePhase === 'complete') {
+  const countriesForMode = useMemo(
+    () => (huntMode === 'location' ? countriesWithRooms.filter((c) => countryHasLocationHunt(c.id)) : countriesWithRooms),
+    [huntMode, countriesWithRooms]
+  );
+
+  if (phase === 'picker') {
+    return (
+      <LinearGradient colors={[colors.base.cream, colors.primary.wisteriaFaded]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
+              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <Heading level={2} style={styles.headerCenter}>Treasure Hunt</Heading>
+            <View style={{ width: 40 }} />
+          </View>
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeToggleBtn, huntMode === 'room' && styles.modeToggleBtnActive]}
+              onPress={() => setHuntMode('room')}
+            >
+              <Icon name="home" size={20} color={huntMode === 'room' ? '#FFF' : colors.text.secondary} />
+              <Text variant="bodySmall" style={{ color: huntMode === 'room' ? '#FFF' : colors.text.secondary, fontFamily: 'Nunito-SemiBold' }}>Room Hunt</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeToggleBtn, huntMode === 'location' && styles.modeToggleBtnActive]}
+              onPress={() => setHuntMode('location')}
+            >
+              <Icon name="landmark" size={20} color={huntMode === 'location' ? '#FFF' : colors.text.secondary} />
+              <Text variant="bodySmall" style={{ color: huntMode === 'location' ? '#FFF' : colors.text.secondary, fontFamily: 'Nunito-SemiBold' }}>Location Hunt</Text>
+            </TouchableOpacity>
+          </View>
+          <Caption style={{ paddingHorizontal: spacing.screenPadding, marginBottom: spacing.md }}>
+            {huntMode === 'room' ? 'Find items in a room using clues!' : 'Match the clue to the right place — real photos from the country.'}
+          </Caption>
+          <ScrollView style={styles.pickerScroll} contentContainerStyle={styles.pickerScrollContent} showsVerticalScrollIndicator={false}>
+            {countriesForMode.map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={[styles.countryPickCard, { borderLeftColor: c.accentColor }]}
+                onPress={() => startHuntInCountry(c.id)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.flagCircle}>
+                  <Text style={styles.flagEmoji}>{c.flagEmoji}</Text>
+                </View>
+                <Text variant="body" style={styles.countryPickName}>{c.name}</Text>
+                <Icon name="chevronRight" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            ))}
+            {countriesForMode.length === 0 ? (
+              <Text variant="body" color={colors.text.muted} style={{ textAlign: 'center', paddingVertical: spacing.lg }}>
+                No countries with enough locations for this mode. Try Room Hunt!
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.countryPickCard, styles.surpriseCard]}
+              onPress={() => {
+                const c = countriesForMode[Math.floor(Math.random() * countriesForMode.length)];
+                if (c) startHuntInCountry(c.id);
+              }}
+              activeOpacity={0.8}
+              disabled={countriesForMode.length === 0}
+            >
+              <Icon name="sparkles" size={28} color={colors.reward.gold} />
+              <Text variant="body" style={styles.surpriseText}>Surprise me</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  if (phase === 'location_complete' && country) {
+    const locationTotalAura = locationFoundForSummary.reduce((s, x) => s + x.learningPoints, 0);
     return (
       <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -258,240 +380,266 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
                 <Animated.View entering={ZoomIn.delay(200).duration(400)}>
                   <Icon name="trophy" size={64} color={colors.reward.gold} />
                 </Animated.View>
-
-                <Heading level={1} style={styles.resultsTitle}>
-                  All Found!
-                </Heading>
-
+                <Heading level={1} style={styles.resultsTitle}>All Found!</Heading>
                 <Text variant="body" color={colors.text.secondary} style={styles.resultsSubtitle}>
-                  You explored {hunt.theme} and found every treasure
+                  You matched every place in {country.name}
                 </Text>
-
                 <View style={styles.resultsDivider} />
-
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
-                    <Icon name="time" size={20} color={colors.calm.ocean} />
-                    <Text variant="h3" color={colors.calm.ocean}>
-                      {formatTime(elapsedSeconds)}
-                    </Text>
-                    <Caption>Time</Caption>
-                  </View>
-                  <View style={styles.statDividerVertical} />
-                  <View style={styles.statItem}>
                     <Icon name="sparkles" size={20} color={colors.reward.gold} />
-                    <Text variant="h3" color={colors.reward.amber}>
-                      +{totalAura}
-                    </Text>
+                    <Text variant="h3" color={colors.reward.amber}>+{locationTotalAura}</Text>
                     <Caption>Aura</Caption>
                   </View>
                 </View>
-
                 <View style={styles.foundItemsList}>
-                  {hunt.items.map((item, i) => (
-                    <Animated.View
-                      key={item.id}
-                      entering={FadeInUp.delay(300 + i * 100).duration(300)}
-                      style={[styles.foundListChip, { borderColor: hunt.accentColor + '40' }]}
-                    >
-                      <Icon name={item.icon} size={14} color={hunt.accentColor} />
-                      <Text variant="bodySmall" color={colors.text.secondary}>
-                        {item.name}
-                      </Text>
+                  {locationFoundForSummary.map((item, i) => (
+                    <Animated.View key={i} entering={FadeInUp.delay(300 + i * 100).duration(300)} style={[styles.foundListChip, { borderColor: accentColor + '40' }]}>
+                      <Icon name="landmark" size={14} color={accentColor} />
+                      <Text variant="bodySmall" color={colors.text.secondary}>{item.name}</Text>
                     </Animated.View>
                   ))}
                 </View>
               </View>
             </Card>
-
-            <Button
-              title="Explore Another Room"
-              onPress={handlePlayAgain}
-              variant="primary"
-              size="lg"
-              fullWidth
-            />
-            <Button
-              title="Back"
-              onPress={() => navigation.goBack()}
-              variant="secondary"
-              size="lg"
-              fullWidth
-            />
+            <Button title="Play Again" onPress={() => startHuntInCountry(countryId!)} variant="primary" size="lg" fullWidth />
+            <Button title="Pick Another Country" onPress={() => { setPhase('picker'); setCountryId(null); setLocationRounds([]); }} variant="secondary" size="lg" fullWidth />
+            <Button title="Back" onPress={() => navigation.goBack()} variant="secondary" size="lg" fullWidth />
           </Animated.View>
         </SafeAreaView>
       </LinearGradient>
     );
   }
 
-  return (
-    <View style={[styles.container, { backgroundColor: hunt.bgColor }]}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Icon name="chevronLeft" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-
-          <View style={styles.headerCenter}>
-            <Heading level={2}>{hunt.theme}</Heading>
-          </View>
-
-          <View style={styles.timerBadge}>
-            <Icon name="time" size={16} color={colors.calm.ocean} />
-            <Text variant="bodySmall" color={colors.calm.ocean} style={styles.timerText}>
-              {formatTime(elapsedSeconds)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Hint Bar */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.hintBar}>
-          <Caption style={styles.hintBarLabel}>Find these items:</Caption>
-          <View style={styles.hintItemsRow}>
-            {hunt.items.map((item) => {
-              const isFound = foundItems.has(item.id);
-              return (
-                <View key={item.id} style={styles.hintItem}>
-                  <View
-                    style={[
-                      styles.hintCircle,
-                      {
-                        backgroundColor: isFound ? hunt.accentColor + '20' : 'rgba(0,0,0,0.04)',
-                        borderColor: isFound ? hunt.accentColor : 'rgba(0,0,0,0.08)',
-                      },
-                    ]}
-                  >
-                    {isFound ? (
-                      <Icon name="check" size={16} color={hunt.accentColor} />
-                    ) : (
-                      <Icon name={item.icon} size={16} color={colors.text.muted} />
-                    )}
+  if (phase === 'complete' && country && roomHuntData) {
+    return (
+      <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <Animated.View entering={FadeIn.duration(400)} style={styles.resultsContainer}>
+            <Card style={styles.resultsCard}>
+              <View style={styles.resultsContent}>
+                <Animated.View entering={ZoomIn.delay(200).duration(400)}>
+                  <Icon name="trophy" size={64} color={colors.reward.gold} />
+                </Animated.View>
+                <Heading level={1} style={styles.resultsTitle}>All Found!</Heading>
+                <Text variant="body" color={colors.text.secondary} style={styles.resultsSubtitle}>
+                  You explored {roomHuntData.room.name} in {country.name} and found every treasure
+                </Text>
+                <View style={styles.resultsDivider} />
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Icon name="time" size={20} color={colors.calm.ocean} />
+                    <Text variant="h3" color={colors.calm.ocean}>{formatTime(elapsedSeconds)}</Text>
+                    <Caption>Time</Caption>
                   </View>
-                  <Text
-                    variant="caption"
-                    color={isFound ? hunt.accentColor : colors.text.muted}
-                    align="center"
-                    numberOfLines={1}
-                    style={styles.hintItemName}
-                  >
-                    {item.name}
-                  </Text>
+                  <View style={styles.statDividerVertical} />
+                  <View style={styles.statItem}>
+                    <Icon name="sparkles" size={20} color={colors.reward.gold} />
+                    <Text variant="h3" color={colors.reward.amber}>+{totalAura}</Text>
+                    <Caption>Aura</Caption>
+                  </View>
                 </View>
-              );
-            })}
-          </View>
-        </Animated.View>
-
-        {/* Progress */}
-        <View style={styles.progressRow}>
-          <View style={styles.progressBarTrack}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  width: `${(foundItems.size / hunt.items.length) * 100}%`,
-                  backgroundColor: hunt.accentColor,
-                },
-              ]}
-            />
-          </View>
-          <Caption>
-            {foundItems.size}/{hunt.items.length}
-          </Caption>
-        </View>
-
-        {/* Room Scene */}
-        <View style={styles.roomContainer}>
-          <View style={[styles.room, { backgroundColor: hunt.bgColor }]}>
-            {/* Border / frame */}
-            <View style={[styles.roomBorder, { borderColor: hunt.accentColor + '30' }]} />
-
-            {/* Decor (background, faded) */}
-            {hunt.decor.map((d, i) => (
-              <View
-                key={`decor-${i}`}
-                style={[
-                  styles.decorItem,
-                  {
-                    left: `${d.x}%`,
-                    top: `${d.y}%`,
-                  },
-                ]}
-              >
-                <Icon name={d.icon} size={d.size} color={hunt.accentColor + '18'} />
+                <View style={styles.foundItemsList}>
+                  {foundItemsForSummary.map((item, i) => (
+                    <Animated.View
+                      key={item.id}
+                      entering={FadeInUp.delay(300 + i * 100).duration(300)}
+                      style={[styles.foundListChip, { borderColor: accentColor + '40' }]}
+                    >
+                      <Icon name={item.icon as IconName} size={14} color={accentColor} />
+                      <Text variant="bodySmall" color={colors.text.secondary}>{item.label}</Text>
+                    </Animated.View>
+                  ))}
+                </View>
               </View>
-            ))}
+            </Card>
+            <Button title="Explore Another Room" onPress={handleExploreAnotherRoom} variant="primary" size="lg" fullWidth />
+            <Button title="Pick Another Country" onPress={() => { setPhase('picker'); setCountryId(null); setRoomHuntData(null); }} variant="secondary" size="lg" fullWidth />
+            <Button title="Back" onPress={() => navigation.goBack()} variant="secondary" size="lg" fullWidth />
+          </Animated.View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
-            {/* Hidden Items */}
-            {hunt.items.map((item) => {
-              const isFound = foundItems.has(item.id);
-              return (
+  const showRoomLoading = (phase === 'room_hunt' || phase === 'reveal') && !roomHuntData;
+  const showLocationLoading = (phase === 'location_hunt' || phase === 'location_reveal') && locationRounds.length === 0;
+  if (showRoomLoading || showLocationLoading) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
+              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <Heading level={2} style={styles.headerCenter}>Loading…</Heading>
+            <View style={{ width: 40 }} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  if (phase === 'location_hunt' || phase === 'location_reveal') {
+    const locRound = locationRounds[locationRoundIndex];
+    if (!locRound) return null;
+    return (
+      <>
+        <View style={[styles.container, { backgroundColor: colors.base.cream }]}>
+          <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
+                <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+              <View style={styles.headerCenter}>
+                <Heading level={2}>Location Hunt</Heading>
+                <Caption>{country?.name} · Round {locationRoundIndex + 1}/{locationRounds.length}</Caption>
+              </View>
+              <View style={{ width: 40 }} />
+            </View>
+            <Animated.View entering={FadeInDown.duration(400)} style={styles.hintBar}>
+              <Caption style={styles.hintBarLabel}>Clue:</Caption>
+              <Text variant="body" style={styles.clueText} accessibilityLabel={`Clue: ${locRound.clue}`}>{locRound.clue}</Text>
+            </Animated.View>
+            {wrongTapMessage ? (
+              <View style={styles.wrongTapWrap}>
+                <Text variant="bodySmall" color={colors.text.muted}>{wrongTapMessage}</Text>
+              </View>
+            ) : null}
+            <View style={styles.locationGrid}>
+              {locRound.options.map((loc) => (
                 <TouchableOpacity
-                  key={item.id}
-                  onPress={() => handleItemFound(item.id)}
-                  disabled={isFound}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.hiddenItem,
-                    {
-                      left: `${item.x}%`,
-                      top: `${item.y}%`,
-                    },
-                  ]}
-                  accessibilityLabel={`Hidden item: ${item.name}`}
+                  key={loc.id}
+                  style={styles.locationCard}
+                  onPress={() => handleLocationCardTap(loc.id)}
+                  activeOpacity={0.9}
+                  accessibilityLabel={`Location: ${loc.name}`}
                   accessibilityRole="button"
                 >
-                  {isFound && <FoundItemGlow accentColor={hunt.accentColor} />}
-                  <Animated.View
-                    style={[
-                      styles.hiddenItemInner,
-                      {
-                        backgroundColor: isFound
-                          ? hunt.accentColor + '20'
-                          : hunt.bgColor,
-                        borderColor: isFound ? hunt.accentColor : hunt.bgColor,
-                        borderWidth: isFound ? 2 : 0,
-                      },
-                    ]}
-                    {...(isFound && { entering: ZoomIn.duration(300) })}
-                  >
-                    <Icon
-                      name={item.icon}
-                      size={22}
-                      color={
-                        isFound
-                          ? hunt.accentColor
-                          : blendWithBg(hunt.bgColor, 0.35)
-                      }
-                    />
-                  </Animated.View>
-                  {isFound && (
-                    <Animated.View
-                      entering={FadeInUp.delay(150).duration(200)}
-                      style={styles.foundLabel}
-                    >
-                      <Text
-                        variant="caption"
-                        color={hunt.accentColor}
-                        style={styles.foundLabelText}
-                      >
-                        {item.name}
-                      </Text>
-                    </Animated.View>
-                  )}
+                  <View style={styles.locationCardImageWrap}>
+                    {loc.imageUrl ? (
+                      <Image source={{ uri: loc.imageUrl }} style={styles.locationCardImage} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.locationCardImage, styles.locationCardPlaceholder]}>
+                        <Icon name="landmark" size={40} color={colors.primary.wisteriaLight} />
+                      </View>
+                    )}
+                    <View style={styles.locationCardNameWrap}>
+                      <Text variant="bodySmall" style={styles.locationCardName} numberOfLines={2}>{loc.name}</Text>
+                    </View>
+                  </View>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
+              ))}
+            </View>
+          </SafeAreaView>
         </View>
-      </SafeAreaView>
-    </View>
+        {phase === 'location_reveal' && locationReveal && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.revealOverlay} onPress={handleLocationRevealNext}>
+              <Pressable style={styles.revealCard} onPress={(e) => e.stopPropagation()}>
+                {locationReveal.imageUrl ? (
+                  <Image source={{ uri: locationReveal.imageUrl }} style={styles.revealLocationImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.revealIconWrap, { backgroundColor: accentColor + '20' }]}>
+                    <Icon name="landmark" size={48} color={accentColor} />
+                  </View>
+                )}
+                <Heading level={3} style={styles.revealTitle}>{locationReveal.name}</Heading>
+                <Text variant="body" color={colors.text.secondary} style={styles.revealContent}>{locationReveal.description}</Text>
+                <View style={styles.revealAuraRow}>
+                  <Icon name="sparkles" size={18} color={colors.reward.gold} />
+                  <Text variant="bodySmall" style={{ color: colors.reward.amber, fontFamily: 'Nunito-SemiBold' }}>+{locationReveal.learningPoints} Aura</Text>
+                </View>
+                <Button title={locationRoundIndex + 1 >= locationRounds.length ? 'Finish' : 'Next round'} onPress={handleLocationRevealNext} variant="primary" size="lg" fullWidth style={{ marginTop: spacing.md }} />
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
+      </>
+    );
+  }
+
+  const currentClue = roomHuntData.items[clueIndex];
+  const room = roomHuntData.room;
+
+  return (
+    <>
+      <View style={[styles.container, { backgroundColor: roomBgColor }]}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
+              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Heading level={2}>{room.name}</Heading>
+              <Caption>{country?.name}</Caption>
+            </View>
+            <View style={styles.timerBadge}>
+              <Icon name="time" size={16} color={colors.calm.ocean} />
+              <Text variant="bodySmall" color={colors.calm.ocean} style={styles.timerText}>{formatTime(elapsedSeconds)}</Text>
+            </View>
+          </View>
+
+          <Animated.View entering={FadeInDown.duration(400)} style={styles.hintBar}>
+            <Caption style={styles.hintBarLabel}>Clue:</Caption>
+            <Text variant="body" style={styles.clueText} accessibilityLabel={`Clue: ${currentClue?.clue}`}>{currentClue?.clue}</Text>
+          </Animated.View>
+
+          <View style={styles.progressRow}>
+            <View style={styles.progressBarTrack}>
+              <View
+                style={[styles.progressBarFill, { width: `${(foundItemsForSummary.length / roomHuntData.items.length) * 100}%`, backgroundColor: accentColor }]}
+              />
+            </View>
+            <Caption>{foundItemsForSummary.length}/{roomHuntData.items.length}</Caption>
+          </View>
+
+          {wrongTapMessage ? (
+            <View style={styles.wrongTapWrap}>
+              <Text variant="bodySmall" color={colors.text.muted}>{wrongTapMessage}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.roomContainer}>
+            <View style={[styles.room, { backgroundColor: roomBgColor }]}>
+              <View style={[styles.roomBorder, { borderColor: accentColor + '30' }]} />
+              {room.objects.map((obj) => (
+                <TouchableOpacity
+                  key={obj.id}
+                  onPress={() => handleObjectTap(obj.id)}
+                  activeOpacity={0.8}
+                  style={[styles.hiddenItem, { left: `${obj.x}%`, top: `${obj.y}%` }]}
+                  accessibilityLabel={`Object: ${obj.label}`}
+                  accessibilityRole="button"
+                >
+                  <View style={[styles.hiddenItemInner, { backgroundColor: accentColor + '18', borderColor: accentColor + '40', borderWidth: 1.5 }]}>
+                    <Icon name={obj.icon as IconName} size={22} color={accentColor} />
+                  </View>
+                  <Text variant="caption" color={colors.text.secondary} style={styles.foundLabelText}>{obj.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+
+      {phase === 'reveal' && revealItem && (
+        <Modal visible transparent animationType="fade">
+          <Pressable style={styles.revealOverlay} onPress={handleRevealNext}>
+            <Pressable style={styles.revealCard} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.revealIconWrap, { backgroundColor: accentColor + '20' }]}>
+                <Icon name={revealItem.icon as IconName} size={48} color={accentColor} />
+              </View>
+              <Heading level={3} style={styles.revealTitle}>{revealItem.learnTitle ?? revealItem.label}</Heading>
+              {revealItem.learnContent ? (
+                <Text variant="body" color={colors.text.secondary} style={styles.revealContent}>{revealItem.learnContent}</Text>
+              ) : null}
+              <Button title="Next" onPress={handleRevealNext} variant="primary" size="lg" fullWidth style={{ marginTop: spacing.md }} />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+    </>
   );
 };
 
@@ -722,6 +870,161 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: spacing.radius.round,
     borderWidth: 1,
+  },
+  pickerScroll: {
+    flex: 1,
+  },
+  pickerScrollContent: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.xxxl,
+  },
+  countryPickCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    padding: spacing.md,
+    borderRadius: spacing.radius.lg,
+    marginBottom: spacing.sm,
+    borderLeftWidth: 4,
+  },
+  flagCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  flagEmoji: {
+    fontSize: 24,
+  },
+  countryPickName: {
+    flex: 1,
+    fontFamily: 'Nunito-SemiBold',
+  },
+  surpriseCard: {
+    borderLeftColor: colors.reward.gold,
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  surpriseText: {
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.reward.amber,
+  },
+  revealOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.screenPadding,
+  },
+  revealCard: {
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.xl,
+    maxWidth: '100%',
+    width: SCREEN_WIDTH - spacing.screenPadding * 2,
+  },
+  revealIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  revealTitle: {
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  revealContent: {
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  wrongTapWrap: {
+    paddingHorizontal: spacing.screenPadding,
+    marginBottom: spacing.sm,
+    alignItems: 'center',
+  },
+  clueText: {
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.text.primary,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  modeToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.radius.lg,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  modeToggleBtnActive: {
+    backgroundColor: colors.primary.wisteria,
+  },
+  locationGrid: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: spacing.screenPadding,
+    gap: spacing.sm,
+  },
+  locationCard: {
+    width: (SCREEN_WIDTH - spacing.screenPadding * 2 - spacing.sm) / 2,
+    aspectRatio: 0.85,
+    borderRadius: spacing.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
+  },
+  locationCardImageWrap: {
+    flex: 1,
+  },
+  locationCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  locationCardPlaceholder: {
+    backgroundColor: colors.primary.wisteriaFaded,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationCardNameWrap: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  locationCardName: {
+    color: '#FFF',
+    fontFamily: 'Nunito-SemiBold',
+  },
+  revealLocationImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: spacing.radius.lg,
+    marginBottom: spacing.md,
+  },
+  revealAuraRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
 });
 

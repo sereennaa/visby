@@ -30,7 +30,9 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
+import * as Haptics from 'expo-haptics';
 import { useStore } from '../../store/useStore';
+import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { RootStackParamList } from '../../types';
 
 const RECIPES = [
@@ -194,7 +196,7 @@ const IngredientButton: React.FC<IngredientButtonProps> = ({ name, onPress, disa
 };
 
 export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation }) => {
-  const { addAura, feedVisby, addSkillPoints, incrementGameStat } = useStore();
+  const { addAura, feedVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion } = useStore();
 
   const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * RECIPES.length));
   const recipe = RECIPES[recipeIndex];
@@ -236,6 +238,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
       const expectedIngredient = recipe.correctIngredients[nextCorrectIndex];
 
       if (ingredient === expectedIngredient) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         setIngredientStates((prev) => ({ ...prev, [ingredient]: 'correct' }));
         setAddedIngredients((prev) => [...prev, ingredient]);
         setScore((prev) => prev + 10);
@@ -250,18 +253,23 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
           const bonus = lives === 3 ? 15 : 0;
           const finalScore = score + 10 + bonus;
           setTimeout(() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
             setScore(finalScore);
             setGamePhase('won');
             addAura(finalScore);
+            const bonus = getGameOfTheDayBonusAura('CookingGame');
+            if (bonus > 0) addAura(bonus);
             feedVisby();
             addSkillPoints('cooking', 5);
             incrementGameStat('gamesPlayed');
+            checkDailyMissionCompletion('play_minigame', 1);
             if (lives === 3) {
               incrementGameStat('perfectCookingGames');
             }
           }, 600);
         }
       } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
         setIngredientStates((prev) => ({ ...prev, [ingredient]: 'wrong' }));
         const newLives = lives - 1;
         setLives(newLives);
@@ -272,15 +280,17 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
 
         if (newLives <= 0) {
           setTimeout(() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
             setGamePhase('lost');
             const finalScore = score;
             if (finalScore > 0) addAura(finalScore);
             feedVisby();
+            checkDailyMissionCompletion('play_minigame', 1);
           }, 700);
         }
       }
     },
-    [gamePhase, recipe, nextCorrectIndex, lives, score, addAura, feedVisby, addSkillPoints, incrementGameStat, potScale],
+    [gamePhase, recipe, nextCorrectIndex, lives, score, addAura, feedVisby, addSkillPoints, incrementGameStat, potScale, checkDailyMissionCompletion],
   );
 
   const handlePlayAgain = () => {

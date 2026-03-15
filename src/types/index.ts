@@ -56,6 +56,9 @@ export interface User {
   settings: UserSettings;
 }
 
+/** Per-country treasure hunt completion: room IDs and (optional) location IDs completed */
+export type TreasureHuntProgress = Record<string, { completedRoomIds: string[]; completedLocationIds?: string[] }>;
+
 export interface UserSettings {
   notifications: boolean;
   locationTracking: boolean;
@@ -115,6 +118,24 @@ export interface PlaceChatMessage {
   username: string;
   message: string;
   createdAt: Date;
+}
+
+// ===================================
+// DAILY MISSION (Phase 1: Make It Stick)
+// ===================================
+
+export type DailyMissionType =
+  | 'collect_stamp'
+  | 'add_bite'
+  | 'play_minigame'
+  | 'chat_with_visby'
+  | 'read_facts'
+  | 'complete_lesson';
+
+export interface DailyMission {
+  type: DailyMissionType;
+  label: string;
+  target: number; // e.g. 1 or 2
 }
 
 // ===================================

@@ -44,6 +44,7 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
   const [formError, setFormError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [earnedAura, setEarnedAura] = useState(0);
+  const [firstBiteEver, setFirstBiteEver] = useState(false);
 
   const takePhoto = async () => {
     const cameraResult = await ImagePicker.launchCameraAsync({
@@ -109,6 +110,7 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
     addSkillPoints('cooking', 3);
     setEarnedAura(reward);
     setShowSuccess(true);
+    if (useStore.getState().bites.length === 1) setFirstBiteEver(true);
   };
 
   return (
@@ -295,6 +297,11 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
               <Icon name="food" size={48} color={colors.reward.peachDark} />
             </View>
             <Heading level={3} style={styles.modalTitle}>Bite Saved!</Heading>
+            {firstBiteEver && (
+              <Text variant="body" color={colors.reward.peachDark} style={styles.modalFirstEver}>
+                Your first bite! 🎉
+              </Text>
+            )}
             <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
               +{earnedAura} Aura
             </Text>
@@ -477,8 +484,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalTitle: {
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  modalFirstEver: {
     marginBottom: spacing.sm,
     textAlign: 'center',
+    fontFamily: 'Nunito-Bold',
   },
   modalAura: {
     marginBottom: spacing.sm,

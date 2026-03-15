@@ -24,8 +24,13 @@ type FriendsScreenProps = {
 };
 
 export const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
-  const { user, friends, friendRequests, acceptFriendRequest, rejectFriendRequest } = useStore();
+  const { user, friends, friendRequests, acceptFriendRequest, rejectFriendRequest, getWeeklyAura } = useStore();
   const incoming = friendRequests.filter((r) => r.toUserId === user?.id && r.status === 'pending');
+  const weeklyAura = getWeeklyAura();
+  const leaderboardEntries = [
+    ...(user ? [{ type: 'you' as const, displayName: user.displayName, username: user.username, level: user.level }] : []),
+    ...friends.map((f) => ({ type: 'friend' as const, displayName: f.displayName, username: f.username, level: f.level ?? 0 })),
+  ].sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
 
   return (
     <View style={styles.container}>
@@ -44,6 +49,30 @@ export const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
         </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Leaderboard */}
+          <Card style={styles.leaderboardCard}>
+            <View style={styles.leaderboardHeader}>
+              <Icon name="trophy" size={22} color={colors.reward.gold} />
+              <Text style={styles.leaderboardTitle}>Leaderboard</Text>
+            </View>
+            <View style={styles.weeklyRow}>
+              <Caption>This week</Caption>
+              <Text variant="h3" color={colors.reward.gold}>{weeklyAura} Aura</Text>
+            </View>
+            <Caption style={styles.byLevelLabel}>By level</Caption>
+            {leaderboardEntries.slice(0, 10).map((entry, index) => (
+              <View key={entry.type === 'you' ? 'you' : entry.username} style={styles.leaderboardRow}>
+                <Text style={styles.rankText}>#{index + 1}</Text>
+                <View style={styles.leaderboardEntry}>
+                  <Text variant="body" style={entry.type === 'you' ? styles.youLabel : undefined}>
+                    {entry.displayName}{entry.type === 'you' ? ' (you)' : ''}
+                  </Text>
+                  <LevelBadge level={entry.level ?? 1} />
+                </View>
+              </View>
+            ))}
+          </Card>
+
           {/* Incoming requests */}
           {incoming.length > 0 && (
             <View style={styles.section}>
@@ -142,6 +171,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  leaderboardCard: {
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+  },
+  leaderboardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  leaderboardTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.text.primary },
+  weeklyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  byLevelLabel: { marginBottom: spacing.xs, color: colors.text.muted },
+  leaderboardRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.xs, gap: spacing.sm },
+  rankText: { fontFamily: 'Nunito-SemiBold', width: 28, color: colors.text.muted },
+  leaderboardEntry: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  youLabel: { fontFamily: 'Nunito-SemiBold', color: colors.primary.wisteriaDark },
   requestCard: { marginBottom: spacing.sm },
   requestRow: { flexDirection: 'row', alignItems: 'center' },
   requestAvatar: {

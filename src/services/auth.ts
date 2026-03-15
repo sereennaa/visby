@@ -44,14 +44,14 @@ function createDemoUser(email: string, password: string, username: string): { us
     treasureHuntsCompleted: 0,
     visitedCountries: [],
     skills: { ...DEFAULT_SKILLS },
-    settings: {
-      notifications: true,
-      locationTracking: true,
-      privateProfile: false,
-      language: 'en',
-      measurementUnit: 'metric',
-    },
-  };
+      settings: {
+        notifications: true,
+        locationTracking: true,
+        privateProfile: false,
+        language: 'en',
+        measurementUnit: 'metric',
+      },
+    };
 
   const visby: Visby = {
     id: visbyId,

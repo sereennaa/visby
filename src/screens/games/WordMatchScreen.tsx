@@ -33,6 +33,8 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
+import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
+import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
 
 type WordMatchScreenProps = {
@@ -295,7 +297,15 @@ const AuraPopup: React.FC<{ visible: boolean }> = ({ visible }) => {
 };
 
 export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, addSkillPoints, incrementGameStat } = useStore();
+  const { addAura, studyWithVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion, getVisbyMood, addVisbyChatMessage, storyBeatsShown, markStoryBeatShown } = useStore();
+  const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
+  React.useEffect(() => {
+    if (storyBeatsShown.includes('hint_WordMatch')) return;
+    setShowFirstTimeHint(true);
+    markStoryBeatShown('hint_WordMatch');
+    const t = setTimeout(() => setShowFirstTimeHint(false), 5000);
+    return () => clearTimeout(t);
+  }, [storyBeatsShown, markStoryBeatShown]);
   const [round, setRound] = useState(() => pickRound());
   const [selectedForeign, setSelectedForeign] = useState<number | null>(null);
   const [foreignStates, setForeignStates] = useState<CardState[]>(
@@ -369,6 +379,8 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
 
       if (isCorrect) {
         haptic(Haptics.ImpactFeedbackStyle.Medium);
+        const { soundService } = require('../../services/sound');
+        soundService.playMatch();
         setForeignStates((prev) =>
           prev.map((s, i) => (i === selectedForeign ? 'matched' : s)),
         );
@@ -386,13 +398,19 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
         if (newMatched === ROUND_SIZE) {
           const finishTime = Date.now();
           setEndTime(finishTime);
+          const bonus = getGameOfTheDayBonusAura('WordMatch');
+          if (bonus > 0) addAura(bonus);
           studyWithVisby();
           addSkillPoints('language', 5);
           incrementGameStat('gamesPlayed');
+          checkDailyMissionCompletion('play_minigame', 1);
           const finalAccuracy = (newMatched / (newMatched + wrongAttempts)) * 100;
           if (finalAccuracy >= 100) {
             incrementGameStat('perfectWordMatches');
           }
+          const outcome = finalAccuracy >= 100 ? 'perfect' : 'won';
+          const line = getPostGameLine('WordMatch', outcome, getVisbyMood());
+          addVisbyChatMessage('visby', line);
           setTimeout(() => setIsFinished(true), 600);
         }
         setTimeout(() => {
@@ -501,6 +519,11 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
                     <Caption>Aura</Caption>
                   </View>
                 </View>
+                <View style={styles.visbyLineWrap}>
+                  <Text variant="body" style={styles.visbyLine}>
+                    — Visby: "{getPostGameLine('WordMatch', accuracy >= 100 ? 'perfect' : 'won', getVisbyMood())}"
+                  </Text>
+                </View>
               </View>
             </Card>
 
@@ -548,6 +571,14 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
             </Text>
           </View>
         </View>
+
+        {showFirstTimeHint && (
+          <View style={styles.firstTimeHint}>
+            <Text variant="bodySmall" style={styles.firstTimeHintText}>
+              Tap a word in one column, then tap its translation in the other. Match all pairs to finish!
+            </Text>
+          </View>
+        )}
 
         <View style={styles.progressRow}>
           <View style={styles.progressTrack}>
@@ -652,6 +683,15 @@ const styles = StyleSheet.create({
   auraHeaderText: {
     fontFamily: typography.fonts.bodyBold,
   },
+  firstTimeHint: {
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.primary.wisteria + '20',
+    borderRadius: 12,
+  },
+  firstTimeHintText: { color: colors.primary.wisteriaDark, textAlign: 'center' },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -753,6 +793,15 @@ const styles = StyleSheet.create({
   },
   resultsContent: {
     alignItems: 'center',
+  },
+  visbyLineWrap: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  visbyLine: {
+    fontStyle: 'italic',
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
   resultsIconWrap: {
     marginBottom: spacing.lg,

@@ -30,6 +30,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
+import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { RootStackParamList } from '../../types';
 
 type MemoryCardsScreenProps = {
@@ -204,7 +205,7 @@ const MemoryCard: React.FC<{
 };
 
 export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, playWithVisby, incrementGameStat, addSkillPoints } = useStore();
+  const { addAura, studyWithVisby, playWithVisby, incrementGameStat, addSkillPoints, checkDailyMissionCompletion } = useStore();
   const [deck, setDeck] = useState(() => buildDeck());
   const [cardStates, setCardStates] = useState<FlipState[]>(
     () => Array(PAIRS_PER_GAME * 2).fill('down'),
@@ -274,6 +275,8 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
 
       if (isMatch) {
         haptic(Haptics.ImpactFeedbackStyle.Medium);
+        const { soundService } = require('../../services/sound');
+        soundService.playMatch();
         const matchStates = [...newStates];
         matchStates[firstFlip] = 'matched';
         matchStates[index] = 'matched';
@@ -292,9 +295,12 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
           if (finalMoves <= 15) {
             addAura(BONUS_THREE_STAR);
           }
+          const bonus = getGameOfTheDayBonusAura('MemoryCards');
+          if (bonus > 0) addAura(bonus);
           studyWithVisby();
           playWithVisby();
           incrementGameStat('gamesPlayed');
+          checkDailyMissionCompletion('play_minigame', 1);
           addSkillPoints('culture', 3);
           setTimeout(() => setIsFinished(true), 500);
         }

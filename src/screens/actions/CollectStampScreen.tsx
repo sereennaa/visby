@@ -8,6 +8,7 @@ import {
   Pressable,
   Image,
 } from 'react-native';
+import Animated, { ZoomIn, FadeIn } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
+import { soundService } from '../../services/sound';
 import { STAMP_TYPES_INFO, AURA_REWARDS } from '../../config/constants';
 import { RootStackParamList, Stamp, StampType } from '../../types';
 
@@ -64,6 +66,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   const [formError, setFormError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [earnedAura, setEarnedAura] = useState(0);
+  const [firstStampEver, setFirstStampEver] = useState(false);
 
   const locationDisplay = currentLocation?.city && currentLocation?.country
     ? `${currentLocation.city}, ${currentLocation.country}`
@@ -128,6 +131,8 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
     addSkillPoints('exploration', 5);
     setEarnedAura(reward);
     setShowSuccess(true);
+    soundService.playStampCollected();
+    if (useStore.getState().stamps.length === 1) setFirstStampEver(true);
   };
 
   return (
@@ -261,14 +266,21 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
       {/* Success Modal */}
       <Modal visible={showSuccess} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => {}}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalIconContainer}>
+          <Animated.View entering={ZoomIn.duration(400).springify()} style={styles.modalContent}>
+            <Animated.View entering={ZoomIn.delay(100).duration(300).springify()} style={styles.modalIconContainer}>
               <Icon name="stamp" size={48} color={colors.primary.wisteriaDark} />
-            </View>
+            </Animated.View>
             <Heading level={3} style={styles.modalTitle}>Stamp Collected!</Heading>
-            <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
-              +{earnedAura} Aura
-            </Text>
+            {firstStampEver && (
+              <Text variant="body" color={colors.primary.wisteriaDark} style={styles.modalFirstEver}>
+                Your first stamp! 🎉
+              </Text>
+            )}
+            <Animated.View entering={FadeIn.delay(200).duration(300)}>
+              <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
+                +{earnedAura} Aura
+              </Text>
+            </Animated.View>
             <Text variant="body" color={colors.text.secondary} style={styles.modalLocation}>
               {locationName}
             </Text>
@@ -282,7 +294,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
               size="lg"
               fullWidth
             />
-          </View>
+          </Animated.View>
         </Pressable>
       </Modal>
     </LinearGradient>
@@ -419,8 +431,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalTitle: {
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  modalFirstEver: {
     marginBottom: spacing.sm,
     textAlign: 'center',
+    fontFamily: 'Nunito-Bold',
   },
   modalAura: {
     marginBottom: spacing.sm,

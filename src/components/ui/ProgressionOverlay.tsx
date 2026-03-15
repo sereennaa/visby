@@ -8,6 +8,7 @@ import { Text, Heading, Caption } from './Text';
 import { Button } from './Button';
 import { Icon, IconName } from './Icon';
 import { useStore, getGrowthStage } from '../../store/useStore';
+import { soundService } from '../../services/sound';
 
 const LEVEL_TITLES: Record<number, string> = {
   1: 'Novice Explorer',
@@ -44,12 +45,14 @@ export const ProgressionOverlay: React.FC = () => {
     if (!user) return;
 
     if (user.level > lastCelebratedLevel) {
+      soundService.playLevelUp();
       setShowLevelUp(true);
       setLastCelebratedLevel(user.level);
     }
 
     const currentStage = getGrowthStage(user.totalCarePoints || 0);
     if (currentStage !== lastStage) {
+      soundService.playLevelUp();
       setShowStageUp(true);
       setLastStage(currentStage);
     }

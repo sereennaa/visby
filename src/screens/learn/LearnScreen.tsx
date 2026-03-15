@@ -16,6 +16,9 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
+import { LESSON_CONTENT } from '../../config/learningContent';
+
+const RECOMMENDED_LESSON_ORDER = ['lang1', 'lang2', 'lang3', 'lang4', 'slang1', 'slang2', 'slang3', 'cult1', 'cult2', 'cult3', 'hist1', 'hist2', 'etiq1', 'etiq2', 'geo1', 'geo2'];
 
 type LearnScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Learn'>;
@@ -115,6 +118,10 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
   const dailyGoal = 3;
   const lessonsToday = getLessonsCompletedToday();
   const dailyProgress = (lessonsToday / dailyGoal) * 100;
+
+  const completedSet = new Set(lessonProgress.filter(p => p.completed).map(p => p.lessonId));
+  const nextLessonId = RECOMMENDED_LESSON_ORDER.find(id => !completedSet.has(id) && LESSON_CONTENT[id]);
+  const nextLesson = nextLessonId ? { id: nextLessonId, title: LESSON_CONTENT[nextLessonId].title } : null;
 
   const getCompletedForCategory = (categoryId: string): number =>
     lessonProgress.filter(p => p.lessonId.startsWith(categoryId) && p.completed).length;
@@ -221,6 +228,33 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
               <Icon name="flashcard" size={24} color={colors.calm.ocean} />
             </TouchableOpacity>
           </View>
+
+          {/* Next up — suggested next step */}
+          {nextLesson && (
+            <TouchableOpacity
+              style={styles.nextUpCard}
+              onPress={() => navigation.navigate('Lesson', { lessonId: nextLesson.id })}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={[colors.primary.wisteriaFaded, colors.calm.skyLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.nextUpGradient}
+              >
+                <View style={styles.nextUpLeft}>
+                  <View style={styles.nextUpIconWrap}>
+                    <Icon name="target" size={22} color={colors.primary.wisteriaDark} />
+                  </View>
+                  <View>
+                    <Caption style={styles.nextUpLabel}>Next up</Caption>
+                    <Text variant="body" style={styles.nextUpTitle}>{nextLesson.title}</Text>
+                  </View>
+                </View>
+                <Icon name="chevronRight" size={20} color={colors.primary.wisteriaDark} />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
 
           {/* Daily Goal */}
           <Card style={styles.dailyGoalCard}>
@@ -363,6 +397,41 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     backgroundColor: colors.base.cream,
     borderRadius: spacing.radius.lg,
+  },
+  nextUpCard: {
+    marginBottom: spacing.md,
+    borderRadius: spacing.radius.xl,
+    overflow: 'hidden',
+  },
+  nextUpGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  nextUpLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  nextUpIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary.wisteria + '35',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  nextUpLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: colors.primary.wisteriaDark,
+    marginBottom: 2,
+  },
+  nextUpTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
   },
   dailyGoalCard: {
     marginBottom: spacing.lg,

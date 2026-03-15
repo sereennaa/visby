@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   TextStyle,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,17 +16,19 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { StampCard, StampMini } from '../../components/collectibles/StampCard';
+import { Button } from '../../components/ui/Button';
+import { SkeletonCard } from '../../components/ui/SkeletonCard';
 import { useStore } from '../../store/useStore';
-import { STAMP_TYPES_INFO } from '../../config/constants';
+import { STAMP_TYPES_INFO, COUNTRIES } from '../../config/constants';
+import { getStampProgressByCountry } from '../../config/collectionGoals';
 import { RootStackParamList, Stamp, StampType } from '../../types';
-import { whimsicalCopy } from '../../theme/whimsical';
 
 type StampsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Stamps'>;
 };
 
 export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
-  const { stamps } = useStore();
+  const { stamps, isLoading } = useStore();
   const [selectedType, setSelectedType] = useState<StampType | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -45,6 +48,10 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
   const sortedStamps = [...filteredStamps].sort(
     (a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime()
   );
+
+  const collectionProgress = getStampProgressByCountry(stamps);
+  const { width: screenWidth } = Dimensions.get('window');
+  const cardWidth = (screenWidth - spacing.screenPadding * 2 - 10) / 2;
 
   const renderStampItem = ({ item }: { item: Stamp }) => (
     <StampCard
@@ -88,8 +95,40 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Collection goals */}
+        {!isLoading && collectionProgress.length > 0 && (
+          <Card style={styles.goalsCard}>
+            <Text variant="body" style={styles.goalsTitle}>Collection goals</Text>
+            {collectionProgress.slice(0, 6).map((p) => {
+              const country = COUNTRIES.find((c) => c.id === p.countryId);
+              const accent = country?.accentColor ?? colors.primary.wisteria;
+              return (
+                <TouchableOpacity
+                  key={p.countryId}
+                  style={[styles.goalRow, { borderLeftColor: accent }]}
+                  onPress={() => navigation.navigate('Explore', { screen: 'CountryRoom', params: { countryId: p.countryId } })}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.goalRowLeft}>
+                    <Text variant="body" style={styles.goalCountry}>{p.countryName}</Text>
+                    <Caption style={styles.goalCount}>{p.current}/{p.target} stamps</Caption>
+                  </View>
+                  {p.completed ? (
+                    <View style={[styles.goalBadge, { backgroundColor: colors.success.emerald + '30' }]}>
+                      <Icon name="checkCircle" size={14} color={colors.success.emerald} />
+                      <Text variant="caption" style={styles.goalBadgeText}>Complete</Text>
+                    </View>
+                  ) : (
+                    <Caption style={styles.goalRemaining}>{p.remaining} to go</Caption>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </Card>
+        )}
+
         {/* Stats Overview */}
-        {stamps.length > 0 && (
+        {!isLoading && stamps.length > 0 && (
           <Card style={styles.statsCard}>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
@@ -174,7 +213,13 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
         />
 
         {/* Stamps Grid/List */}
-        {sortedStamps.length > 0 ? (
+        {isLoading ? (
+          <View style={styles.skeletonGrid}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonCard key={i} width={cardWidth} height={200} />
+            ))}
+          </View>
+        ) : sortedStamps.length > 0 ? (
           <FlatList
             data={sortedStamps}
             renderItem={renderStampItem}
@@ -190,11 +235,13 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
           />
         ) : (
           <View style={styles.emptyState}>
-            <Icon name="stamp" size={64} color={colors.text.muted} />
+            <View style={styles.emptyIconWrap}>
+              <Icon name="stamp" size={64} color={colors.primary.wisteria} />
+            </View>
             <Text
               variant="h3"
               align="center"
-              color={colors.text.secondary}
+              color={colors.text.primary}
               style={styles.emptyTitle}
             >
               No stamps yet!
@@ -205,15 +252,22 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
               color={colors.text.muted}
               style={styles.emptyText}
             >
-              {whimsicalCopy.noStamps}
+              Add your first stamp from a place you've been — or explore the map to discover spots.
             </Text>
+            <Button
+              title="Add your first stamp"
+              onPress={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
+              variant="primary"
+              size="md"
+              style={styles.emptyPrimaryBtn}
+            />
             <TouchableOpacity
               style={styles.exploreButton}
               onPress={() => navigation.navigate('Map')}
             >
               <Icon name="map" size={20} color={colors.primary.wisteriaDark} />
               <Text variant="body" color={colors.primary.wisteriaDark}>
-                Explore Nearby
+                Explore nearby
               </Text>
             </TouchableOpacity>
           </View>
@@ -250,6 +304,46 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     backgroundColor: colors.base.cream,
     borderRadius: spacing.radius.md,
+  },
+  goalsCard: {
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: spacing.md,
+  },
+  goalsTitle: {
+    fontFamily: 'Nunito-SemiBold',
+    marginBottom: spacing.sm,
+    color: colors.text.primary,
+  },
+  goalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderLeftWidth: 4,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.base.cream,
+    borderRadius: 8,
+  },
+  goalRowLeft: { flex: 1 },
+  goalCountry: { fontFamily: 'Nunito-SemiBold', color: colors.text.primary },
+  goalCount: { marginTop: 2, color: colors.text.muted },
+  goalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  goalBadgeText: { color: colors.success.emerald, fontFamily: 'Nunito-SemiBold' },
+  goalRemaining: { color: colors.text.muted },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.lg,
   },
   statsCard: {
     marginHorizontal: spacing.screenPadding,
@@ -326,12 +420,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  emptyIconWrap: {
+    marginBottom: spacing.sm,
+  },
   emptyTitle: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
   emptyText: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  emptyPrimaryBtn: {
+    marginBottom: spacing.md,
   },
   exploreButton: {
     flexDirection: 'row',

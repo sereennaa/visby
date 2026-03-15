@@ -2,8 +2,36 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory, DailyMission, DailyMissionType, TreasureHuntProgress, PlaceChatMessage } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
+import { QUEST_DEFINITIONS, getQuestById, type QuestDefinition } from '../config/quests';
+
+const DAILY_MISSION_BONUS_AURA = 25;
+const SURPRISE_AURA_MIN = 5;
+const SURPRISE_AURA_MAX = 15;
+const SURPRISE_CHANCE = 0.18; // 18% on eligible open
+
+const DAILY_MISSION_POOL: DailyMission[] = [
+  { type: 'collect_stamp', label: 'Collect 1 stamp', target: 1 },
+  { type: 'add_bite', label: 'Log 1 bite', target: 1 },
+  { type: 'play_minigame', label: 'Play 1 mini-game', target: 1 },
+  { type: 'chat_with_visby', label: 'Chat with Visby', target: 1 },
+  { type: 'read_facts', label: 'Read 2 country facts', target: 2 },
+  { type: 'complete_lesson', label: 'Complete 1 lesson', target: 1 },
+];
+
+function todayDateKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getISOWeekKey(): string {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+  const week = Math.ceil((days + start.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+}
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
 import { COUNTRY_SOUVENIRS } from '../config/cosmetics';
 
@@ -97,6 +125,9 @@ interface AppStore {
   /** Per-country learning completion: facts read, quiz done, games played (for "place complete" / next level) */
   countryProgress: Record<string, { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number }>;
 
+  /** Per-country treasure hunt: completed room IDs (and optionally location IDs) */
+  treasureHuntProgress: TreasureHuntProgress;
+
   // Friends (Club Penguin–style)
   friends: Friend[];
   friendRequests: FriendRequest[];
@@ -106,11 +137,37 @@ interface AppStore {
   visbyMemories: VisbyMemory[];
   lastVisbyCheckInAt: string | null; // ISO date of last daily check-in modal
 
+  // Daily mission & surprise (Phase 1: Make It Stick)
+  dailyMission: DailyMission | null;
+  dailyMissionDateKey: string; // 'YYYY-MM-DD'
+  dailyMissionCompletedAt: string | null; // ISO when completed today
+  dailyMissionProgress: number;
+  lastSurpriseDateKey: string; // 'YYYY-MM-DD' — at most one surprise per day
+
+  // Place chat (Phase 2: Club Penguin–style room chat)
+  placeChatMessages: Record<string, PlaceChatMessage[]>; // key = e.g. room_jp_living
+
+  // Streak freeze (Phase 1: one per month, use when you miss a day)
+  streakFreezesRemaining: number;
+  lastFreezeGrantMonth: string; // 'YYYY-MM'
+  pendingStreakFreezeOffer: boolean; // true when we should show "Use a freeze?" modal
+
+  // Story beats (milestone messages from Visby)
+  storyBeatsShown: string[]; // e.g. ['first_country', 'first_lesson']
+
+  // Quest chains (multi-step challenges)
+  questProgress: Record<string, { completedAt: string | null }>;
+
+  // Leaderboard: weekly Aura (reset each week)
+  userWeeklyAura: number;
+  lastWeeklyResetDateKey: string; // 'YYYY-Www' ISO week
+
   // Settings
   settings: {
     notifications: boolean;
     locationTracking: boolean;
     privateProfile: boolean;
+    soundEffects: boolean;
   };
   
   // Actions - Auth
@@ -165,6 +222,27 @@ interface AppStore {
   shouldShowVisbyCheckIn: () => boolean;
   getVisbyMemories: () => VisbyMemory[];
 
+  // Actions - Daily mission & surprise
+  getDailyMission: () => DailyMission | null;
+  checkDailyMissionCompletion: (type: DailyMissionType, amount?: number) => boolean; // returns true if mission just completed
+  trySurprise: () => { granted: boolean; aura?: number }; // maybe grant surprise Aura once per day
+
+  // Actions - Place chat
+  addPlaceChatMessage: (placeKey: string, message: string) => void;
+  getPlaceChatMessages: (placeKey: string) => PlaceChatMessage[];
+
+  // Actions - Streak freeze
+  useStreakFreeze: () => boolean; // returns true if freeze was used
+  declineStreakFreezeOffer: () => void;
+
+  markStoryBeatShown: (id: string) => void;
+
+  // Actions - Quests
+  getQuestProgress: (questId: string) => { current: number; target: number; completed: boolean; definition: QuestDefinition } | null;
+  checkQuests: () => void;
+
+  getWeeklyAura: () => number; // current user's Aura earned this week (resets by week)
+
   // Actions - Learning
   setLessonProgress: (progress: UserLessonProgress[]) => void;
   updateLessonProgress: (lessonId: string, progress: Partial<UserLessonProgress>) => void;
@@ -184,6 +262,7 @@ interface AppStore {
   restVisby: () => void;
   studyWithVisby: () => void;
   getVisbyNeeds: () => VisbyNeeds;
+  getVisbyMood: () => import('../types').VisbyMood;
 
   // Actions - Furniture & Room Decoration
   ownedFurniture: string[];
@@ -194,6 +273,10 @@ interface AppStore {
 
   // Actions - Game Stats
   incrementGameStat: (stat: 'gamesPlayed' | 'perfectCookingGames' | 'perfectWordMatches' | 'treasureHuntsCompleted') => void;
+
+  getTreasureHuntProgress: (countryId: string) => { completedRoomIds: string[]; completedLocationIds: string[] };
+  completeTreasureHuntRoom: (countryId: string, roomId: string) => void;
+  completeTreasureHuntLocation: (countryId: string, locationId: string) => void;
 
   // Actions - Skills
   addSkillPoints: (skill: keyof SkillProgress, amount: number) => void;
@@ -221,15 +304,30 @@ export const useStore = create<AppStore>()(
       userHouses: [],
       ownedFurniture: [],
       countryProgress: {},
+      treasureHuntProgress: {},
       friends: [],
       friendRequests: [],
       visbyChatMessages: [],
       visbyMemories: [],
       lastVisbyCheckInAt: null,
+      dailyMission: null,
+      dailyMissionDateKey: '',
+      dailyMissionCompletedAt: null,
+      dailyMissionProgress: 0,
+      lastSurpriseDateKey: '',
+      placeChatMessages: {},
+      streakFreezesRemaining: 1,
+      lastFreezeGrantMonth: '',
+      pendingStreakFreezeOffer: false,
+      storyBeatsShown: [],
+      questProgress: {},
+      userWeeklyAura: 0,
+      lastWeeklyResetDateKey: '',
       settings: {
         notifications: true,
         locationTracking: true,
         privateProfile: false,
+        soundEffects: true,
       },
 
       // Auth Actions
@@ -245,11 +343,25 @@ export const useStore = create<AppStore>()(
         lessonProgress: [],
         userHouses: [],
         countryProgress: {},
+        treasureHuntProgress: {},
         friends: [],
         friendRequests: [],
         visbyChatMessages: [],
         visbyMemories: [],
         lastVisbyCheckInAt: null,
+        dailyMission: null,
+        dailyMissionDateKey: '',
+        dailyMissionCompletedAt: null,
+        dailyMissionProgress: 0,
+        lastSurpriseDateKey: '',
+        placeChatMessages: {},
+        streakFreezesRemaining: 1,
+        lastFreezeGrantMonth: '',
+        pendingStreakFreezeOffer: false,
+        storyBeatsShown: [],
+        questProgress: {},
+        userWeeklyAura: 0,
+        lastWeeklyResetDateKey: '',
       }),
       
       getCountryProgress: (countryId) => {
@@ -265,6 +377,7 @@ export const useStore = create<AppStore>()(
             [countryId]: { ...current, factsReadCount: Math.min((current.factsReadCount || 0) + 1, 999) },
           },
         });
+        get().checkDailyMissionCompletion('read_facts', 1);
       },
       markQuizCompleted: (countryId) => {
         const { countryProgress } = get();
@@ -405,6 +518,150 @@ export const useStore = create<AppStore>()(
       },
       getVisbyMemories: () => get().visbyMemories,
 
+      getDailyMission: () => {
+        const today = todayDateKey();
+        const { dailyMission, dailyMissionDateKey, dailyMissionCompletedAt, dailyMissionProgress } = get();
+        if (dailyMissionDateKey !== today) {
+          const mission = DAILY_MISSION_POOL[Math.floor(Math.random() * DAILY_MISSION_POOL.length)];
+          set({
+            dailyMission: mission,
+            dailyMissionDateKey: today,
+            dailyMissionCompletedAt: null,
+            dailyMissionProgress: 0,
+          });
+          return mission;
+        }
+        return dailyMission;
+      },
+      checkDailyMissionCompletion: (type, amount = 1) => {
+        const { dailyMission, dailyMissionDateKey, dailyMissionCompletedAt, dailyMissionProgress } = get();
+        const today = todayDateKey();
+        if (dailyMissionDateKey !== today || !dailyMission || dailyMissionCompletedAt || dailyMission.type !== type) return false;
+        const newProgress = dailyMissionProgress + amount;
+        set({ dailyMissionProgress: newProgress });
+        if (newProgress < dailyMission.target) return false;
+        set({
+          dailyMissionCompletedAt: new Date().toISOString(),
+        });
+        get().addAura(DAILY_MISSION_BONUS_AURA);
+        import('../services/sound').then((m) => m.soundService.playMissionComplete()).catch(() => {});
+        return true;
+      },
+      trySurprise: () => {
+        const today = todayDateKey();
+        const { lastSurpriseDateKey } = get();
+        if (lastSurpriseDateKey === today) return { granted: false };
+        if (Math.random() > SURPRISE_CHANCE) return { granted: false };
+        const aura = SURPRISE_AURA_MIN + Math.floor(Math.random() * (SURPRISE_AURA_MAX - SURPRISE_AURA_MIN + 1));
+        set({ lastSurpriseDateKey: today });
+        get().addAura(aura);
+        return { granted: true, aura };
+      },
+
+      addPlaceChatMessage: (placeKey, message) => {
+        const { user, placeChatMessages } = get();
+        if (!user || !message.trim()) return;
+        const trimmed = message.trim().slice(0, 300);
+        const msg: PlaceChatMessage = {
+          id: `pcm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          userId: user.id,
+          username: user.username,
+          message: trimmed,
+          createdAt: new Date(),
+        };
+        const list = placeChatMessages[placeKey] || [];
+        const next = [...list, msg].slice(-50);
+        set({ placeChatMessages: { ...placeChatMessages, [placeKey]: next } });
+        get().chargeSocialBattery(8);
+      },
+      getPlaceChatMessages: (placeKey) => get().placeChatMessages[placeKey] || [],
+
+      useStreakFreeze: () => {
+        const { user, pendingStreakFreezeOffer, streakFreezesRemaining } = get();
+        if (!user || !pendingStreakFreezeOffer || streakFreezesRemaining <= 0) return false;
+        set({
+          pendingStreakFreezeOffer: false,
+          streakFreezesRemaining: streakFreezesRemaining - 1,
+          user: {
+            ...user,
+            lastCheckIn: new Date(),
+            aura: user.aura + 10,
+            totalAuraEarned: user.totalAuraEarned + 10,
+          },
+        });
+        return true;
+      },
+      declineStreakFreezeOffer: () => {
+        const { user, pendingStreakFreezeOffer } = get();
+        if (!user || !pendingStreakFreezeOffer) return;
+        set({
+          pendingStreakFreezeOffer: false,
+          user: {
+            ...user,
+            currentStreak: 1,
+            lastCheckIn: new Date(),
+            aura: user.aura + 10,
+            totalAuraEarned: user.totalAuraEarned + 10,
+          },
+        });
+      },
+
+      markStoryBeatShown: (id) => {
+        const { storyBeatsShown } = get();
+        if (storyBeatsShown.includes(id)) return;
+        set({ storyBeatsShown: [...storyBeatsShown, id] });
+      },
+
+      getQuestProgress: (questId) => {
+        const def = getQuestById(questId);
+        if (!def) return null;
+        const state = get();
+        const completedAt = state.questProgress[questId]?.completedAt ?? null;
+        let current = 0;
+        if (def.progressType === 'lessons_completed') {
+          current = state.lessonProgress.filter((p) => p.completed).length;
+        } else if (def.progressType === 'stamp_countries') {
+          current = new Set(state.stamps.map((s) => s.country)).size;
+        }
+        return {
+          current,
+          target: def.target,
+          completed: !!completedAt,
+          definition: def,
+        };
+      },
+      checkQuests: () => {
+        const state = get();
+        QUEST_DEFINITIONS.forEach((def) => {
+          const existing = state.questProgress[def.id]?.completedAt;
+          if (existing) return;
+          let current = 0;
+          if (def.progressType === 'lessons_completed') {
+            current = state.lessonProgress.filter((p) => p.completed).length;
+          } else if (def.progressType === 'stamp_countries') {
+            current = new Set(state.stamps.map((s) => s.country)).size;
+          }
+          if (current >= def.target) {
+            set((s) => ({
+              questProgress: {
+                ...s.questProgress,
+                [def.id]: { completedAt: new Date().toISOString() },
+              },
+            }));
+            get().addAura(def.rewardAura);
+          }
+        });
+      },
+      getWeeklyAura: () => {
+        const weekKey = getISOWeekKey();
+        const state = get();
+        if (state.lastWeeklyResetDateKey !== weekKey) {
+          set({ userWeeklyAura: 0, lastWeeklyResetDateKey: weekKey });
+          return 0;
+        }
+        return state.userWeeklyAura ?? 0;
+      },
+
       // Visby Actions
       setVisby: (visby) => set({ visby }),
       updateVisbyAppearance: (appearance) => {
@@ -442,19 +699,23 @@ export const useStore = create<AppStore>()(
         set((state) => ({ stamps: [...state.stamps, stamp] }));
         get().playWithVisby();
         get().checkAndAwardBadges();
+        get().checkDailyMissionCompletion('collect_stamp', 1);
+        get().checkQuests();
       },
       setBites: (bites) => set({ bites }),
       addBite: (bite) => {
         set((state) => ({ bites: [...state.bites, bite] }));
         get().feedVisby();
         get().checkAndAwardBadges();
+        get().checkDailyMissionCompletion('add_bite', 1);
       },
       setBadges: (badges) => set({ badges }),
       addBadge: (badge) => set((state) => ({ badges: [...state.badges, badge] })),
       
       // Progression Actions
       addAura: (amount) => {
-        const { user } = get();
+        const state = get();
+        const { user } = state;
         if (user) {
           const multiplier = Math.min(3.0, 1.0 + (user.currentStreak * 0.1));
           const boosted = Math.round(amount * multiplier);
@@ -462,6 +723,9 @@ export const useStore = create<AppStore>()(
           const newLevel = [...LEVEL_THRESHOLDS]
             .reverse()
             .find((t) => newTotalAura >= t.aura)?.level ?? 1;
+          const weekKey = getISOWeekKey();
+          const weeklyReset = state.lastWeeklyResetDateKey !== weekKey;
+          const newWeeklyAura = weeklyReset ? boosted : (state.userWeeklyAura ?? 0) + boosted;
           set({
             user: {
               ...user,
@@ -469,6 +733,7 @@ export const useStore = create<AppStore>()(
               totalAuraEarned: newTotalAura,
               level: newLevel,
             },
+            ...(weeklyReset ? { userWeeklyAura: newWeeklyAura, lastWeeklyResetDateKey: weekKey } : { userWeeklyAura: newWeeklyAura }),
           });
         }
       },
@@ -498,11 +763,20 @@ export const useStore = create<AppStore>()(
         }
       },
       dailyCheckIn: () => {
-        const { user } = get();
+        const { user, streakFreezesRemaining, lastFreezeGrantMonth } = get();
         if (!user) return;
 
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        const grantFreezeForMonth = () => {
+          if (lastFreezeGrantMonth === monthKey) return;
+          set({
+            lastFreezeGrantMonth: monthKey,
+            streakFreezesRemaining: Math.min(2, get().streakFreezesRemaining + 1),
+          });
+        };
 
         if (user.lastCheckIn) {
           const last = new Date(user.lastCheckIn);
@@ -511,19 +785,40 @@ export const useStore = create<AppStore>()(
 
           if (diffDays === 0) return;
 
-          const newStreak = diffDays === 1 ? user.currentStreak + 1 : 1;
+          grantFreezeForMonth();
+
+          if (diffDays === 1) {
+            const newStreak = user.currentStreak + 1;
+            set({
+              user: {
+                ...user,
+                currentStreak: newStreak,
+                longestStreak: Math.max(newStreak, user.longestStreak),
+                lastCheckIn: now,
+                aura: user.aura + 10,
+                totalAuraEarned: user.totalAuraEarned + 10,
+              },
+            });
+            return;
+          }
+
+          if (diffDays > 1 && get().streakFreezesRemaining > 0) {
+            set({ pendingStreakFreezeOffer: true });
+            return;
+          }
 
           set({
             user: {
               ...user,
-              currentStreak: newStreak,
-              longestStreak: Math.max(newStreak, user.longestStreak),
+              currentStreak: 1,
+              longestStreak: user.longestStreak,
               lastCheckIn: now,
               aura: user.aura + 10,
               totalAuraEarned: user.totalAuraEarned + 10,
             },
           });
         } else {
+          grantFreezeForMonth();
           set({
             user: {
               ...user,
@@ -584,6 +879,7 @@ export const useStore = create<AppStore>()(
             ],
           });
         }
+        if (progress.completed) get().checkQuests();
       },
       completeLessonToday: () => {
         const { user } = get();
@@ -759,6 +1055,9 @@ export const useStore = create<AppStore>()(
         if (!visby?.needs) return DEFAULT_NEEDS;
         return calculateDecay(visby.needs);
       },
+      getVisbyMood: () => {
+        return deriveVisbyMood(get().getVisbyNeeds());
+      },
 
       // Furniture & Room Decoration Actions
       buyFurniture: (furnitureId, price) => {
@@ -822,6 +1121,43 @@ export const useStore = create<AppStore>()(
         get().checkAndAwardBadges();
       },
 
+      getTreasureHuntProgress: (countryId) => {
+        const progress = get().treasureHuntProgress[countryId];
+        return {
+          completedRoomIds: progress?.completedRoomIds ?? [],
+          completedLocationIds: progress?.completedLocationIds ?? [],
+        };
+      },
+      completeTreasureHuntRoom: (countryId, roomId) => {
+        const { treasureHuntProgress } = get();
+        const current = treasureHuntProgress[countryId] ?? { completedRoomIds: [], completedLocationIds: [] };
+        if (current.completedRoomIds.includes(roomId)) return;
+        set({
+          treasureHuntProgress: {
+            ...treasureHuntProgress,
+            [countryId]: {
+              ...current,
+              completedRoomIds: [...current.completedRoomIds, roomId],
+            },
+          },
+        });
+      },
+      completeTreasureHuntLocation: (countryId, locationId) => {
+        const { treasureHuntProgress } = get();
+        const current = treasureHuntProgress[countryId] ?? { completedRoomIds: [], completedLocationIds: [] };
+        const ids = current.completedLocationIds ?? [];
+        if (ids.includes(locationId)) return;
+        set({
+          treasureHuntProgress: {
+            ...treasureHuntProgress,
+            [countryId]: {
+              ...current,
+              completedLocationIds: [...ids, locationId],
+            },
+          },
+        });
+      },
+
       // Growth Stage
       getGrowthStage: () => {
         const { user } = get();
@@ -862,11 +1198,25 @@ export const useStore = create<AppStore>()(
         userHouses: state.userHouses,
         ownedFurniture: state.ownedFurniture,
         countryProgress: state.countryProgress,
+        treasureHuntProgress: state.treasureHuntProgress,
         friends: state.friends,
         friendRequests: state.friendRequests,
         visbyChatMessages: state.visbyChatMessages,
         visbyMemories: state.visbyMemories,
         lastVisbyCheckInAt: state.lastVisbyCheckInAt,
+        dailyMission: state.dailyMission,
+        dailyMissionDateKey: state.dailyMissionDateKey,
+        dailyMissionCompletedAt: state.dailyMissionCompletedAt,
+        dailyMissionProgress: state.dailyMissionProgress,
+        lastSurpriseDateKey: state.lastSurpriseDateKey,
+        placeChatMessages: state.placeChatMessages,
+        streakFreezesRemaining: state.streakFreezesRemaining,
+        lastFreezeGrantMonth: state.lastFreezeGrantMonth,
+        pendingStreakFreezeOffer: state.pendingStreakFreezeOffer,
+        storyBeatsShown: state.storyBeatsShown,
+        questProgress: state.questProgress,
+        userWeeklyAura: state.userWeeklyAura,
+        lastWeeklyResetDateKey: state.lastWeeklyResetDateKey,
         settings: state.settings,
         isAuthenticated: state.isAuthenticated,
       }),
