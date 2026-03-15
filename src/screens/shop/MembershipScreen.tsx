@@ -185,9 +185,9 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
       >
         <Pressable style={styles.modalOverlay} onPress={() => setComingSoonVisible(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Heading level={3}>Coming Soon!</Heading>
+            <Heading level={3} style={{ color: colors.primary.wisteriaDark }}>Coming soon</Heading>
             <Text variant="body" style={styles.modalBody}>
-              Membership purchases will be available when the app launches. Stay tuned!
+              We're brewing something special for members. Stay tuned!
             </Text>
             <View style={styles.modalActions}>
               <Button size="sm" variant="primary" title="OK" onPress={() => setComingSoonVisible(false)} />

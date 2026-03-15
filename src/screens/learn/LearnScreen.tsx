@@ -202,7 +202,15 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
               <Heading level={1}>Learn</Heading>
               <Caption>Expand your world knowledge</Caption>
             </View>
@@ -342,10 +350,14 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginTop: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  backButton: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
   },
   flashcardsButton: {
     padding: spacing.sm,

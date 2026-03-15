@@ -69,6 +69,17 @@ export const colors = {
     warningLight: '#FFF6E8',
     info: '#60A8F0',
     infoLight: '#EDF4FF',
+    streak: '#FF6B3D',
+    streakBg: '#FFF3EC',
+  },
+
+  /** Card and surface tints (whimsical consistency) */
+  surface: {
+    card: '#FFFFFF',
+    cardWarm: '#FFF8F5',
+    lavender: '#F5EFFF',
+    peach: '#FFF5E6',
+    mint: '#F0FFF0',
   },
 
   visby: {

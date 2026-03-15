@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   Modal,
   Pressable,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +23,8 @@ import { useStore } from '../../store/useStore';
 import { RootStackParamList, FurnitureItem } from '../../types';
 import {
   FURNITURE_CATALOG,
+  getAvailableFurniture,
+  COUNTRY_ORIGIN_NAMES,
   WALLPAPER_OPTIONS,
   FLOORING_OPTIONS,
 } from '../../config/furniture';
@@ -51,7 +54,10 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
   const { user, ownedFurniture, buyFurniture, spendAura } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('Furniture');
   const [infoModal, setInfoModal] = useState<{ title: string; message: string } | null>(null);
+  const [detailItem, setDetailItem] = useState<FurnitureItem | null>(null);
   const aura = user?.aura ?? 0;
+  const visitedCountries = user?.visitedCountries ?? [];
+  const availableFurniture = useMemo(() => getAvailableFurniture(visitedCountries), [visitedCountries]);
 
   const isOwned = useCallback(
     (id: string) => ownedFurniture.includes(id),
@@ -77,19 +83,31 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
     ({ item }: { item: FurnitureItem }) => {
       const owned = isOwned(item.id);
       const rarityColor = RARITY_COLORS[item.rarity] ?? '#9E9E9E';
+      const originName = item.countryOrigin ? COUNTRY_ORIGIN_NAMES[item.countryOrigin] ?? item.countryOrigin : null;
       return (
-        <View style={[styles.itemCard, { width: cardW }]}>
+        <TouchableOpacity
+          style={[styles.itemCard, { width: cardW }]}
+          onPress={() => setDetailItem(item)}
+          activeOpacity={0.9}
+        >
           <View style={styles.itemIconWrap}>
-            <Icon name={item.icon as IconName} size={36} color={colors.text.primary} />
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.itemImage} resizeMode="cover" />
+            ) : (
+              <Icon name={item.icon as IconName} size={36} color={colors.text.primary} />
+            )}
           </View>
           <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
           <View style={styles.rarityRow}>
             <View style={[styles.rarityDot, { backgroundColor: rarityColor }]} />
             <Caption style={styles.rarityText}>{item.rarity}</Caption>
           </View>
-          {item.countryOrigin && (
-            <Caption style={styles.originText}>Origin: {item.countryOrigin.toUpperCase()}</Caption>
+          {originName && (
+            <Caption style={styles.originText}>From {originName}</Caption>
           )}
+          {item.description ? (
+            <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
+          ) : null}
           {owned ? (
             <View style={styles.ownedBadge}>
               <Icon name="check" size={14} color="#4CAF50" />
@@ -98,13 +116,13 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
           ) : (
             <TouchableOpacity
               style={styles.buyBtn}
-              onPress={() => handleBuyFurniture(item)}
+              onPress={(e) => { e.stopPropagation(); handleBuyFurniture(item); }}
               activeOpacity={0.8}
             >
               <Text style={styles.buyBtnText}>{item.price} Aura</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </TouchableOpacity>
       );
     },
     [cardW, isOwned, handleBuyFurniture],
@@ -112,13 +130,13 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
 
   const sortedFurniture = useMemo(
     () =>
-      [...FURNITURE_CATALOG].sort((a, b) => {
+      [...availableFurniture].sort((a, b) => {
         const aOwned = ownedFurniture.includes(a.id) ? 1 : 0;
         const bOwned = ownedFurniture.includes(b.id) ? 1 : 0;
         if (aOwned !== bOwned) return aOwned - bOwned;
         return a.price - b.price;
       }),
-    [ownedFurniture],
+    [availableFurniture, ownedFurniture],
   );
 
   return (
@@ -169,15 +187,20 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
 
         {/* Content */}
         {activeTab === 'Furniture' && (
-          <FlatList
-            data={sortedFurniture}
-            keyExtractor={(item) => item.id}
-            renderItem={renderFurnitureItem}
-            numColumns={NUM_COLS}
-            contentContainerStyle={styles.gridContent}
-            columnWrapperStyle={styles.gridRow}
-            showsVerticalScrollIndicator={false}
-          />
+          <>
+            {visitedCountries.length < 2 && (
+              <Text style={styles.unlockHint}>Visit new places in the World to unlock traditional furniture from each country!</Text>
+            )}
+            <FlatList
+              data={sortedFurniture}
+              keyExtractor={(item) => item.id}
+              renderItem={renderFurnitureItem}
+              numColumns={NUM_COLS}
+              contentContainerStyle={styles.gridContent}
+              columnWrapperStyle={styles.gridRow}
+              showsVerticalScrollIndicator={false}
+            />
+          </>
         )}
 
         {activeTab === 'Wallpaper' && (
@@ -212,6 +235,42 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
           </ScrollView>
         )}
       </SafeAreaView>
+
+      {detailItem && (
+        <Modal visible transparent animationType="fade">
+          <Pressable style={styles.modalOverlay} onPress={() => setDetailItem(null)}>
+            <Pressable style={styles.detailModalCard} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.detailIconWrap}>
+                {detailItem.imageUrl ? (
+                  <Image source={{ uri: detailItem.imageUrl }} style={styles.detailImage} resizeMode="cover" />
+                ) : (
+                  <Icon name={detailItem.icon as IconName} size={48} color={colors.primary.wisteriaDark} />
+                )}
+              </View>
+              <Heading level={2} style={styles.detailTitle}>{detailItem.name}</Heading>
+              {detailItem.countryOrigin && (
+                <Caption style={styles.detailOrigin}>From {COUNTRY_ORIGIN_NAMES[detailItem.countryOrigin] ?? detailItem.countryOrigin}</Caption>
+              )}
+              {detailItem.description ? (
+                <Text variant="body" style={styles.detailDescription}>{detailItem.description}</Text>
+              ) : null}
+              <View style={styles.detailMeta}>
+                <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[detailItem.rarity] ?? '#9E9E9E' }]} />
+                <Caption style={styles.rarityText}>{detailItem.rarity}</Caption>
+                <Text variant="body" style={styles.detailPrice}>{detailItem.price} Aura</Text>
+              </View>
+              {isOwned(detailItem.id) ? (
+                <View style={styles.ownedBadge}><Icon name="check" size={14} color="#4CAF50" /><Text style={styles.ownedText}>Owned</Text></View>
+              ) : (
+                <Button title={`Buy for ${detailItem.price} Aura`} onPress={() => { handleBuyFurniture(detailItem); setDetailItem(null); }} variant="primary" />
+              )}
+              <TouchableOpacity style={styles.detailClose} onPress={() => setDetailItem(null)}>
+                <Text style={styles.detailCloseText}>Close</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
 
       {infoModal && (
         <Modal visible transparent animationType="fade">
@@ -284,11 +343,59 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-Bold',
   },
 
+  unlockHint: {
+    fontFamily: 'Nunito-Medium',
+    fontSize: 12,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   gridContent: {
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxl * 3,
     paddingTop: spacing.xs,
   },
+  detailModalCard: {
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.lg,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  detailIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: colors.primary.wisteriaFaded,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  detailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  detailTitle: { textAlign: 'center', marginBottom: spacing.xs },
+  detailOrigin: { marginBottom: spacing.sm, textTransform: 'none' },
+  detailDescription: {
+    textAlign: 'center',
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  detailMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  detailPrice: { fontFamily: 'Nunito-Bold', color: colors.reward.amber },
+  detailClose: { marginTop: spacing.sm },
+  detailCloseText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.secondary },
   gridRow: {
     gap: GAP,
     marginBottom: GAP,
@@ -310,6 +417,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
+    overflow: 'hidden',
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
   },
   itemName: {
     fontFamily: 'Baloo2-SemiBold',
@@ -336,7 +448,15 @@ const styles = StyleSheet.create({
   originText: {
     fontSize: 9,
     color: colors.text.muted,
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  itemDescription: {
+    fontFamily: 'Nunito-Regular',
+    fontSize: 10,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 6,
+    lineHeight: 14,
   },
   ownedBadge: {
     flexDirection: 'row',

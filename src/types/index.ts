@@ -65,6 +65,59 @@ export interface UserSettings {
 }
 
 // ===================================
+// FRIENDS (Club Penguin–style)
+// ===================================
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  fromUsername: string;
+  fromDisplayName: string;
+  toUserId: string;
+  status: FriendRequestStatus;
+  createdAt: Date;
+}
+
+/** Friend record: cached profile so we can show level, badges, and visit their house */
+export interface Friend {
+  userId: string;
+  username: string;
+  displayName: string;
+  /** Cached when we load their profile */
+  level?: number;
+  aura?: number;
+  badgesCount?: number;
+  visbyId?: string;
+  /** Countries they have a house in (for "Visit house") */
+  houseCountryIds?: string[];
+  /** When we became friends (for sorting) */
+  addedAt: Date;
+}
+
+/** Where a user is right now — for live presence and "who's here" / chat */
+export type PresencePlaceType = 'home' | 'country_room' | 'place_street';
+
+export interface PresencePlace {
+  type: PresencePlaceType;
+  countryId?: string;
+  pinId?: string;
+  roomId?: string;
+  /** Human-readable label for UI, e.g. "Paris · Eiffel Tower" */
+  label?: string;
+}
+
+/** One message in a place chat (Club Penguin style) */
+export interface PlaceChatMessage {
+  id: string;
+  userId: string;
+  username: string;
+  message: string;
+  createdAt: Date;
+}
+
+// ===================================
 // VISBY AVATAR
 // ===================================
 
@@ -107,7 +160,7 @@ export interface EquippedCosmetics {
   companion?: string;
 }
 
-export type VisbyMood = 
+export type VisbyMood =
   | 'happy'
   | 'excited'
   | 'curious'
@@ -118,7 +171,8 @@ export type VisbyMood =
   | 'hungry'
   | 'bored'
   | 'confused'
-  | 'sick';
+  | 'sick'
+  | 'lonely'; // when social battery is low
 
 export type VisbyGrowthStage = 'egg' | 'baby' | 'kid' | 'teen' | 'adult';
 
@@ -127,7 +181,23 @@ export interface VisbyNeeds {
   happiness: number; // 0-100
   energy: number;    // 0-100
   knowledge: number; // 0-100
+  socialBattery: number; // 0-100 — filled by chatting with Visby or socializing with others
   lastUpdated: string; // ISO timestamp
+}
+
+/** One message in the Visby check-in / chat (user or Visby) */
+export interface VisbyChatMessage {
+  id: string;
+  role: 'user' | 'visby';
+  text: string;
+  createdAt: string; // ISO
+}
+
+/** Something the user shared that Visby can remember and bring up later */
+export interface VisbyMemory {
+  id: string;
+  summary: string;   // e.g. "working on a big project", "had a test today"
+  createdAt: string; // ISO
 }
 
 export interface SkillProgress {
@@ -514,6 +584,8 @@ export interface CountryFact {
   /** Icon name for display */
   icon: string;
   category: 'culture' | 'food' | 'language' | 'nature' | 'history' | 'fun';
+  /** Optional image URL (e.g. croissant, Eiffel Tower) for dreamy learning */
+  imageUrl?: string;
 }
 
 export interface UserHouse {
@@ -528,6 +600,9 @@ export interface UserHouse {
   roomCustomizations?: Record<string, RoomCustomization>;
 }
 
+/** What the Visby can do with this furniture — fulfills needs + earns Aura */
+export type FurnitureInteractionType = 'table' | 'stove' | 'bed' | 'bookshelf' | 'toy';
+
 export interface FurnitureItem {
   id: string;
   name: string;
@@ -539,6 +614,14 @@ export interface FurnitureItem {
   width: number;
   height: number;
   rarity: CosmeticRarity;
+  /** Sims-style rich description: materials, style, where it's from */
+  description?: string;
+  /** If set, Visby can use this furniture to fulfill a need and earn Aura */
+  interactionType?: FurnitureInteractionType | null;
+  /** Short label for the action, e.g. "Eat a meal", "Cook traditional meal" */
+  interactionLabel?: string;
+  /** Aura reward when using this furniture */
+  interactionAura?: number;
 }
 
 export interface PlacedFurniture {
@@ -600,11 +683,14 @@ export type RootStackParamList = {
   
   // Main App
   Main: undefined;
-  
-  // Home
+
+  // Tab roots
   Home: undefined;
-  
-  // Map & Explore
+  Explore: undefined;
+  Inbox: undefined;
+
+  // Map & Explore (stack screens, reachable from Explore tab)
+  // Map is inside Explore stack; kept on root for direct access if needed
   Map: undefined;
   LocationDetail: { locationId: string };
   CollectStamp: { locationId: string };
@@ -627,15 +713,14 @@ export type RootStackParamList = {
   Quiz: { category?: string } | undefined;
   Flashcards: { deckId?: string } | undefined;
   
-  // Profile
+  // Profile & Friends
   Profile: undefined;
   EditProfile: undefined;
   Settings: undefined;
+  Friends: undefined;
+  AddFriend: undefined;
+  FriendProfile: { friendUserId: string };
   
-  // Countries & Houses (visit, buy house, walk through like Club Penguin)
-  CountryWorld: undefined;
-  CountryRoom: { countryId: string };
-
   // Mini-Games
   WordMatch: { countryId?: string } | undefined;
   MemoryCards: { category?: string } | undefined;
@@ -649,11 +734,21 @@ export type RootStackParamList = {
   Membership: undefined;
 }
 
+// Explore tab has its own stack so Map/CountryWorld/CountryRoom keep the tab bar visible
+export type ExploreStackParamList = {
+  Explore: undefined;
+  Map: undefined;
+  CountryWorld: undefined;
+  CountryRoom: { countryId: string; /** When set, viewing a friend's house (read-only) */ friendUserId?: string };
+  /** Map of the country with pinned cities and landmarks */
+  CountryMap: { countryId: string };
+  /** Street view: walk through a pinned place and see stops with pictures and facts */
+  PlaceStreet: { countryId: string; pinId: string };
+};
+
 export type MainTabParamList = {
   Home: undefined;
-  Map: undefined;
-  Stamps: undefined;
-  Bites: undefined;
-  Learn: undefined;
+  Explore: import('@react-navigation/native').NavigatorScreenParams<ExploreStackParamList>;
+  Inbox: undefined;
   Profile: undefined;
 };

@@ -39,7 +39,7 @@ export interface VisbyEquipped {
 export interface VisbyCharacterProps {
   appearance?: VisbyAppearance;
   equipped?: VisbyEquipped;
-  mood?: 'happy' | 'excited' | 'sleepy' | 'surprised' | 'thinking' | 'curious' | 'proud' | 'adventurous' | 'cozy' | 'hungry' | 'bored' | 'confused' | 'sick';
+  mood?: 'happy' | 'excited' | 'sleepy' | 'surprised' | 'thinking' | 'curious' | 'proud' | 'adventurous' | 'cozy' | 'hungry' | 'bored' | 'confused' | 'sick' | 'lonely';
   size?: number;
   animated?: boolean;
   stage?: 'egg' | 'baby' | 'kid' | 'teen' | 'adult';
@@ -430,7 +430,7 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
         </G>
       );
     }
-    if (mood === 'bored') {
+    if (mood === 'bored' || mood === 'lonely') {
       return (
         <G>
           {[LX, RX].map((cx, i) => (
@@ -581,6 +581,7 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       case 'hungry':
         return <Ellipse cx={CX} cy={81} rx={5} ry={4} fill="#D07060" />;
       case 'bored':
+      case 'lonely':
         return <Path d="M 69 80 L 81 80" stroke="#D07060" strokeWidth={2} strokeLinecap="round" />;
       case 'confused':
         return <Path d="M 67 80 Q 71 82 75 79 Q 79 76 83 80" stroke="#D07060" strokeWidth={2} fill="none" strokeLinecap="round" />;

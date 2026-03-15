@@ -18,6 +18,7 @@ import { StampCard, StampMini } from '../../components/collectibles/StampCard';
 import { useStore } from '../../store/useStore';
 import { STAMP_TYPES_INFO } from '../../config/constants';
 import { RootStackParamList, Stamp, StampType } from '../../types';
+import { whimsicalCopy } from '../../theme/whimsical';
 
 type StampsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Stamps'>;
@@ -61,7 +62,15 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
             <Heading level={1}>My Stamps</Heading>
             <Caption>{stamps.length} collected</Caption>
           </View>
@@ -196,7 +205,7 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
               color={colors.text.muted}
               style={styles.emptyText}
             >
-              Start exploring to collect your first stamp
+              {whimsicalCopy.noStamps}
             </Text>
             <TouchableOpacity
               style={styles.exploreButton}
@@ -223,11 +232,15 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: spacing.screenPadding,
     marginTop: spacing.md,
     marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  backButton: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
   },
   headerActions: {
     flexDirection: 'row',

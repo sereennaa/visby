@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { Icon, IconName } from '../components/ui/Icon';
-import { RootStackParamList, MainTabParamList } from '../types';
+import { RootStackParamList, MainTabParamList, ExploreStackParamList } from '../types';
 import { useStore } from '../store/useStore';
 
 // Auth Screens
@@ -17,14 +17,17 @@ import { SignUpScreen } from '../screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { OnboardingScreen } from '../screens/auth/OnboardingScreen';
 
-// Main Screens
+// Main Screens (tab roots)
 import { HomeScreen } from '../screens/home/HomeScreen';
+import { ExploreScreen } from '../screens/explore/ExploreScreen';
+import { InboxScreen } from '../screens/inbox/InboxScreen';
+import { ProfileScreen } from '../screens/profile/ProfileScreen';
+// Stack screens (reachable from tabs)
 import { MapScreen } from '../screens/explore/MapScreen';
 import { StampsScreen } from '../screens/collections/StampsScreen';
 import { BitesScreen } from '../screens/collections/BitesScreen';
 import { LearnScreen } from '../screens/learn/LearnScreen';
-import { ProfileScreen } from '../screens/profile/ProfileScreen';
-import { CountryWorldScreen, CountryRoomScreen } from '../screens/world';
+import { CountryWorldScreen, CountryRoomScreen, CountryMapScreen, PlaceStreetScreen } from '../screens/world';
 
 // Detail Screens
 import { StampDetailScreen } from '../screens/details/StampDetailScreen';
@@ -37,6 +40,7 @@ import { AddBiteScreen } from '../screens/actions/AddBiteScreen';
 
 // Profile Screens
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
+import { FriendsScreen, AddFriendScreen, FriendProfileScreen } from '../screens/friends';
 
 // Feature Screens
 import { AvatarScreen } from '../screens/avatar/AvatarScreen';
@@ -63,6 +67,7 @@ import { TreasureHuntScreen } from '../screens/games/TreasureHuntScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const ExploreStack = createNativeStackNavigator<ExploreStackParamList>();
 
 interface TabIconProps {
   focused: boolean;
@@ -83,6 +88,24 @@ const TabIcon: React.FC<TabIconProps> = ({ focused, iconName, iconNameOutline })
     </View>
   );
 };
+
+const ExploreStackNavigator = () => (
+  <ExploreStack.Navigator
+    screenOptions={{
+      headerShown: false,
+      contentStyle: { backgroundColor: colors.base.cream },
+      animation: 'slide_from_right',
+    }}
+    initialRouteName="Explore"
+  >
+    <ExploreStack.Screen name="Explore" component={ExploreScreen} />
+    <ExploreStack.Screen name="Map" component={MapScreen} />
+    <ExploreStack.Screen name="CountryWorld" component={CountryWorldScreen} />
+    <ExploreStack.Screen name="CountryRoom" component={CountryRoomScreen} />
+    <ExploreStack.Screen name="CountryMap" component={CountryMapScreen} />
+    <ExploreStack.Screen name="PlaceStreet" component={PlaceStreetScreen} />
+  </ExploreStack.Navigator>
+);
 
 const MainTabs = () => {
   return (
@@ -121,8 +144,8 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Map"
-        component={MapScreen}
+        name="Explore"
+        component={ExploreStackNavigator}
         options={{
           tabBarLabel: 'Explore',
           tabBarIcon: ({ focused }) => (
@@ -135,43 +158,15 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Stamps"
-        component={StampsScreen}
+        name="Inbox"
+        component={InboxScreen}
         options={{
-          tabBarLabel: 'Stamps',
+          tabBarLabel: 'Inbox',
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
-              iconName="stamp"
-              iconNameOutline="stamp"
-            />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Bites"
-        component={BitesScreen}
-        options={{
-          tabBarLabel: 'Bites',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              focused={focused}
-              iconName="food"
-              iconNameOutline="food"
-            />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Learn"
-        component={LearnScreen}
-        options={{
-          tabBarLabel: 'Learn',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              focused={focused}
-              iconName="book"
-              iconNameOutline="bookOutline"
+              iconName="mail"
+              iconNameOutline="mailOutline"
             />
           ),
         }}
@@ -217,9 +212,11 @@ export const AppNavigator = () => {
         {/* Main App */}
         <Stack.Screen name="Main" component={MainTabs} />
 
-        {/* Countries & Houses - visit, buy house, walk through (Club Penguin style) */}
-        <Stack.Screen name="CountryWorld" component={CountryWorldScreen} />
-        <Stack.Screen name="CountryRoom" component={CountryRoomScreen} />
+        {/* Screens reachable from Home & Explore tabs */}
+        <Stack.Screen name="Map" component={MapScreen} />
+        <Stack.Screen name="Stamps" component={StampsScreen} />
+        <Stack.Screen name="Bites" component={BitesScreen} />
+        <Stack.Screen name="Learn" component={LearnScreen} />
 
         {/* Detail Screens */}
         <Stack.Screen name="StampDetail" component={StampDetailScreen} />
@@ -235,6 +232,9 @@ export const AppNavigator = () => {
         <Stack.Screen name="Badges" component={BadgesScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Friends" component={FriendsScreen} />
+        <Stack.Screen name="AddFriend" component={AddFriendScreen} />
+        <Stack.Screen name="FriendProfile" component={FriendProfileScreen} />
 
         {/* Learn Screens */}
         <Stack.Screen name="LessonCategory" component={LessonCategoryScreen} />

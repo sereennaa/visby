@@ -18,6 +18,7 @@ import { BiteCard, BiteGridItem } from '../../components/collectibles/BiteCard';
 import { useStore } from '../../store/useStore';
 import { BITE_CATEGORIES_INFO } from '../../config/constants';
 import { RootStackParamList, Bite, BiteCategory } from '../../types';
+import { whimsicalCopy } from '../../theme/whimsical';
 
 type BitesScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Bites'>;
@@ -72,7 +73,15 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
             <Heading level={1}>My Bites</Heading>
             <Caption>{bites.length} food memories</Caption>
           </View>
@@ -198,7 +207,7 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
               color={colors.text.secondary}
               style={styles.emptyTitle}
             >
-              No food memories yet!
+              No bites yet!
             </Text>
             <Text
               variant="body"
@@ -206,7 +215,7 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
               color={colors.text.muted}
               style={styles.emptyText}
             >
-              Try a new dish and add it to your collection
+              {whimsicalCopy.noBites}
             </Text>
             <Button
               title="Add Your First Bite"
@@ -231,11 +240,15 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: spacing.screenPadding,
     marginTop: spacing.md,
     marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  backButton: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
   },
   headerActions: {
     flexDirection: 'row',

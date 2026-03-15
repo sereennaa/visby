@@ -20,11 +20,11 @@ import { Icon } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { COUNTRIES } from '../../config/constants';
 import { COUNTRY_SOUVENIRS, COSMETICS_CATALOG, isCosmeticLocked } from '../../config/cosmetics';
-import { RootStackParamList, UserHouse } from '../../types';
+import { ExploreStackParamList, UserHouse } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 type CountryWorldScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'CountryWorld'>;
+  navigation: NativeStackNavigationProp<ExploreStackParamList, 'CountryWorld'>;
 };
 
 type ConfirmModal = {
@@ -207,6 +207,15 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
             <Heading level={1}>Visit the World</Heading>
             <Caption>Pay Aura to visit a country, or buy a house to visit anytime!</Caption>
             <View style={styles.statsRow}>
@@ -417,7 +426,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                   title="Visit Shop"
                   onPress={() => {
                     setSouvenirModal(s => ({ ...s, visible: false }));
-                    navigation.navigate('CosmeticShop');
+                    (navigation.getParent() as any)?.getParent()?.navigate('CosmeticShop');
                   }}
                 />
               </View>
@@ -435,6 +444,12 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl * 4 },
   header: { marginBottom: spacing.lg },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
+  },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.lg },
   auraRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   auraText: { fontFamily: 'Nunito-SemiBold' },

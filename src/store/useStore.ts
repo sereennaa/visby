@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
 import { COUNTRY_SOUVENIRS } from '../config/cosmetics';
@@ -21,35 +21,41 @@ export const DEFAULT_NEEDS: VisbyNeeds = {
   happiness: 80,
   energy: 80,
   knowledge: 50,
+  socialBattery: 80,
   lastUpdated: new Date().toISOString(),
 };
 
 const DECAY_RATES = {
-  hunger: 2.0,     // per hour
+  hunger: 2.0,
   happiness: 1.5,
   energy: 1.0,
   knowledge: 0.5,
+  socialBattery: 1.2,
 };
 
 function calculateDecay(needs: VisbyNeeds): VisbyNeeds {
+  const merged = { ...DEFAULT_NEEDS, ...needs };
   const now = Date.now();
-  const last = new Date(needs.lastUpdated).getTime();
+  const last = new Date(merged.lastUpdated).getTime();
   const hoursElapsed = Math.min(24, (now - last) / (1000 * 60 * 60));
-  if (hoursElapsed < 0.01) return needs;
+  if (hoursElapsed < 0.01) return merged;
   return {
-    hunger: Math.max(0, Math.round(needs.hunger - DECAY_RATES.hunger * hoursElapsed)),
-    happiness: Math.max(0, Math.round(needs.happiness - DECAY_RATES.happiness * hoursElapsed)),
-    energy: Math.max(0, Math.round(needs.energy - DECAY_RATES.energy * hoursElapsed)),
-    knowledge: Math.max(0, Math.round(needs.knowledge - DECAY_RATES.knowledge * hoursElapsed)),
+    hunger: Math.max(0, Math.round(merged.hunger - DECAY_RATES.hunger * hoursElapsed)),
+    happiness: Math.max(0, Math.round(merged.happiness - DECAY_RATES.happiness * hoursElapsed)),
+    energy: Math.max(0, Math.round(merged.energy - DECAY_RATES.energy * hoursElapsed)),
+    knowledge: Math.max(0, Math.round(merged.knowledge - DECAY_RATES.knowledge * hoursElapsed)),
+    socialBattery: Math.max(0, Math.round((merged.socialBattery ?? DEFAULT_NEEDS.socialBattery) - DECAY_RATES.socialBattery * hoursElapsed)),
     lastUpdated: new Date().toISOString(),
   };
 }
 
 function deriveVisbyMood(needs: VisbyNeeds): import('../types').VisbyMood {
-  if (needs.hunger === 0 || needs.happiness === 0 || needs.energy === 0 || needs.knowledge === 0) return 'sick';
-  const min = Math.min(needs.hunger, needs.happiness, needs.energy, needs.knowledge);
+  const social = needs.socialBattery ?? DEFAULT_NEEDS.socialBattery;
+  if (needs.hunger === 0 || needs.happiness === 0 || needs.energy === 0 || needs.knowledge === 0 || social === 0) return 'sick';
+  const min = Math.min(needs.hunger, needs.happiness, needs.energy, needs.knowledge, social);
   if (min > 70) return 'excited';
   if (min > 50) return 'happy';
+  if (social < 25) return 'lonely';
   if (needs.energy < 30) return 'sleepy';
   if (needs.hunger < 30) return 'hungry';
   if (needs.happiness < 30) return 'bored';
@@ -87,6 +93,18 @@ interface AppStore {
 
   // Houses (countries kid has bought a house in)
   userHouses: UserHouse[];
+
+  /** Per-country learning completion: facts read, quiz done, games played (for "place complete" / next level) */
+  countryProgress: Record<string, { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number }>;
+
+  // Friends (Club Penguin–style)
+  friends: Friend[];
+  friendRequests: FriendRequest[];
+
+  // Visby social / check-in chat
+  visbyChatMessages: VisbyChatMessage[];
+  visbyMemories: VisbyMemory[];
+  lastVisbyCheckInAt: string | null; // ISO date of last daily check-in modal
 
   // Settings
   settings: {
@@ -127,7 +145,26 @@ interface AppStore {
   addUserHouse: (house: UserHouse) => void;
   /** Record first visit to a country. Returns souvenir cosmetic ID if one was granted. */
   visitCountry: (countryId: string) => string | null;
-  
+  getCountryProgress: (countryId: string) => { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number };
+  markFactRead: (countryId: string) => void;
+  markQuizCompleted: (countryId: string) => void;
+  markGamePlayed: (countryId: string) => void;
+
+  // Actions - Friends
+  sendFriendRequest: (toUsername: string) => { success: boolean; error?: string };
+  acceptFriendRequest: (requestId: string) => void;
+  rejectFriendRequest: (requestId: string) => void;
+  removeFriend: (friendUserId: string) => void;
+  updateFriendProfile: (friendUserId: string, data: Partial<Pick<Friend, 'level' | 'aura' | 'badgesCount' | 'houseCountryIds'>>) => void;
+
+  // Actions - Visby social battery & chat
+  chargeSocialBattery: (amount: number) => void;
+  addVisbyChatMessage: (role: 'user' | 'visby', text: string) => void;
+  addVisbyMemory: (summary: string) => void;
+  setLastVisbyCheckInAt: () => void;
+  shouldShowVisbyCheckIn: () => boolean;
+  getVisbyMemories: () => VisbyMemory[];
+
   // Actions - Learning
   setLessonProgress: (progress: UserLessonProgress[]) => void;
   updateLessonProgress: (lessonId: string, progress: Partial<UserLessonProgress>) => void;
@@ -183,6 +220,12 @@ export const useStore = create<AppStore>()(
       currentLocation: null,
       userHouses: [],
       ownedFurniture: [],
+      countryProgress: {},
+      friends: [],
+      friendRequests: [],
+      visbyChatMessages: [],
+      visbyMemories: [],
+      lastVisbyCheckInAt: null,
       settings: {
         notifications: true,
         locationTracking: true,
@@ -201,8 +244,167 @@ export const useStore = create<AppStore>()(
         badges: [],
         lessonProgress: [],
         userHouses: [],
+        countryProgress: {},
+        friends: [],
+        friendRequests: [],
+        visbyChatMessages: [],
+        visbyMemories: [],
+        lastVisbyCheckInAt: null,
       }),
       
+      getCountryProgress: (countryId) => {
+        const progress = get().countryProgress[countryId];
+        return progress || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+      },
+      markFactRead: (countryId) => {
+        const { countryProgress } = get();
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        set({
+          countryProgress: {
+            ...countryProgress,
+            [countryId]: { ...current, factsReadCount: Math.min((current.factsReadCount || 0) + 1, 999) },
+          },
+        });
+      },
+      markQuizCompleted: (countryId) => {
+        const { countryProgress } = get();
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        set({
+          countryProgress: {
+            ...countryProgress,
+            [countryId]: { ...current, quizCompleted: true },
+          },
+        });
+      },
+      markGamePlayed: (countryId) => {
+        const { countryProgress } = get();
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        set({
+          countryProgress: {
+            ...countryProgress,
+            [countryId]: { ...current, gamesPlayedCount: (current.gamesPlayedCount || 0) + 1 },
+          },
+        });
+      },
+
+      // Friends Actions (works with local/demo; backend can sync later)
+      sendFriendRequest: (toUsername) => {
+        const { user, friends, friendRequests } = get();
+        if (!user) return { success: false, error: 'Not logged in' };
+        const normalized = toUsername.trim().toLowerCase();
+        if (normalized === user.username.trim().toLowerCase()) return { success: false, error: "You can't add yourself" };
+        if (friends.some((f) => f.username.toLowerCase() === normalized)) return { success: false, error: 'Already friends' };
+        if (friendRequests.some((r) => r.fromUserId === user.id && r.toUserId === `demo_${normalized}`)) return { success: false, error: 'Request already sent' };
+        const requestId = `fr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const now = new Date();
+        const outgoing: FriendRequest = {
+          id: requestId,
+          fromUserId: user.id,
+          fromUsername: user.username,
+          fromDisplayName: user.displayName,
+          toUserId: `demo_${normalized}`,
+          status: 'pending',
+          createdAt: now,
+        };
+        const incoming: FriendRequest = {
+          id: `fr_in_${requestId}`,
+          fromUserId: `demo_${normalized}`,
+          fromUsername: toUsername.trim(),
+          fromDisplayName: toUsername.trim(),
+          toUserId: user.id,
+          status: 'pending',
+          createdAt: now,
+        };
+        set({ friendRequests: [...friendRequests, outgoing, incoming] });
+        return { success: true };
+      },
+      acceptFriendRequest: (requestId) => {
+        const { user, friendRequests, friends } = get();
+        const req = friendRequests.find((r) => r.id === requestId && r.toUserId === user?.id);
+        if (!user || !req) return;
+        const newFriend: Friend = {
+          userId: req.fromUserId,
+          username: req.fromUsername,
+          displayName: req.fromDisplayName,
+          level: 1,
+          aura: 0,
+          badgesCount: 0,
+          houseCountryIds: ['jp', 'fr'],
+          addedAt: new Date(),
+        };
+        set({
+          friends: [...friends, newFriend],
+          friendRequests: friendRequests.filter(
+            (r) => r.id !== requestId && !(r.fromUserId === user.id && r.toUserId === req.fromUserId)
+          ),
+        });
+      },
+      rejectFriendRequest: (requestId) => {
+        const { user, friendRequests } = get();
+        if (!user) return;
+        const req = friendRequests.find((r) => r.id === requestId && r.toUserId === user.id);
+        if (!req) return;
+        set({
+          friendRequests: friendRequests.filter(
+            (r) => r.id !== requestId && !(r.fromUserId === user.id && r.toUserId === req.fromUserId)
+          ),
+        });
+      },
+      removeFriend: (friendUserId) => {
+        set((state) => ({ friends: state.friends.filter((f) => f.userId !== friendUserId) }));
+      },
+      updateFriendProfile: (friendUserId, data) => {
+        set((state) => ({
+          friends: state.friends.map((f) => (f.userId === friendUserId ? { ...f, ...data } : f)),
+        }));
+      },
+
+      // Visby social battery & check-in chat
+      chargeSocialBattery: (amount) => {
+        const { visby } = get();
+        if (!visby) return;
+        const needs = { ...DEFAULT_NEEDS, ...(visby.needs || {}) };
+        const updated = {
+          ...needs,
+          socialBattery: Math.min(100, (needs.socialBattery ?? DEFAULT_NEEDS.socialBattery) + amount),
+          lastUpdated: new Date().toISOString(),
+        };
+        const mood = deriveVisbyMood(updated);
+        set({ visby: { ...visby, needs: updated, currentMood: mood } });
+      },
+      addVisbyChatMessage: (role, text) => {
+        const { visbyChatMessages } = get();
+        const msg: VisbyChatMessage = {
+          id: `vcm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          role,
+          text,
+          createdAt: new Date().toISOString(),
+        };
+        set({ visbyChatMessages: [...visbyChatMessages, msg] });
+      },
+      addVisbyMemory: (summary) => {
+        const { visbyMemories } = get();
+        const trimmed = summary.trim().slice(0, 200);
+        if (!trimmed) return;
+        const memory: VisbyMemory = {
+          id: `vm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          summary: trimmed,
+          createdAt: new Date().toISOString(),
+        };
+        set({ visbyMemories: [...visbyMemories, memory].slice(-30) });
+      },
+      setLastVisbyCheckInAt: () => {
+        set({ lastVisbyCheckInAt: new Date().toISOString() });
+      },
+      shouldShowVisbyCheckIn: () => {
+        const { lastVisbyCheckInAt } = get();
+        if (!lastVisbyCheckInAt) return true;
+        const last = new Date(lastVisbyCheckInAt);
+        const today = new Date();
+        return last.getDate() !== today.getDate() || last.getFullYear() !== today.getFullYear() || last.getMonth() !== today.getMonth();
+      },
+      getVisbyMemories: () => get().visbyMemories,
+
       // Visby Actions
       setVisby: (visby) => set({ visby }),
       updateVisbyAppearance: (appearance) => {
@@ -493,7 +695,7 @@ export const useStore = create<AppStore>()(
       updateVisbyNeeds: () => {
         const { visby } = get();
         if (!visby) return;
-        const needs = visby.needs || DEFAULT_NEEDS;
+        const needs = { ...DEFAULT_NEEDS, ...(visby.needs || {}) };
         const updated = calculateDecay(needs);
         const mood = deriveVisbyMood(updated);
         set({ visby: { ...visby, needs: updated, currentMood: mood } });
@@ -501,7 +703,7 @@ export const useStore = create<AppStore>()(
       feedVisby: () => {
         const { visby, user } = get();
         if (!visby) return;
-        const needs = visby.needs || DEFAULT_NEEDS;
+        const needs = { ...DEFAULT_NEEDS, ...(visby.needs || {}) };
         const updated = {
           ...needs,
           hunger: Math.min(100, needs.hunger + 25),
@@ -514,7 +716,7 @@ export const useStore = create<AppStore>()(
       playWithVisby: () => {
         const { visby, user } = get();
         if (!visby) return;
-        const needs = visby.needs || DEFAULT_NEEDS;
+        const needs = { ...DEFAULT_NEEDS, ...(visby.needs || {}) };
         const updated = {
           ...needs,
           happiness: Math.min(100, needs.happiness + 20),
@@ -528,7 +730,7 @@ export const useStore = create<AppStore>()(
       restVisby: () => {
         const { visby, user } = get();
         if (!visby) return;
-        const needs = visby.needs || DEFAULT_NEEDS;
+        const needs = { ...DEFAULT_NEEDS, ...(visby.needs || {}) };
         const updated = {
           ...needs,
           energy: Math.min(100, needs.energy + 30),
@@ -541,7 +743,7 @@ export const useStore = create<AppStore>()(
       studyWithVisby: () => {
         const { visby, user } = get();
         if (!visby) return;
-        const needs = visby.needs || DEFAULT_NEEDS;
+        const needs = { ...DEFAULT_NEEDS, ...(visby.needs || {}) };
         const updated = {
           ...needs,
           knowledge: Math.min(100, needs.knowledge + 20),
@@ -659,6 +861,12 @@ export const useStore = create<AppStore>()(
         lessonProgress: state.lessonProgress,
         userHouses: state.userHouses,
         ownedFurniture: state.ownedFurniture,
+        countryProgress: state.countryProgress,
+        friends: state.friends,
+        friendRequests: state.friendRequests,
+        visbyChatMessages: state.visbyChatMessages,
+        visbyMemories: state.visbyMemories,
+        lastVisbyCheckInAt: state.lastVisbyCheckInAt,
         settings: state.settings,
         isAuthenticated: state.isAuthenticated,
       }),

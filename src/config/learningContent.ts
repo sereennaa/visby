@@ -4,6 +4,8 @@ export interface QuizQuestion {
   options: string[];
   correct: number;
   category: string;
+  /** Optional image URL to show with the question (e.g. landmark, food) */
+  imageUrl?: string;
 }
 
 export interface FlashcardItem {
@@ -17,6 +19,8 @@ export interface FlashcardItem {
 export interface LessonSlide {
   text: string;
   icon: string;
+  /** Optional image URL for a dreamy, visual lesson */
+  imageUrl?: string;
 }
 
 export interface LessonData {
@@ -285,12 +289,12 @@ export const LESSON_CONTENT: Record<string, LessonData> = {
   lang1: {
     title: 'Greetings & Hello',
     slides: [
-      { text: 'Hello! In many languages, the greeting changes based on the time of day.', icon: '' },
-      { text: '"Bonjour" means good day in French. Use it from morning to evening!', icon: '' },
-      { text: '"Konnichiwa" is hello in Japanese. It literally means "this day is..."', icon: '' },
-      { text: '"Hola" is hello in Spanish — simple, warm, and used everywhere!', icon: '' },
-      { text: '"Namaste" in Hindi means "I bow to you" — a beautiful, respectful greeting.', icon: '' },
-      { text: 'Great job! You learned 4 new greetings. Try using one today!', icon: '' },
+      { text: 'Hello! In many languages, the greeting changes based on the time of day.', icon: 'sparkles', imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600' },
+      { text: '"Bonjour" means good day in French. Use it from morning to evening!', icon: 'language', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+      { text: '"Konnichiwa" is hello in Japanese. It literally means "this day is..."', icon: 'language', imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600' },
+      { text: '"Hola" is hello in Spanish — simple, warm, and used everywhere!', icon: 'language', imageUrl: 'https://images.unsplash.com/photo-1518638150340-f706e86654de?w=600' },
+      { text: '"Namaste" in Hindi means "I bow to you" — a beautiful, respectful greeting.', icon: 'language', imageUrl: 'https://images.unsplash.com/photo-1524496128540-801c43a8e2e8?w=600' },
+      { text: 'Great job! You learned 4 new greetings. Try using one today!', icon: 'gift' },
     ],
   },
   lang2: {
@@ -358,12 +362,12 @@ export const LESSON_CONTENT: Record<string, LessonData> = {
   cult1: {
     title: 'Festival Traditions',
     slides: [
-      { text: 'Festivals are celebrations of culture, food, and togetherness!', icon: '' },
-      { text: 'Diwali, the Festival of Lights, lights up India with lamps and fireworks.', icon: '' },
-      { text: 'Carnival in Brazil features samba dancing, wild costumes, and parades!', icon: '' },
-      { text: 'Hanami in Japan is the tradition of having picnics under cherry blossoms.', icon: '' },
-      { text: 'Día de los Muertos in Mexico honors loved ones with beautiful altars.', icon: '' },
-      { text: 'Every festival tells a unique story about its people and their values.', icon: '' },
+      { text: 'Festivals are celebrations of culture, food, and togetherness!', icon: 'sparkles', imageUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600' },
+      { text: 'Diwali, the Festival of Lights, lights up India with lamps and fireworks.', icon: 'culture', imageUrl: 'https://images.unsplash.com/photo-1609873814058-a8928924184a?w=600' },
+      { text: 'Carnival in Brazil features samba dancing, wild costumes, and parades!', icon: 'culture', imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600' },
+      { text: 'Hanami in Japan is the tradition of having picnics under cherry blossoms.', icon: 'culture', imageUrl: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600' },
+      { text: 'Día de los Muertos in Mexico honors loved ones with beautiful altars.', icon: 'culture', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600' },
+      { text: 'Every festival tells a unique story about its people and their values.', icon: 'gift' },
     ],
   },
   cult2: {
@@ -390,12 +394,12 @@ export const LESSON_CONTENT: Record<string, LessonData> = {
   hist1: {
     title: 'Ancient Wonders',
     slides: [
-      { text: 'The ancient world built things that still amaze us today!', icon: '' },
-      { text: 'The Pyramids of Giza are over 4,500 years old and almost perfectly aligned.', icon: '' },
-      { text: 'The Great Wall of China stretches over 13,000 miles across mountains!', icon: '' },
-      { text: 'The Colosseum in Rome could hold 50,000 spectators!', icon: '' },
-      { text: 'Machu Picchu was hidden in the clouds for centuries until 1911.', icon: '' },
-      { text: 'These wonders prove that humans have always dreamed big!', icon: '' },
+      { text: 'The ancient world built things that still amaze us today!', icon: 'sparkles', imageUrl: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=600' },
+      { text: 'The Pyramids of Giza are over 4,500 years old and almost perfectly aligned.', icon: 'history', imageUrl: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=600' },
+      { text: 'The Great Wall of China stretches over 13,000 miles across mountains!', icon: 'history', imageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=600' },
+      { text: 'The Colosseum in Rome could hold 50,000 spectators!', icon: 'history', imageUrl: 'https://images.unsplash.com/photo-1552832238-c57a64f85ad4?w=600' },
+      { text: 'Machu Picchu was hidden in the clouds for centuries until 1911.', icon: 'history', imageUrl: 'https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=600' },
+      { text: 'These wonders prove that humans have always dreamed big!', icon: 'gift' },
     ],
   },
   hist2: {
@@ -531,26 +535,26 @@ export const LESSON_CONTENT: Record<string, LessonData> = {
 
 export const COUNTRY_QUIZ_QUESTIONS: Record<string, QuizQuestion[]> = {
   jp: [
-    { id: 'jp1', question: 'What is the capital of Japan?', options: ['Osaka', 'Tokyo', 'Kyoto', 'Hiroshima'], correct: 1, category: 'jp' },
+    { id: 'jp1', question: 'What is the capital of Japan?', options: ['Osaka', 'Tokyo', 'Kyoto', 'Hiroshima'], correct: 1, category: 'jp', imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600' },
     { id: 'jp2', question: 'What do Japanese people eat with?', options: ['Forks', 'Hands', 'Chopsticks', 'Spoons'], correct: 2, category: 'jp' },
-    { id: 'jp3', question: 'What is sushi rice flavored with?', options: ['Soy sauce', 'Vinegar', 'Sugar', 'Ketchup'], correct: 1, category: 'jp' },
-    { id: 'jp4', question: 'Cherry blossom season in Japan is called...', options: ['Matsuri', 'Hanami', 'Origami', 'Tsunami'], correct: 1, category: 'jp' },
-    { id: 'jp5', question: 'Mount Fuji is a famous Japanese...', options: ['River', 'Desert', 'Volcano', 'Forest'], correct: 2, category: 'jp' },
+    { id: 'jp3', question: 'What is sushi rice flavored with?', options: ['Soy sauce', 'Vinegar', 'Sugar', 'Ketchup'], correct: 1, category: 'jp', imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600' },
+    { id: 'jp4', question: 'Cherry blossom season in Japan is called...', options: ['Matsuri', 'Hanami', 'Origami', 'Tsunami'], correct: 1, category: 'jp', imageUrl: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600' },
+    { id: 'jp5', question: 'Mount Fuji is a famous Japanese...', options: ['River', 'Desert', 'Volcano', 'Forest'], correct: 2, category: 'jp', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
     { id: 'jp6', question: 'What is origami?', options: ['Cooking', 'Paper folding', 'Sword fighting', 'Painting'], correct: 1, category: 'jp' },
     { id: 'jp7', question: 'Samurai were Japanese...', options: ['Chefs', 'Warriors', 'Farmers', 'Teachers'], correct: 1, category: 'jp' },
-    { id: 'jp8', question: 'What is the traditional Japanese robe called?', options: ['Sari', 'Kimono', 'Hanbok', 'Kilt'], correct: 1, category: 'jp' },
+    { id: 'jp8', question: 'What is the traditional Japanese robe called?', options: ['Sari', 'Kimono', 'Hanbok', 'Kilt'], correct: 1, category: 'jp', imageUrl: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600' },
     { id: 'jp9', question: 'In Japan, slurping noodles means...', options: ["You're rude", "You're enjoying them", "You're full", "You want more"], correct: 1, category: 'jp' },
     { id: 'jp10', question: '"Kawaii" means what in Japanese?', options: ['Scary', 'Cute', 'Big', 'Fast'], correct: 1, category: 'jp' },
   ],
   fr: [
-    { id: 'fr1', question: 'What is the capital of France?', options: ['Lyon', 'Paris', 'Marseille', 'Nice'], correct: 1, category: 'fr' },
-    { id: 'fr2', question: 'The Eiffel Tower was built for which event?', options: ['A wedding', 'World\'s Fair 1889', 'Napoleon\'s victory', 'Christmas'], correct: 1, category: 'fr' },
-    { id: 'fr3', question: 'What is a croissant shaped like?', options: ['A star', 'A crescent moon', 'A circle', 'A triangle'], correct: 1, category: 'fr' },
+    { id: 'fr1', question: 'What is the capital of France?', options: ['Lyon', 'Paris', 'Marseille', 'Nice'], correct: 1, category: 'fr', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+    { id: 'fr2', question: 'The Eiffel Tower was built for which event?', options: ['A wedding', 'World\'s Fair 1889', 'Napoleon\'s victory', 'Christmas'], correct: 1, category: 'fr', imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=600' },
+    { id: 'fr3', question: 'What is a croissant shaped like?', options: ['A star', 'A crescent moon', 'A circle', 'A triangle'], correct: 1, category: 'fr', imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600' },
     { id: 'fr4', question: 'French people greet with kisses on the...', options: ['Forehead', 'Hand', 'Cheeks', 'Nose'], correct: 2, category: 'fr' },
     { id: 'fr5', question: '"Merci beaucoup" means...', options: ['Good morning', 'Thank you very much', 'See you later', 'Excuse me'], correct: 1, category: 'fr' },
-    { id: 'fr6', question: 'The Louvre in Paris is a famous...', options: ['Restaurant', 'Museum', 'Park', 'Church'], correct: 1, category: 'fr' },
-    { id: 'fr7', question: 'Baguette is a type of French...', options: ['Dance', 'Song', 'Bread', 'Hat'], correct: 2, category: 'fr' },
-    { id: 'fr8', question: 'France is known for making amazing...', options: ['Sushi', 'Cheese', 'Tacos', 'Curry'], correct: 1, category: 'fr' },
+    { id: 'fr6', question: 'The Louvre in Paris is a famous...', options: ['Restaurant', 'Museum', 'Park', 'Church'], correct: 1, category: 'fr', imageUrl: 'https://images.unsplash.com/photo-1549887534-1541e9326642?w=600' },
+    { id: 'fr7', question: 'Baguette is a type of French...', options: ['Dance', 'Song', 'Bread', 'Hat'], correct: 2, category: 'fr', imageUrl: 'https://images.unsplash.com/photo-1549931319-a0a151e95b1d?w=600' },
+    { id: 'fr8', question: 'France is known for making amazing...', options: ['Sushi', 'Cheese', 'Tacos', 'Curry'], correct: 1, category: 'fr', imageUrl: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=600' },
     { id: 'fr9', question: 'The French flag has how many colors?', options: ['Two', 'Three', 'Four', 'Five'], correct: 1, category: 'fr' },
     { id: 'fr10', question: '"Au revoir" means...', options: ['Hello', 'Please', 'Goodbye', 'Sorry'], correct: 2, category: 'fr' },
   ],
@@ -718,39 +722,39 @@ export interface CountryLocation {
 
 const COUNTRY_LOCATIONS: Record<string, CountryLocation[]> = {
   jp: [
-    { id: 'jp_loc1', name: 'Tokyo Tower', description: 'A 333-meter communications tower inspired by the Eiffel Tower, lit up beautifully at night.', category: 'landmark', learningPoints: 10 },
-    { id: 'jp_loc2', name: 'Fushimi Inari Shrine', description: 'Thousands of bright orange torii gates line a winding trail up a sacred mountain in Kyoto.', category: 'culture', learningPoints: 12 },
-    { id: 'jp_loc3', name: 'Tsukiji Outer Market', description: 'A bustling Tokyo market where you can try the freshest sushi and street food in the world.', category: 'food', learningPoints: 8 },
-    { id: 'jp_loc4', name: 'Arashiyama Bamboo Grove', description: 'Walk through towering bamboo stalks that sway and whisper in the wind near Kyoto.', category: 'nature', learningPoints: 10 },
-    { id: 'jp_loc5', name: 'Senso-ji Temple', description: 'Tokyo\'s oldest Buddhist temple, with a giant red lantern at the Thunder Gate entrance.', category: 'culture', learningPoints: 10 },
+    { id: 'jp_loc1', name: 'Tokyo Tower', description: 'A 333-meter communications tower inspired by the Eiffel Tower, lit up beautifully at night.', category: 'landmark', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800' },
+    { id: 'jp_loc2', name: 'Fushimi Inari Shrine', description: 'Thousands of bright orange torii gates line a winding trail up a sacred mountain in Kyoto.', category: 'culture', learningPoints: 12, imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800' },
+    { id: 'jp_loc3', name: 'Tsukiji Outer Market', description: 'A bustling Tokyo market where you can try the freshest sushi and street food in the world.', category: 'food', learningPoints: 8, imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=800' },
+    { id: 'jp_loc4', name: 'Arashiyama Bamboo Grove', description: 'Walk through towering bamboo stalks that sway and whisper in the wind near Kyoto.', category: 'nature', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800' },
+    { id: 'jp_loc5', name: 'Senso-ji Temple', description: 'Tokyo\'s oldest Buddhist temple, with a giant red lantern at the Thunder Gate entrance.', category: 'culture', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=800' },
   ],
   fr: [
-    { id: 'fr_loc1', name: 'Eiffel Tower', description: 'The iconic iron lattice tower with 1,665 steps and a sparkling light show every night.', category: 'landmark', learningPoints: 10 },
-    { id: 'fr_loc2', name: 'Louvre Museum', description: 'The world\'s largest art museum, home to the Mona Lisa and 38,000 other artworks.', category: 'culture', learningPoints: 12 },
-    { id: 'fr_loc3', name: 'Mont Saint-Michel', description: 'A fairy-tale abbey perched on a rocky island that becomes surrounded by the sea at high tide.', category: 'landmark', learningPoints: 15 },
-    { id: 'fr_loc4', name: 'Palace of Versailles', description: 'A breathtaking royal palace with 2,300 rooms and the stunning Hall of Mirrors.', category: 'culture', learningPoints: 12 },
-    { id: 'fr_loc5', name: 'Nice Beach', description: 'The sparkling Côte d\'Azur beach with blue Mediterranean waters and colorful pebbles.', category: 'nature', learningPoints: 8 },
+    { id: 'fr_loc1', name: 'Eiffel Tower', description: 'The iconic iron lattice tower with 1,665 steps and a sparkling light show every night.', category: 'landmark', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800' },
+    { id: 'fr_loc2', name: 'Louvre Museum', description: 'The world\'s largest art museum, home to the Mona Lisa and 38,000 other artworks.', category: 'culture', learningPoints: 12, imageUrl: 'https://images.unsplash.com/photo-1549887534-1541e9326642?w=800' },
+    { id: 'fr_loc3', name: 'Mont Saint-Michel', description: 'A fairy-tale abbey perched on a rocky island that becomes surrounded by the sea at high tide.', category: 'landmark', learningPoints: 15, imageUrl: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800' },
+    { id: 'fr_loc4', name: 'Palace of Versailles', description: 'A breathtaking royal palace with 2,300 rooms and the stunning Hall of Mirrors.', category: 'culture', learningPoints: 12, imageUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=800' },
+    { id: 'fr_loc5', name: 'Nice Beach', description: 'The sparkling Côte d\'Azur beach with blue Mediterranean waters and colorful pebbles.', category: 'nature', learningPoints: 8, imageUrl: 'https://images.unsplash.com/photo-1523482580671-f216145a2953?w=800' },
   ],
   mx: [
-    { id: 'mx_loc1', name: 'Chichén Itzá', description: 'An ancient Mayan pyramid where shadows create a serpent shape during the equinox.', category: 'landmark', learningPoints: 15 },
-    { id: 'mx_loc2', name: 'Oaxaca Markets', description: 'Colorful markets overflowing with mole, chapulines, mezcal, and handmade crafts.', category: 'food', learningPoints: 10 },
-    { id: 'mx_loc3', name: 'Cenote Ik Kil', description: 'A natural sinkhole swimming pool surrounded by hanging vines and lush jungle.', category: 'nature', learningPoints: 12 },
-    { id: 'mx_loc4', name: 'Frida Kahlo Museum', description: 'The bright blue house where famous artist Frida Kahlo lived and created her masterpieces.', category: 'culture', learningPoints: 10 },
-    { id: 'mx_loc5', name: 'Monarch Butterfly Sanctuary', description: 'A hidden forest where millions of orange monarch butterflies rest during winter migration.', category: 'hidden_gem', learningPoints: 15 },
+    { id: 'mx_loc1', name: 'Chichén Itzá', description: 'An ancient Mayan pyramid where shadows create a serpent shape during the equinox.', category: 'landmark', learningPoints: 15, imageUrl: 'https://images.unsplash.com/photo-1518638150340-f706e86654de?w=800' },
+    { id: 'mx_loc2', name: 'Oaxaca Markets', description: 'Colorful markets overflowing with mole, chapulines, mezcal, and handmade crafts.', category: 'food', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c6a14769?w=800' },
+    { id: 'mx_loc3', name: 'Cenote Ik Kil', description: 'A natural sinkhole swimming pool surrounded by hanging vines and lush jungle.', category: 'nature', learningPoints: 12, imageUrl: 'https://images.unsplash.com/photo-1589561253898-768830c460aa?w=800' },
+    { id: 'mx_loc4', name: 'Frida Kahlo Museum', description: 'The bright blue house where famous artist Frida Kahlo lived and created her masterpieces.', category: 'culture', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800' },
+    { id: 'mx_loc5', name: 'Monarch Butterfly Sanctuary', description: 'A hidden forest where millions of orange monarch butterflies rest during winter migration.', category: 'hidden_gem', learningPoints: 15, imageUrl: 'https://images.unsplash.com/photo-1535332371349-a5d229f49c5c?w=800' },
   ],
   it: [
-    { id: 'it_loc1', name: 'Colosseum', description: 'The massive ancient Roman arena where gladiators once fought before 50,000 spectators.', category: 'landmark', learningPoints: 12 },
-    { id: 'it_loc2', name: 'Venice Canals', description: 'A magical floating city where gondolas glide through winding waterways instead of streets.', category: 'landmark', learningPoints: 10 },
-    { id: 'it_loc3', name: 'Pompeii', description: 'An ancient Roman city frozen in time after being buried by a volcanic eruption in 79 AD.', category: 'culture', learningPoints: 15 },
-    { id: 'it_loc4', name: 'Amalfi Coast', description: 'Colorful cliffside villages overlooking sparkling turquoise waters along Italy\'s southern coast.', category: 'nature', learningPoints: 10 },
-    { id: 'it_loc5', name: 'Trevi Fountain', description: 'A stunning Baroque fountain — toss a coin to make a wish and ensure your return to Rome!', category: 'hidden_gem', learningPoints: 8 },
+    { id: 'it_loc1', name: 'Colosseum', description: 'The massive ancient Roman arena where gladiators once fought before 50,000 spectators.', category: 'landmark', learningPoints: 12, imageUrl: 'https://images.unsplash.com/photo-1552832238-c57a64f85ad4?w=800' },
+    { id: 'it_loc2', name: 'Venice Canals', description: 'A magical floating city where gondolas glide through winding waterways instead of streets.', category: 'landmark', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800' },
+    { id: 'it_loc3', name: 'Pompeii', description: 'An ancient Roman city frozen in time after being buried by a volcanic eruption in 79 AD.', category: 'culture', learningPoints: 15, imageUrl: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800' },
+    { id: 'it_loc4', name: 'Amalfi Coast', description: 'Colorful cliffside villages overlooking sparkling turquoise waters along Italy\'s southern coast.', category: 'nature', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800' },
+    { id: 'it_loc5', name: 'Trevi Fountain', description: 'A stunning Baroque fountain — toss a coin to make a wish and ensure your return to Rome!', category: 'hidden_gem', learningPoints: 8, imageUrl: 'https://images.unsplash.com/photo-1552832238-c57a64f85ad4?w=800' },
   ],
   gb: [
-    { id: 'gb_loc1', name: 'Big Ben & Parliament', description: 'London\'s iconic clock tower chimes on the hour beside the Houses of Parliament.', category: 'landmark', learningPoints: 10 },
-    { id: 'gb_loc2', name: 'Stonehenge', description: 'A mysterious prehistoric circle of giant stones that has puzzled people for 5,000 years.', category: 'culture', learningPoints: 15 },
-    { id: 'gb_loc3', name: 'Lake District', description: 'Rolling green hills and sparkling lakes that inspired poet William Wordsworth.', category: 'nature', learningPoints: 10 },
-    { id: 'gb_loc4', name: 'Borough Market', description: 'London\'s oldest and most famous food market with treats from around the world.', category: 'food', learningPoints: 8 },
-    { id: 'gb_loc5', name: 'Shambles, York', description: 'A medieval cobbled street that inspired Diagon Alley in Harry Potter!', category: 'hidden_gem', learningPoints: 12 },
+    { id: 'gb_loc1', name: 'Big Ben & Parliament', description: 'London\'s iconic clock tower chimes on the hour beside the Houses of Parliament.', category: 'landmark', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800' },
+    { id: 'gb_loc2', name: 'Stonehenge', description: 'A mysterious prehistoric circle of giant stones that has puzzled people for 5,000 years.', category: 'culture', learningPoints: 15, imageUrl: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800' },
+    { id: 'gb_loc3', name: 'Lake District', description: 'Rolling green hills and sparkling lakes that inspired poet William Wordsworth.', category: 'nature', learningPoints: 10, imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800' },
+    { id: 'gb_loc4', name: 'Borough Market', description: 'London\'s oldest and most famous food market with treats from around the world.', category: 'food', learningPoints: 8, imageUrl: 'https://images.unsplash.com/photo-1579208575657-c595a05383b7?w=800' },
+    { id: 'gb_loc5', name: 'Shambles, York', description: 'A medieval cobbled street that inspired Diagon Alley in Harry Potter!', category: 'hidden_gem', learningPoints: 12, imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800' },
   ],
   br: [
     { id: 'br_loc1', name: 'Christ the Redeemer', description: 'The giant statue of Jesus with open arms standing atop Corcovado Mountain in Rio.', category: 'landmark', learningPoints: 12 },

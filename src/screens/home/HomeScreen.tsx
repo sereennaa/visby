@@ -35,6 +35,7 @@ import { LevelProgress } from '../../components/ui/ProgressBar';
 import { AuraBadge, LevelBadge } from '../../components/ui/Badge';
 import { Icon, IconName, IconBadge } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
+import { VisbyCheckInModal } from '../../components/visby/VisbyCheckInModal';
 import { StampMini } from '../../components/collectibles/StampCard';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
@@ -129,7 +130,7 @@ const AdventureCard: React.FC<{
           style={styles.adventureGradient}
         >
           <View style={[styles.adventureIconWrap, { backgroundColor: iconBg }]}>
-            <Icon name={icon} size={22} color="#FFFFFF" />
+            <Icon name={icon} size={22} color={colors.text.inverse} />
           </View>
           <Text variant="bodySmall" style={styles.adventureLabel}>{label}</Text>
           <Caption style={styles.adventureSub}>{subtitle}</Caption>
@@ -141,10 +142,11 @@ const AdventureCard: React.FC<{
 
 /* ─── Needs HUD ─── */
 const NEED_CONFIG: { key: keyof Omit<VisbyNeeds, 'lastUpdated'>; icon: IconName; label: string; color: string; bgColor: string; hint: string; howTo: string }[] = [
-  { key: 'hunger', icon: 'food', label: 'Food', color: '#E8A04E', bgColor: '#FFEAD0', hint: 'Hungry!', howTo: 'Log a bite or play Cooking Game' },
-  { key: 'happiness', icon: 'heart', label: 'Joy', color: '#E07A8A', bgColor: '#FFE0E8', hint: 'Bored!', howTo: 'Collect stamps or play games' },
-  { key: 'energy', icon: 'flash', label: 'Energy', color: '#5EA0D4', bgColor: '#E0F0FF', hint: 'Tired!', howTo: 'Check in daily to rest' },
-  { key: 'knowledge', icon: 'book', label: 'Smarts', color: '#8B6FC0', bgColor: '#EDE3FA', hint: 'Curious!', howTo: 'Take a quiz or finish a lesson' },
+  { key: 'hunger', icon: 'food', label: 'Food', color: colors.reward.peachDark, bgColor: colors.reward.peachLight, hint: 'Hungry!', howTo: 'Log a bite or play Cooking Game' },
+  { key: 'happiness', icon: 'heart', label: 'Joy', color: colors.accent.coral, bgColor: colors.accent.blush, hint: 'Bored!', howTo: 'Collect stamps or play games' },
+  { key: 'energy', icon: 'flash', label: 'Energy', color: colors.calm.ocean, bgColor: colors.calm.skyLight, hint: 'Tired!', howTo: 'Check in daily to rest' },
+  { key: 'knowledge', icon: 'book', label: 'Smarts', color: colors.primary.wisteriaDark, bgColor: colors.primary.wisteriaFaded, hint: 'Curious!', howTo: 'Take a quiz or finish a lesson' },
+  { key: 'socialBattery', icon: 'chat', label: 'Social', color: colors.accent.rose, bgColor: colors.accent.blush, hint: 'Lonely!', howTo: 'Chat with Visby or hang out with friends' },
 ];
 
 const NeedsHUD: React.FC<{
@@ -209,11 +211,12 @@ const NeedsHUD: React.FC<{
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage } = useStore();
+  const { user, visby, stamps, bites, badges, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage, shouldShowVisbyCheckIn } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
   const [careHint, setCareHint] = React.useState<typeof NEED_CONFIG[number] | null>(null);
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [dailyRewardAmount, setDailyRewardAmount] = useState(0);
+  const [showVisbyCheckIn, setShowVisbyCheckIn] = useState(false);
 
   const visbyFloat = useSharedValue(0);
 
@@ -225,6 +228,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (newAura > prevAura) {
       setDailyRewardAmount(newAura - prevAura);
       setShowDailyReward(true);
+    }
+    if (shouldShowVisbyCheckIn()) {
+      const t = setTimeout(() => setShowVisbyCheckIn(true), 700);
+      return () => clearTimeout(t);
     }
   }, []);
 
@@ -312,27 +319,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   });
 
   const statItems = [
-    { icon: 'stamp' as IconName, value: stamps.length, label: 'Stamps', iconBg: '#EDE3FA', iconColor: colors.primary.wisteriaDark },
-    { icon: 'food' as IconName, value: bites.length, label: 'Bites', iconBg: '#FFEAD0', iconColor: '#E08A3A' },
-    { icon: 'trophy' as IconName, value: badges.length, label: 'Badges', iconBg: '#DFF5E1', iconColor: colors.success.emerald },
-    { icon: 'globe' as IconName, value: user?.countriesVisited || 0, label: 'Places', iconBg: '#E6F2FC', iconColor: colors.calm.ocean },
+    { icon: 'stamp' as IconName, value: stamps.length, label: 'Stamps', iconBg: colors.primary.wisteriaFaded, iconColor: colors.primary.wisteriaDark },
+    { icon: 'food' as IconName, value: bites.length, label: 'Bites', iconBg: colors.reward.peachLight, iconColor: colors.reward.peachDark },
+    { icon: 'trophy' as IconName, value: badges.length, label: 'Badges', iconBg: colors.success.honeydew, iconColor: colors.success.emerald },
+    { icon: 'globe' as IconName, value: user?.countriesVisited || 0, label: 'Places', iconBg: colors.calm.skyLight, iconColor: colors.calm.ocean },
   ];
 
   const adventures = [
-    { icon: 'globe' as IconName, label: 'World', subtitle: 'Explore', gradient: ['#F6EDFF', '#EDE3FA'] as [string, string], iconBg: '#A78BDB', onPress: () => navigation.navigate('CountryWorld') },
-    { icon: 'stamp' as IconName, label: 'Stamp', subtitle: 'Collect', gradient: ['#FFF5E6', '#FFEAD0'] as [string, string], iconBg: '#E8A04E', onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
-    { icon: 'bowl' as IconName, label: 'Bite', subtitle: 'Log food', gradient: ['#FFF0F0', '#FFE0DE'] as [string, string], iconBg: '#E07A6A', onPress: () => navigation.navigate('AddBite') },
-    { icon: 'book' as IconName, label: 'Learn', subtitle: 'Study', gradient: ['#E8F4FF', '#D6ECFF'] as [string, string], iconBg: '#5EA0D4', onPress: () => navigation.navigate('Learn') },
-    { icon: 'trophy' as IconName, label: 'Badges', subtitle: 'Earn', gradient: ['#E8FFE8', '#D4F7D4'] as [string, string], iconBg: '#48B048', onPress: () => navigation.navigate('Badges') },
-    { icon: 'shirt' as IconName, label: 'Shop', subtitle: 'Style', gradient: ['#FFF0F7', '#FFE0ED'] as [string, string], iconBg: '#D46B9B', onPress: () => navigation.navigate('CosmeticShop') },
-    { icon: 'home' as IconName, label: 'Furniture', subtitle: 'Decorate', gradient: ['#F0EDF5', '#E8E0F0'] as [string, string], iconBg: '#8B7BA8', onPress: () => navigation.navigate('FurnitureShop') },
+    { icon: 'globe' as IconName, label: 'World', subtitle: 'Explore', gradient: [colors.primary.wisteriaFaded, colors.primary.wisteriaLight] as [string, string], iconBg: colors.primary.wisteriaDark, onPress: () => navigation.navigate('Explore', { screen: 'CountryWorld' }) },
+    { icon: 'stamp' as IconName, label: 'Stamp', subtitle: 'Collect', gradient: [colors.reward.peachLight, colors.reward.peach] as [string, string], iconBg: colors.reward.peachDark, onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
+    { icon: 'bowl' as IconName, label: 'Bite', subtitle: 'Log food', gradient: [colors.accent.blush, colors.accent.rose] as [string, string], iconBg: colors.accent.coral, onPress: () => navigation.navigate('AddBite') },
+    { icon: 'book' as IconName, label: 'Learn', subtitle: 'Study', gradient: [colors.calm.skyLight, colors.calm.sky] as [string, string], iconBg: colors.calm.ocean, onPress: () => navigation.navigate('Learn') },
+    { icon: 'trophy' as IconName, label: 'Badges', subtitle: 'Earn', gradient: [colors.success.honeydew, colors.success.mint] as [string, string], iconBg: colors.success.emerald, onPress: () => navigation.navigate('Badges') },
+    { icon: 'shirt' as IconName, label: 'Shop', subtitle: 'Style', gradient: [colors.accent.blush, colors.accent.rose] as [string, string], iconBg: colors.accent.coral, onPress: () => navigation.navigate('CosmeticShop') },
+    { icon: 'home' as IconName, label: 'Furniture', subtitle: 'Decorate', gradient: [colors.primary.wisteriaFaded, colors.accent.lavender] as [string, string], iconBg: colors.primary.wisteriaDark, onPress: () => navigation.navigate('FurnitureShop') },
   ];
 
   return (
     <View style={styles.container}>
       {/* Layered gradient background */}
       <LinearGradient
-        colors={['#FDFBF8', '#F3EAFF', '#EAF2FF', '#FFF8F2', '#FDFBF8']}
+        colors={[colors.base.cream, colors.primary.wisteriaFaded, colors.calm.skyLight, colors.reward.peachLight, colors.base.cream]}
         locations={[0, 0.25, 0.5, 0.75, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -357,6 +364,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Heading level={1} style={styles.titleText}>
                 {currentLevel.title}
               </Heading>
+              <Caption style={styles.dashboardCaption}>
+                Your home base — learn, play, and see what&apos;s new.
+              </Caption>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('AuraStore')}
@@ -381,7 +391,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <MagicBorder
                 borderRadius={28}
                 borderWidth={2}
-                colors={['#D4C4F0', '#FFD700', '#90C8EE', '#FFB6C1', '#D4C4F0']}
+                colors={[colors.primary.wisteriaLight, colors.reward.gold, colors.calm.skyDark, colors.accent.rose, colors.primary.wisteriaLight]}
                 style={styles.visbyCardOuter}
               >
                 <LinearGradient
@@ -428,6 +438,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         <Icon name="sparkles" size={12} color={colors.reward.gold} />
                         <Caption color={colors.text.muted}>Tap to customize</Caption>
                       </View>
+                      <TouchableOpacity
+                        style={styles.chatWithVisbyBtn}
+                        onPress={() => setShowVisbyCheckIn(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Icon name="chat" size={14} color={colors.primary.wisteriaDark} />
+                        <Caption color={colors.primary.wisteriaDark}>Chat with Visby</Caption>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </LinearGradient>
@@ -462,26 +480,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {user?.currentStreak !== undefined && user.currentStreak > 0 && (
             <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.streakCard}>
               <LinearGradient
-                colors={['#FFF3EC', '#FFE8DA']}
+                colors={[colors.status.streakBg, colors.reward.peachLight]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.streakGradient}
               >
                 <View style={styles.streakLeft}>
                   <View style={styles.streakFireWrap}>
-                    <Icon name="flame" size={28} color="#FF6B3D" />
+                    <Icon name="flame" size={28} color={colors.status.streak} />
                   </View>
                   <View>
                     <Text variant="h3" style={styles.streakDays}>
                       {user.currentStreak} day streak
                     </Text>
-                    <Caption color="#C4763A">
+                    <Caption color={colors.text.secondary}>
                       {getStreakMultiplier().toFixed(1)}x aura multiplier
                     </Caption>
                   </View>
                 </View>
                 <View style={styles.streakBadge}>
-                  <Icon name="flash" size={14} color="#FFFFFF" />
+                  <Icon name="flash" size={14} color={colors.text.inverse} />
                 </View>
               </LinearGradient>
             </Animated.View>
@@ -495,7 +513,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <Icon name="home" size={18} color={colors.primary.wisteriaDark} />
                   <Heading level={2} style={styles.sectionTitle}>My Houses</Heading>
                 </View>
-                <TouchableOpacity onPress={() => navigation.navigate('CountryWorld')} accessibilityRole="button" accessibilityLabel="Visit world">
+                <TouchableOpacity onPress={() => navigation.navigate('Explore', { screen: 'CountryWorld' })} accessibilityRole="button" accessibilityLabel="Visit world">
                   <Text variant="bodySmall" color={colors.primary.wisteriaDark}>Visit World</Text>
                 </TouchableOpacity>
               </View>
@@ -506,12 +524,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <TouchableOpacity
                       key={house.id}
                       style={styles.myHouseCard}
-                      onPress={() => navigation.navigate('CountryRoom', { countryId: house.countryId })}
+                      onPress={() => navigation.navigate('Explore', { screen: 'CountryRoom', params: { countryId: house.countryId } })}
                       activeOpacity={0.85}
                       accessibilityRole="button"
                       accessibilityLabel={`Visit ${house.houseName}`}
                     >
-                      <LinearGradient colors={['#F5EFFF', '#EDE3FA']} style={styles.myHouseGradient}>
+                      <LinearGradient colors={[colors.surface.lavender, colors.primary.wisteriaFaded]} style={styles.myHouseGradient}>
                         <View style={styles.myHouseIconWrap}>
                           <Icon name="home" size={24} color={colors.primary.wisteriaDark} />
                         </View>
@@ -534,7 +552,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               accessibilityLabel="Explore nearby"
             >
               <LinearGradient
-                colors={['#FFFFFF', '#F8F5FF']}
+                colors={[colors.surface.card, colors.primary.wisteriaFaded]}
                 style={styles.locationCard}
               >
                 <View style={styles.locationLeft}>
@@ -597,7 +615,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </ScrollView>
             ) : (
               <LinearGradient
-                colors={['#FAF5FF', '#FFF8F0']}
+                colors={[colors.primary.wisteriaFaded, colors.reward.peachLight]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.emptyStampCard}
@@ -629,10 +647,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gamesScrollRow}>
               {([
-                { key: 'WordMatch', label: 'Word\nMatch', icon: 'language' as IconName, gradient: ['#EDE3FA', '#FAF5FF'] as [string, string], iconColor: colors.primary.wisteriaDark },
-                { key: 'MemoryCards', label: 'Memory\nCards', icon: 'flashcard' as IconName, gradient: ['#E0F0FF', '#F0F7FF'] as [string, string], iconColor: colors.calm.ocean },
-                { key: 'CookingGame', label: 'World\nCooking', icon: 'food' as IconName, gradient: ['#FFEAD0', '#FFF5E8'] as [string, string], iconColor: colors.reward.peachDark },
-                { key: 'TreasureHunt', label: 'Treasure\nHunt', icon: 'compass' as IconName, gradient: ['#DFF5E1', '#F0FFF0'] as [string, string], iconColor: colors.success.emerald },
+                { key: 'WordMatch', label: 'Word\nMatch', icon: 'language' as IconName, gradient: [colors.primary.wisteriaFaded, colors.primary.wisteriaLight] as [string, string], iconColor: colors.primary.wisteriaDark },
+                { key: 'MemoryCards', label: 'Memory\nCards', icon: 'flashcard' as IconName, gradient: [colors.calm.skyLight, colors.calm.sky] as [string, string], iconColor: colors.calm.ocean },
+                { key: 'CookingGame', label: 'World\nCooking', icon: 'food' as IconName, gradient: [colors.reward.peachLight, colors.reward.peach] as [string, string], iconColor: colors.reward.peachDark },
+                { key: 'TreasureHunt', label: 'Treasure\nHunt', icon: 'compass' as IconName, gradient: [colors.success.honeydew, colors.success.mint] as [string, string], iconColor: colors.success.emerald },
               ] as const).map((game, i) => (
                 <Animated.View key={game.key} entering={FadeInDown.duration(400).delay(750 + i * 80)}>
                   <TouchableOpacity
@@ -688,8 +706,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <Modal visible={showDailyReward} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={() => setShowDailyReward(false)}>
           <Pressable style={styles.careModal} onPress={(e) => e.stopPropagation()}>
-            <View style={[styles.careIconCircle, { backgroundColor: '#FFF3E0' }]}>
-              <Icon name="flame" size={36} color="#FF6B3D" />
+            <View style={[styles.careIconCircle, { backgroundColor: colors.status.streakBg }]}>
+              <Icon name="flame" size={36} color={colors.status.streak} />
             </View>
             <Heading level={2} style={styles.careTitle}>Daily Check-in!</Heading>
             <Text style={styles.dailyRewardText}>+{dailyRewardAmount} Aura</Text>
@@ -702,6 +720,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <VisbyCheckInModal visible={showVisbyCheckIn} onClose={() => setShowVisbyCheckIn(false)} />
 
       {/* Care Hint Modal */}
       <Modal visible={!!careHint} transparent animationType="fade">
@@ -814,6 +834,11 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginTop: 2,
   },
+  dashboardCaption: {
+    marginTop: 4,
+    color: colors.text.muted,
+    fontSize: 12,
+  },
 
   /* Visby Hero Card */
   visbyCardOuter: {
@@ -872,6 +897,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  chatWithVisbyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary.wisteriaFaded,
+    borderRadius: 12,
+  },
 
   /* Stats */
   statsRow: {
@@ -882,7 +918,7 @@ const styles = StyleSheet.create({
   statBubble: {
     width: STAT_SIZE,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.card,
     borderRadius: 20,
     paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xs,
@@ -947,14 +983,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   streakDays: {
-    color: '#8B4513',
+    color: colors.visby.hair.brown,
     fontSize: 16,
   },
   streakBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FF8C42',
+    backgroundColor: colors.reward.peachDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1174,7 +1210,7 @@ const styles = StyleSheet.create({
   /* Needs HUD */
   needsContainer: {
     marginBottom: spacing.xl,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.card,
     borderRadius: 20,
     padding: spacing.md,
     ...(Platform.OS !== 'web' ? {
@@ -1219,7 +1255,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#F0EDF5',
+    backgroundColor: colors.primary.wisteriaFaded,
     overflow: 'hidden',
   },
   needBarFill: {
@@ -1242,7 +1278,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   careModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.card,
     borderRadius: 28,
     padding: spacing.xl,
     maxWidth: 340,
@@ -1296,7 +1332,7 @@ const styles = StyleSheet.create({
   dailyRewardText: {
     fontFamily: 'Baloo2-Bold',
     fontSize: 28,
-    color: '#FFB020',
+    color: colors.reward.gold,
     textAlign: 'center' as const,
   },
 

@@ -49,12 +49,12 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#FAF8FF' }}>
-          <Icon name="warning" size={48} color="#B8A5E0" />
-          <Text style={{ fontSize: 22, fontWeight: '700', color: '#2A1A4A', textAlign: 'center', marginBottom: 8 }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: colors.base.cream }}>
+          <Icon name="warning" size={48} color={colors.primary.wisteria} />
+          <Text style={{ fontFamily: 'Baloo2-Bold', fontSize: 22, color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>
             Oops! Something went wrong
           </Text>
-          <Text style={{ fontSize: 15, color: '#8A7AA0', textAlign: 'center', marginBottom: 24 }}>
+          <Text style={{ fontFamily: 'Nunito-Medium', fontSize: 15, color: colors.text.secondary, textAlign: 'center', marginBottom: 24 }}>
             Don't worry, your progress is saved. Try restarting the app.
           </Text>
           <TouchableOpacity

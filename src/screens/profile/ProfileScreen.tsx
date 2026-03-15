@@ -105,6 +105,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const nextStageName = currentIdx < 4 ? stageOrder[currentIdx + 1] : 'adult';
 
   const menuItems: { icon: IconName; label: string; screen: keyof RootStackParamList }[] = [
+    { icon: 'people', label: 'Friends', screen: 'Friends' },
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
     { icon: 'shirt', label: 'Wardrobe & Avatar', screen: 'Avatar' },
     { icon: 'sparkles', label: 'Cosmetic Shop', screen: 'CosmeticShop' },
@@ -332,7 +333,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           {/* App Info */}
           <View style={styles.appInfo}>
             <Text variant="caption" align="center" color={colors.text.muted}>
-              Visby v1.0.0
+              Visby v1.0.1
             </Text>
             <View style={styles.madeWithRow}>
               <Text variant="caption" color={colors.text.muted}>Made with </Text>

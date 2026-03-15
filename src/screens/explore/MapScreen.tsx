@@ -19,10 +19,10 @@ import { useStore } from '../../store/useStore';
 import { locationService } from '../../services/location';
 import { STAMP_TYPES_INFO } from '../../config/constants';
 import { SAMPLE_LOCATIONS, SampleLocation } from '../../config/locations';
-import { RootStackParamList, StampType } from '../../types';
+import { ExploreStackParamList, StampType } from '../../types';
 
 type MapScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Map'>;
+  navigation: NativeStackNavigationProp<ExploreStackParamList, 'Map'>;
 };
 
 export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
@@ -98,7 +98,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
     return (
       <Card
         style={styles.locationCard}
-        onPress={() => navigation.navigate('LocationDetail', { locationId: item.id })}
+        onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('LocationDetail', { locationId: item.id })}
       >
         <View style={styles.locationRow}>
           <View style={[styles.typeIcon, { backgroundColor: typeInfo.color + '30' }]}>
@@ -138,8 +138,16 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <Heading level={1}>Explore</Heading>
-          <TouchableOpacity onPress={fetchLocation}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Heading level={1} style={styles.headerTitle}>Nearby</Heading>
+          <TouchableOpacity onPress={fetchLocation} style={styles.headerIcon}>
             <Icon name="refresh" size={24} color={colors.text.secondary} />
           </TouchableOpacity>
         </View>
@@ -248,7 +256,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
                           key={loc.id}
                           style={styles.nearbyCard}
                           activeOpacity={0.7}
-                          onPress={() => navigation.navigate('LocationDetail', { locationId: loc.id })}
+                          onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('LocationDetail', { locationId: loc.id })}
                         >
                           <View style={[styles.nearbyIcon, { backgroundColor: info.color + '25' }]}>
                             <Icon name={info.icon} size={20} color={info.color} />
@@ -307,7 +315,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
         <View style={styles.floatingButton}>
           <Button
             title="Collect Stamp Here"
-            onPress={() => navigation.navigate('CollectStamp', { locationId: 'current' })}
+            onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'current' })}
             variant="primary"
             size="lg"
             icon={<Icon name="stamp" size={20} color={colors.text.inverse} />}
@@ -327,11 +335,21 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.screenPadding,
     marginTop: spacing.md,
     marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  backButton: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
+  },
+  headerTitle: {
+    flex: 1,
+  },
+  headerIcon: {
+    padding: spacing.xs,
   },
   currentLocationCard: {
     marginHorizontal: spacing.screenPadding,

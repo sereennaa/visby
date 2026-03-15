@@ -28,7 +28,9 @@ interface Particle {
 
 interface FloatingParticlesProps {
   count?: number;
-  variant?: 'sparkle' | 'stars' | 'mixed' | 'snow' | 'hearts';
+  variant?: 'sparkle' | 'stars' | 'mixed' | 'snow' | 'hearts' | 'petals' | 'dust' | 'aurora';
+  /** Override particle colors (e.g. country-specific cherry blossoms, castle dust) */
+  customColors?: readonly string[];
   opacity?: number;
   speed?: 'slow' | 'normal' | 'fast';
 }
@@ -39,12 +41,20 @@ const COLOR_SETS: Record<string, string[]> = {
   mixed: [colors.reward.gold, colors.primary.wisteriaLight, '#FECDD3', '#A5D6A7', '#FFE082', '#B3E5FC', '#E1BEE7', '#FFF59D'],
   snow: ['#E3F2FD', '#BBDEFB', '#E0E0E0', '#F5F5F5', '#CFD8DC'],
   hearts: [colors.primary.wisteriaLight, colors.reward.gold, '#E1BEE7', '#FFE082', '#F5F5F5'],
+  petals: ['#FFB6C1', '#FFC0CB', '#FFE4EC', '#FFF0F5', '#F8B4C4', '#FFFFFF'],
+  dust: ['#E8DCC8', '#D4C4B0', '#FFE4B5', '#C9B8A8', '#F5F0DC', '#E0D8D0'],
+  aurora: ['#A5D6A7', '#81C784', '#B3E5FC', '#90CAF9', '#CE93D8', '#E1BEE7'],
 };
 
 const SPEED_MULTIPLIER = { slow: 1.6, normal: 1, fast: 0.6 };
 
-const generateParticles = (count: number, variant: keyof typeof COLOR_SETS): Particle[] => {
-  const particleColors = COLOR_SETS[variant];
+const getColorsForVariant = (variant: keyof typeof COLOR_SETS, customColors?: readonly string[]): string[] => {
+  if (customColors && customColors.length > 0) return [...customColors];
+  return COLOR_SETS[variant] ?? COLOR_SETS.sparkle;
+};
+
+const generateParticles = (count: number, variant: keyof typeof COLOR_SETS, customColors?: readonly string[]): Particle[] => {
+  const particleColors = getColorsForVariant(variant, customColors);
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     color: particleColors[i % particleColors.length],
@@ -128,10 +138,15 @@ const ParticleView: React.FC<{ particle: Particle; speedMult: number; baseOpacit
 export const FloatingParticles: React.FC<FloatingParticlesProps> = ({
   count = 15,
   variant = 'sparkle',
+  customColors,
   opacity = 0.7,
   speed = 'normal',
 }) => {
-  const particles = useMemo(() => generateParticles(count, variant), [count, variant]);
+  const effectiveVariant = COLOR_SETS[variant] ? variant : 'sparkle';
+  const particles = useMemo(
+    () => generateParticles(count, effectiveVariant, customColors),
+    [count, effectiveVariant, customColors],
+  );
   const speedMult = SPEED_MULTIPLIER[speed];
 
   return (

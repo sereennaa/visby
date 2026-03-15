@@ -24,6 +24,7 @@ export const iconMap = {
   bookOutline: { family: 'Ionicons', name: 'book-outline' },
   person: { family: 'Ionicons', name: 'person' },
   personOutline: { family: 'Ionicons', name: 'person-outline' },
+  people: { family: 'Ionicons', name: 'people' },
   settings: { family: 'Ionicons', name: 'settings' },
   settingsOutline: { family: 'Ionicons', name: 'settings-outline' },
   back: { family: 'Ionicons', name: 'arrow-back' },

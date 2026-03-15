@@ -160,7 +160,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             )}
             <View style={styles.separator} />
             {renderRow('info', 'About Visby', () =>
-              setInfoModal({ title: 'Visby', message: 'Version 1.0.0\n\nExplore the world, one stamp at a time.' }),
+              setInfoModal({ title: 'Visby', message: 'Version 1.0.1\n\n4 tabs: Home, Explore, Inbox, Profile.' }),
             )}
           </Card>
 
