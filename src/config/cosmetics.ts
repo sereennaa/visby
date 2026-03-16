@@ -39,6 +39,7 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'arctic_hood', name: 'Arctic Hood', description: 'Warm fur-lined hood for polar expeditions', type: 'hat', rarity: 'uncommon', price: 150, icon: 'mountain' },
 
   // ===================== OUTFITS =====================
+  { id: 'default_tunic', name: 'Comfy Tunic', description: 'Your Visby\'s first outfit — soft and cozy, perfect for adventure', type: 'outfit', rarity: 'common', price: 0, icon: 'shirt' },
   { id: 'kimono', name: 'Kimono', description: 'Elegant Japanese traditional robe', type: 'outfit', rarity: 'rare', price: 350, country: 'Japan', icon: 'shirt' },
   { id: 'lederhosen', name: 'Lederhosen', description: 'Bavarian leather shorts from Germany', type: 'outfit', rarity: 'uncommon', price: 200, country: 'Germany', icon: 'shirt' },
   { id: 'sari', name: 'Sari', description: 'Beautiful draped garment from India', type: 'outfit', rarity: 'rare', price: 300, country: 'India', icon: 'shirt' },
@@ -79,6 +80,7 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'musical_instrument', name: 'Musical Instrument', description: 'A small ukulele to serenade the world', type: 'accessory', rarity: 'uncommon', price: 140, icon: 'sparkles' },
 
   // ===================== SHOES =====================
+  { id: 'default_boots', name: 'Starter Boots', description: 'Comfy first boots for your Visby\'s travels', type: 'shoes', rarity: 'common', price: 0, icon: 'footsteps' },
   { id: 'wooden_clogs', name: 'Wooden Clogs', description: 'Traditional klompen from the Netherlands', type: 'shoes', rarity: 'uncommon', price: 140, country: 'Netherlands', icon: 'footsteps' },
   { id: 'sandals', name: 'Sandals', description: 'Simple open-toed sandals for warm climates', type: 'shoes', rarity: 'common', price: 40, icon: 'footsteps' },
   { id: 'cowboy_boots', name: 'Cowboy Boots', description: 'Leather boots with spurs from the Wild West', type: 'shoes', rarity: 'uncommon', price: 160, country: 'USA', icon: 'star' },
@@ -91,6 +93,7 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'running_shoes', name: 'Running Shoes', description: 'Lightweight trainers for speedy explorers', type: 'shoes', rarity: 'common', price: 50, icon: 'footsteps' },
 
   // ===================== BACKPACKS =====================
+  { id: 'default_backpack', name: 'Starter Pack', description: 'A trusty first backpack for your Visby', type: 'backpack', rarity: 'common', price: 0, icon: 'backpack' },
   { id: 'explorer_backpack', name: 'Explorer Backpack', description: 'Rugged canvas pack for world travelers', type: 'backpack', rarity: 'common', price: 80, icon: 'backpack' },
   { id: 'samurai_pack', name: 'Samurai Pack', description: 'Warrior-style pack adorned with Japanese crests', type: 'backpack', rarity: 'rare', price: 260, country: 'Japan', icon: 'viking' },
   { id: 'school_backpack', name: 'School Backpack', description: 'Classic backpack for young learners', type: 'backpack', rarity: 'common', price: 50, icon: 'backpack' },

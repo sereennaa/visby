@@ -10,14 +10,15 @@ import { Icon } from '../../components/ui/Icon';
 import { NavBreadcrumb } from '../../components/ui/NavBreadcrumb';
 import { useStore } from '../../store/useStore';
 import { COUNTRIES } from '../../config/constants';
-import { getWorldMapPosition } from '../../config/worldMapPositions';
+import { getWorldMapPosition, getWorldMapLabel } from '../../config/worldMapPositions';
+import { WorldMapBackground } from '../../components/maps/WorldMapBackground';
 import { ExploreStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAP_VIEW_PADDING = spacing.screenPadding * 2;
 const MAP_VIEW_WIDTH = SCREEN_WIDTH - MAP_VIEW_PADDING;
-const MAP_VIEW_HEIGHT = 220;
-const WORLD_DOT_SIZE = 28;
+const MAP_VIEW_HEIGHT = 260;
+const WORLD_DOT_SIZE = 26;
 
 type WorldMapScreenProps = {
   navigation: NativeStackNavigationProp<ExploreStackParamList, 'WorldMap'>;
@@ -76,10 +77,14 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({ navigation }) =>
           <>
             <Caption style={styles.subtitle}>Find countries on the map. Tap a country to see where it is and visit.</Caption>
             <View style={styles.mapViewWrap}>
-              <LinearGradient
-                colors={[colors.calm.skyLight + 'ee', colors.calm.sky + 'aa', colors.calm.ocean + '88']}
-                style={styles.mapViewCanvas}
-              >
+              <View style={styles.mapViewCanvas}>
+                <WorldMapBackground
+                  width={MAP_VIEW_WIDTH}
+                  height={MAP_VIEW_HEIGHT}
+                  oceanColor="#A8C8E0"
+                  landColor="#E2D8CC"
+                  landStroke="rgba(160,140,120,0.35)"
+                />
                 {COUNTRIES.map((country) => {
                   const pos = getWorldMapPosition(country.id);
                   if (!pos) return null;
@@ -87,27 +92,48 @@ export const WorldMapScreen: React.FC<WorldMapScreenProps> = ({ navigation }) =>
                   const owned = hasHouse(country.id);
                   const left = (pos.xPercent / 100) * MAP_VIEW_WIDTH - WORLD_DOT_SIZE / 2;
                   const top = (pos.yPercent / 100) * MAP_VIEW_HEIGHT - WORLD_DOT_SIZE / 2;
+                  const clampedLeft = Math.max(2, Math.min(MAP_VIEW_WIDTH - WORLD_DOT_SIZE - 2, left));
+                  const clampedTop = Math.max(2, Math.min(MAP_VIEW_HEIGHT - WORLD_DOT_SIZE - 2, top));
                   return (
                     <TouchableOpacity
                       key={country.id}
-                      style={[
-                        styles.worldDot,
-                        {
-                          left: Math.max(2, Math.min(MAP_VIEW_WIDTH - WORLD_DOT_SIZE - 2, left)),
-                          top: Math.max(2, Math.min(MAP_VIEW_HEIGHT - WORLD_DOT_SIZE - 2, top)),
-                          backgroundColor: visited ? colors.primary.wisteria : colors.base.parchment,
-                          borderColor: owned ? colors.success.emerald : (visited ? colors.primary.wisteriaLight : colors.base.warmWhite),
-                        },
-                      ]}
+                      style={[styles.worldDotWrap, { left: clampedLeft, top: clampedTop }]}
                       onPress={() => (hasHouse(country.id) ? navigation.navigate('CountryRoom', { countryId: country.id }) : navigation.navigate('CountryWorld'))}
                       activeOpacity={0.85}
                       accessibilityLabel={`${country.name} on world map`}
                     >
-                      {owned ? <Icon name="home" size={14} color={colors.success.emerald} /> : <Icon name="globe" size={14} color={visited ? colors.primary.wisteriaDark : colors.text.muted} />}
+                      <View
+                        style={[
+                          styles.worldDot,
+                          {
+                            backgroundColor: visited ? colors.primary.wisteria : colors.base.parchment,
+                            borderColor: owned ? colors.success.emerald : (visited ? colors.primary.wisteriaLight : colors.base.warmWhite),
+                          },
+                        ]}
+                      >
+                        {owned ? <Icon name="home" size={12} color={colors.success.emerald} /> : <Icon name="globe" size={12} color={visited ? colors.primary.wisteriaDark : colors.text.muted} />}
+                      </View>
+                      <Text style={styles.worldDotLabel} numberOfLines={1}>{getWorldMapLabel(country.id, country.name)}</Text>
                     </TouchableOpacity>
                   );
                 })}
-              </LinearGradient>
+              </View>
+            </View>
+            <View style={styles.mapLegend}>
+              <View style={styles.mapLegendRow}>
+                <View style={[styles.mapLegendDot, { backgroundColor: colors.base.parchment }]} />
+                <Text variant="caption" style={styles.mapLegendText}>Not yet visited</Text>
+              </View>
+              <View style={styles.mapLegendRow}>
+                <View style={[styles.mapLegendDot, { backgroundColor: colors.primary.wisteria }]} />
+                <Text variant="caption" style={styles.mapLegendText}>Visited</Text>
+              </View>
+              <View style={styles.mapLegendRow}>
+                <View style={[styles.mapLegendDot, { backgroundColor: colors.success.emerald, borderWidth: 2, borderColor: colors.success.emerald }]}>
+                  <Icon name="home" size={8} color="#FFF" />
+                </View>
+                <Text variant="caption" style={styles.mapLegendText}>Your home</Text>
+              </View>
             </View>
             <TouchableOpacity
               style={styles.visitWorldBtn}
@@ -218,7 +244,33 @@ const styles = StyleSheet.create({
   },
   mapViewWrap: {
     paddingHorizontal: MAP_VIEW_PADDING / 2,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  mapLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  mapLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mapLegendDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: colors.base.warmWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapLegendText: {
+    color: colors.text.secondary,
+    fontSize: 11,
   },
   mapViewCanvas: {
     width: MAP_VIEW_WIDTH,
@@ -229,14 +281,27 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  worldDot: {
+  worldDotWrap: {
     position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    minWidth: 48,
+  },
+  worldDot: {
     width: WORLD_DOT_SIZE,
     height: WORLD_DOT_SIZE,
     borderRadius: WORLD_DOT_SIZE / 2,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  worldDotLabel: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 9,
+    color: colors.text.primary,
+    marginTop: 2,
+    textAlign: 'center',
+    maxWidth: 56,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxxl },

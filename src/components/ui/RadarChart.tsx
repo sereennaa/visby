@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -21,6 +21,8 @@ interface RadarChartProps {
   animated?: boolean;
   /** Animate data shape scaling in over 800ms */
   animateFill?: boolean;
+  /** When provided, corners are tappable; index 0..n-1 for each axis in data order */
+  onSegmentPress?: (index: number) => void;
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -30,6 +32,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   fillColor = colors.primary.wisteriaFaded,
   animated = true,
   animateFill = true,
+  onSegmentPress,
 }) => {
   const scale = useSharedValue(animated ? 0.8 : 1);
   const opacity = useSharedValue(animated ? 0 : 1);
@@ -94,6 +97,10 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     const p = getPoint(i, radius + 18);
     return { ...d, ...p };
   });
+
+  // Place touch targets at label position so tapping "Language", "Geography", etc. works
+  const touchRadius = radius + 18;
+  const hitSize = 52;
 
   return (
     <Animated.View style={[styles.container, { width: size, height: size }, animatedStyle]}>
@@ -169,6 +176,30 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           })}
         </Svg>
       </Animated.View>
+      {onSegmentPress && (
+        <View style={[StyleSheet.absoluteFill, styles.touchLayer]} pointerEvents="box-none">
+          {data.map((_, i) => {
+            const p = getPoint(i, touchRadius);
+            return (
+              <Pressable
+                key={`touch-${i}`}
+                style={[
+                  styles.touchTarget,
+                  {
+                    left: p.x - hitSize / 2,
+                    top: p.y - hitSize / 2,
+                    width: hitSize,
+                    height: hitSize,
+                  },
+                ]}
+                onPress={() => onSegmentPress(i)}
+                accessibilityRole="button"
+                accessibilityLabel={`${data[i]?.label ?? `Skill ${i + 1}`}. Tap to see how to improve.`}
+              />
+            );
+          })}
+        </View>
+      )}
     </Animated.View>
   );
 };
@@ -181,5 +212,13 @@ const styles = StyleSheet.create({
   dataLayer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  touchLayer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  touchTarget: {
+    position: 'absolute',
+    borderRadius: 22,
   },
 });

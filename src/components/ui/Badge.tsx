@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { getShadowStyle } from '../../theme/shadows';
 import { Text } from './Text';
 import { Icon } from './Icon';
 
@@ -159,11 +160,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   glowShadow: {
-    shadowColor: colors.reward.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 4,
+    ...getShadowStyle({
+      shadowColor: colors.reward.gold,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5,
+      shadowRadius: 8,
+      elevation: 4,
+    }),
   },
   auraBadgeContainer: {
     flexDirection: 'row',

@@ -245,7 +245,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                 <Icon name="info" size={20} color={colors.primary.wisteriaDark} />
                 <View style={{ flex: 1 }}>
                   <Text variant="body" style={{ fontWeight: '600' }}>How It Works</Text>
-                  <Caption>Spend Aura to visit a country and explore its rooms. Buy a house for unlimited access. Earn Aura by learning, collecting stamps, and keeping your streak!</Caption>
+                  <Caption>Spend Aura to visit a country and explore its rooms. Buy a house for unlimited access. Earn Aura by learning, adding places to your passport, and keeping your streak!</Caption>
                 </View>
               </View>
             </Card>

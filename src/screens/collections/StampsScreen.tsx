@@ -7,8 +7,10 @@ import {
   TextStyle,
   Dimensions,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { whimsicalGradients } from '../../theme/whimsical';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -55,17 +57,19 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
   const { width: screenWidth } = Dimensions.get('window');
   const cardWidth = (screenWidth - spacing.screenPadding * 2 - 10) / 2;
 
-  const renderStampItem = ({ item }: { item: Stamp }) => (
-    <StampCard
-      stamp={item}
-      onPress={() => navigation.navigate('StampDetail', { stampId: item.id })}
-      size={viewMode === 'grid' ? 'md' : 'lg'}
-    />
+  const renderStampItem = ({ item, index }: { item: Stamp; index: number }) => (
+    <Animated.View entering={FadeIn.duration(380).delay(Math.min(index * 48, 240))}>
+      <StampCard
+        stamp={item}
+        onPress={() => navigation.navigate('StampDetail', { stampId: item.id })}
+        size={viewMode === 'grid' ? 'md' : 'lg'}
+      />
+    </Animated.View>
   );
 
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+      colors={[...whimsicalGradients.hero]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -79,9 +83,10 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
           >
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Heading level={1}>My Stamps</Heading>
-            <Caption>{stamps.length} collected</Caption>
+          <View style={styles.headerTextWrap}>
+            <Heading level={1} style={styles.headerTitle}>My Passport</Heading>
+            <Caption style={styles.headerDefinition}>{copy.stamps.definition}</Caption>
+            <Caption style={styles.headerCount}>{stamps.length} places collected</Caption>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
@@ -100,7 +105,7 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
         {/* Collection goals */}
         {!isLoading && collectionProgress.length > 0 && (
           <Card style={styles.goalsCard}>
-            <Text variant="body" style={styles.goalsTitle}>Collection goals</Text>
+            <Text variant="body" style={styles.goalsTitle}>Dream destinations</Text>
             {collectionProgress.slice(0, 6).map((p) => {
               const country = COUNTRIES.find((c) => c.id === p.countryId);
               const accent = country?.accentColor ?? colors.primary.wisteria;
@@ -240,10 +245,10 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
             icon="stamp"
             title={copy.empty.noStamps.title}
             subtitle={copy.empty.noStamps.subtitle}
-            actionLabel={copy.actions.addFirstStamp}
-            onAction={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
-            secondaryLabel={copy.actions.exploreNearby}
-            onSecondary={() => navigation.navigate('Map')}
+            actionLabel={copy.actions.exploreMap}
+            onAction={() => navigation.navigate('Map')}
+            secondaryLabel={copy.actions.addFirstStamp}
+            onSecondary={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
             style={styles.emptyState}
           />
         )}
@@ -270,6 +275,21 @@ const styles = StyleSheet.create({
   backButton: {
     padding: spacing.xs,
     marginLeft: -spacing.xs,
+  },
+  headerTextWrap: {
+    flex: 1,
+  },
+  headerTitle: {
+    color: colors.text.primary,
+  },
+  headerDefinition: {
+    marginTop: 2,
+    color: colors.text.secondary,
+    fontStyle: 'italic',
+  },
+  headerCount: {
+    marginTop: 2,
+    color: colors.text.muted,
   },
   headerActions: {
     flexDirection: 'row',

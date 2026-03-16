@@ -741,6 +741,7 @@ export type RootStackParamList = {
   // Learning
   Learn: undefined;
   Progress: undefined;
+  SkillDetail: { skillKey: keyof SkillProgress };
   DiscoveryLog: undefined;
   LessonCategory: { categoryId: string };
   Lesson: { lessonId: string };

@@ -59,7 +59,7 @@ function createDemoUser(email: string, password: string, username: string): { us
     name: `${username}'s Visby`,
     createdAt: new Date(),
     appearance: DEFAULT_VISBY_APPEARANCE,
-    equipped: { hat: 'viking_helmet' },
+    equipped: { outfit: 'default_tunic', hat: 'viking_helmet' },
     ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet'],
     currentMood: 'happy',
     needs: { ...DEFAULT_NEEDS },
@@ -128,7 +128,7 @@ export const authService = {
       name: `${username}'s Visby`,
       createdAt: new Date(),
       appearance: DEFAULT_VISBY_APPEARANCE,
-      equipped: { hat: 'viking_helmet', accessory: 'sword' },
+      equipped: { outfit: 'default_tunic', hat: 'viking_helmet', accessory: 'sword' },
       ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet', 'sword'],
       currentMood: 'happy',
     };

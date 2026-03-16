@@ -43,6 +43,7 @@ import { AddBiteScreen } from '../screens/actions/AddBiteScreen';
 // Profile Screens
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { ProgressScreen } from '../screens/profile/ProgressScreen';
+import { SkillDetailScreen } from '../screens/profile/SkillDetailScreen';
 import { DiscoveryLogScreen } from '../screens/profile/DiscoveryLogScreen';
 import { ParentDashboardScreen } from '../screens/profile/ParentDashboardScreen';
 import { FriendsScreen, AddFriendScreen, FriendProfileScreen } from '../screens/friends';
@@ -244,6 +245,7 @@ export const AppNavigator = () => {
         <Stack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="Progress" component={ProgressScreen} />
+        <Stack.Screen name="SkillDetail" component={SkillDetailScreen} />
         <Stack.Screen name="DiscoveryLog" component={DiscoveryLogScreen} />
         <Stack.Screen name="Friends" component={FriendsScreen} />
         <Stack.Screen name="AddFriend" component={AddFriendScreen} />

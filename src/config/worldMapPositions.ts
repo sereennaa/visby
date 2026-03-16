@@ -28,3 +28,25 @@ export const WORLD_MAP_POSITIONS: Record<string, WorldMapPosition> = {
 export function getWorldMapPosition(countryId: string): WorldMapPosition | null {
   return WORLD_MAP_POSITIONS[countryId] ?? null;
 }
+
+/** Short label for the world map so names fit (e.g. "UK" not "United Kingdom"). */
+export const WORLD_MAP_LABELS: Record<string, string> = {
+  gb: 'UK',
+  br: 'Brazil',
+  kr: 'S. Korea',
+  ma: 'Morocco',
+  pe: 'Peru',
+  ke: 'Kenya',
+  no: 'Norway',
+  tr: 'Turkey',
+  gr: 'Greece',
+  jp: 'Japan',
+  fr: 'France',
+  mx: 'Mexico',
+  it: 'Italy',
+  th: 'Thailand',
+};
+
+export function getWorldMapLabel(countryId: string, fullName: string): string {
+  return WORLD_MAP_LABELS[countryId] ?? fullName;
+}

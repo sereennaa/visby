@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -28,7 +28,9 @@ import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore, DEFAULT_SKILLS, getGrowthStage } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
+import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../../types';
+import { SKILL_KEYS_ORDER } from '../../config/skills';
 import { RadarChart } from '../../components/ui/RadarChart';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
@@ -39,6 +41,14 @@ type ProfileScreenProps = {
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, visby, stamps, bites, badges, logout } = useStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleSkillPress = useCallback(
+    (index: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      navigation.navigate('SkillDetail', { skillKey: SKILL_KEYS_ORDER[index] });
+    },
+    [navigation]
+  );
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -88,7 +98,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const statItems: { icon: IconName; label: string; value: number }[] = [
-    { icon: 'stamp', label: 'Stamps', value: stamps.length },
+    { icon: 'stamp', label: 'Passport', value: stamps.length },
     { icon: 'food', label: 'Bites', value: bites.length },
     { icon: 'trophy', label: 'Badges', value: badges.length },
     { icon: 'globe', label: 'Countries', value: user?.countriesVisited || 0 },
@@ -359,8 +369,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                     ]}
                     size={220}
                     animateFill={true}
+                    onSegmentPress={handleSkillPress}
                   />
                 </View>
+                <Caption style={styles.skillsTapHint}>{copy.profile.sections.skills.tapHint}</Caption>
                 {Object.values(skills).every((v) => v === 0) && (
                   <View style={styles.skillsEmpty}>
                     <Caption style={styles.skillsEmptyHint}>
@@ -678,6 +690,11 @@ const styles = StyleSheet.create({
   },
   radarWrap: {
     marginVertical: spacing.sm,
+  },
+  skillsTapHint: {
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
   },
   skillsEmpty: {
     alignItems: 'center',

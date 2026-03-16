@@ -200,7 +200,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             Your adventure awaits
           </Text>
           <Text variant="body" align="center" style={styles.welcomeText}>
-            Explore the world, collect stamps, dress your Viking, and learn about cultures everywhere you go.
+            Explore the world, fill your passport with places, dress your Viking, and learn about cultures everywhere you go.
           </Text>
 
           <View style={styles.featurePills}>

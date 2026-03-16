@@ -46,8 +46,7 @@ import { RootStackParamList, VisbyNeeds, VisbyGrowthStage } from '../../types';
 import { DEFAULT_HOME_ROOM, HOME_ATMOSPHERE } from '../../config/homeRoom';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
 import { COUNTRY_HOUSES } from '../../config/countryRooms';
-import { FURNITURE_CATALOG } from '../../config/furniture';
-import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
+import { HomeRoom } from '../../components/home/HomeRoom';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 10;
@@ -74,11 +73,6 @@ const MOOD_LABELS: Record<string, { label: string; icon: IconName }> = {
   sick: { label: 'Sick', icon: 'flash' },
   lonely: { label: 'Lonely', icon: 'chat' },
 };
-
-const HOME_ROOM_WINDOW_H = 40;
-const HOME_ROOM_WALL_H = 140;
-const HOME_ROOM_FLOOR_H = 100;
-const HOME_VISBY_SIZE = 88;
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -272,139 +266,179 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* ──── HOME ROOM: Visby in their space (Club Penguin / Sims style) ──── */}
+          {/* ──── NEEDS BARS ──── */}
+          {visby && (
+            <Animated.View entering={FadeInDown.duration(400).delay(140)} style={styles.needsSection}>
+              <View style={styles.needsRow}>
+                {(function () {
+                  const needs = getVisbyNeeds();
+                  return NEED_CONFIG.map((nc) => {
+                    const value = (needs[nc.key] as number) ?? 0;
+                    const isLow = value < 40;
+                    return (
+                      <TouchableOpacity
+                        key={nc.key}
+                        style={styles.needsBarWrap}
+                        onPress={() => setCareHint(nc)}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${nc.label}: ${value}%`}
+                      >
+                        <View style={[styles.needsBarIconWrap, { backgroundColor: nc.bgColor }]}>
+                          <Icon name={nc.icon} size={16} color={nc.color} />
+                        </View>
+                        <View style={styles.needsBarTrack}>
+                          <View
+                            style={[
+                              styles.needsBarFill,
+                              {
+                                width: `${Math.max(0, Math.min(100, value))}%`,
+                                backgroundColor: isLow ? colors.status.warning : nc.color,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
+            </Animated.View>
+          )}
+
+          {/* ──── HOME ROOM: full Club Penguin / Sims style room ──── */}
           {(() => {
             const firstHouse = userHouses[0];
             const homeCountryId = firstHouse?.countryId ?? null;
             const houseData = homeCountryId ? COUNTRY_HOUSES[homeCountryId] : null;
             const homeRoom = houseData?.rooms?.[0] ?? DEFAULT_HOME_ROOM;
             const roomCustomization = firstHouse?.roomCustomizations?.[homeRoom.id];
-            const placedItems = roomCustomization?.placedFurniture ?? [];
-            const effectiveWallColor = roomCustomization?.wallColor || homeRoom.wallColor;
-            const effectiveFloorColor = roomCustomization?.floorColor || homeRoom.floorColor;
+            const homeCountry = homeCountryId ? COUNTRIES.find((c) => c.id === homeCountryId) : null;
             const atmosphere = homeCountryId ? getCountryAtmosphere(homeCountryId) : { windowSky: HOME_ATMOSPHERE.windowSky };
             const currentMood = getVisbyMood?.() ?? visby?.currentMood ?? 'happy';
             const moodInfo = MOOD_LABELS[currentMood] ?? MOOD_LABELS.happy;
             return (
-              <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.homeRoomWrap}>
-                <View style={styles.homeRoomFrame}>
-                  <LinearGradient
-                    colors={[...atmosphere.windowSky]}
-                    style={[styles.homeRoomWindow, { height: HOME_ROOM_WINDOW_H }]}
-                    locations={[0, 0.6, 1]}
-                  />
-                  <LinearGradient
-                    colors={[effectiveWallColor, effectiveWallColor, (COUNTRIES.find(c => c.id === homeCountryId)?.accentColor ?? colors.primary.wisteria) + '18']}
-                    style={[styles.homeRoomWall, { height: HOME_ROOM_WALL_H }]}
-                    locations={[0, 0.7, 1]}
-                  >
-                    <View style={styles.homeRoomObjectsLayer}>
-                      {homeRoom.objects.slice(0, 4).map((obj) => (
-                        <View key={obj.id} style={[styles.homeRoomDecor, { left: `${obj.x}%`, top: `${obj.y}%` }]}>
-                          <View style={styles.homeRoomDecorIconWrap}>
-                            <Icon name={obj.icon as IconName} size={20} color={colors.text.secondary} />
-                          </View>
-                        </View>
-                      ))}
-                      {placedItems.slice(0, 6).map((placed) => {
-                        const catalogItem = FURNITURE_CATALOG.find(f => f.id === placed.furnitureId);
-                        if (!catalogItem) return null;
-                        return (
-                          <View key={placed.id} style={[styles.homeRoomPlaced, { left: `${placed.x}%`, top: `${placed.y}%` }]}>
-                            {catalogItem.interactionType ? (
-                              <FurnitureVisual
-                                interactionType={catalogItem.interactionType}
-                                icon={catalogItem.icon as IconName}
-                                size="small"
-                                showHint={false}
-                              />
-                            ) : (
-                              <View style={styles.homeRoomDecorIconWrap}>
-                                <Icon name={catalogItem.icon as IconName} size={20} color={colors.text.secondary} />
-                              </View>
-                            )}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  </LinearGradient>
-                  <View style={[styles.homeRoomBaseboard, { backgroundColor: effectiveFloorColor }]} />
-                  <LinearGradient
-                    colors={[effectiveFloorColor, effectiveFloorColor, (COUNTRIES.find(c => c.id === homeCountryId)?.accentColor ?? '#000') + '08']}
-                    style={[styles.homeRoomFloor, { height: HOME_ROOM_FLOOR_H }]}
-                    locations={[0, 0.6, 1]}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={0.95}
-                      onPress={() => setShowVisbyCheckIn(true)}
-                      style={styles.homeVisbyTouch}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${visby?.name || 'Visby'}, ${moodInfo.label}. Tap to chat.`}
-                    >
-                      <Animated.View style={[styles.homeVisbyWrap, visbyAnimStyle]}>
-                        <View style={styles.homeVisbyShadow} />
-                        <VisbyCharacter
-                          appearance={defaultAppearance}
-                          equipped={visby?.equipped}
-                          mood={currentMood}
-                          size={HOME_VISBY_SIZE}
-                          animated
-                          stage={getGrowthStage()}
-                        />
-                        <TouchableOpacity
-                          style={[styles.homeMoodBubble, { backgroundColor: colors.base.cream }]}
-                          onPress={() => openCareHintForMood(currentMood)}
-                          activeOpacity={MOOD_TO_NEED_KEY[currentMood] ? 0.7 : 1}
-                          disabled={!MOOD_TO_NEED_KEY[currentMood]}
-                        >
-                          <Icon name={moodInfo.icon} size={14} color={colors.primary.wisteriaDark} />
-                          <Text style={styles.homeMoodLabel}>{moodInfo.label}</Text>
-                        </TouchableOpacity>
-                      </Animated.View>
-                    </TouchableOpacity>
-                  </LinearGradient>
+              <HomeRoom
+                homeRoom={homeRoom}
+                roomCustomization={roomCustomization ?? null}
+                homeCountryId={homeCountryId}
+                roomLabel={homeCountry ? `${homeRoom.name} · ${homeCountry.name}` : homeRoom.name}
+                windowSky={atmosphere.windowSky}
+                effectiveWallColor={roomCustomization?.wallColor || homeRoom.wallColor}
+                effectiveFloorColor={roomCustomization?.floorColor || homeRoom.floorColor}
+                visby={visby}
+                defaultAppearance={defaultAppearance}
+                getGrowthStage={getGrowthStage}
+                currentMood={currentMood}
+                moodInfo={moodInfo}
+                onTapVisby={() => setShowVisbyCheckIn(true)}
+                onTapMood={() => openCareHintForMood(currentMood)}
+                canOpenMoodHint={!!MOOD_TO_NEED_KEY[currentMood]}
+                onTapSubtitle={() => navigation.navigate('Avatar')}
+              />
+            );
+          })()}
+
+          {/* ──── DAILY ADVENTURE ──── */}
+          {(() => {
+            const adventure = getAdventureOfTheDay();
+            const showVisitWorld = userHouses.length === 0;
+            return (
+              <Animated.View entering={FadeInDown.duration(400).delay(320)} style={styles.dailyAdventureSection}>
+                <View style={styles.sectionTitleRow}>
+                  <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
+                  <Heading level={2} style={styles.sectionTitle}>Daily adventure</Heading>
                 </View>
-                <TouchableOpacity
-                  style={styles.homeRoomSubtitle}
-                  onPress={() => navigation.navigate('Avatar')}
-                  activeOpacity={0.8}
-                >
-                  <Caption color={colors.text.muted}>{visby?.name || 'Your Visby'} · Tap to chat or customize</Caption>
-                </TouchableOpacity>
+                <View style={styles.dailyAdventureCard}>
+                  <View style={styles.dailyAdventureSteps}>
+                    <View style={[styles.dailyAdventureStep, adventure.step1 && styles.dailyAdventureStepDone]}>
+                      <Icon name={adventure.step1 ? 'check' : 'globe'} size={18} color={adventure.step1 ? colors.success.emerald : colors.text.muted} />
+                      <Caption style={styles.dailyAdventureStepLabel}>Visit a place</Caption>
+                    </View>
+                    <View style={[styles.dailyAdventureStep, adventure.step2 && styles.dailyAdventureStepDone]}>
+                      <Icon name={adventure.step2 ? 'check' : 'book'} size={18} color={adventure.step2 ? colors.success.emerald : colors.text.muted} />
+                      <Caption style={styles.dailyAdventureStepLabel}>Read 2 facts</Caption>
+                    </View>
+                    <View style={[styles.dailyAdventureStep, adventure.step3 && styles.dailyAdventureStepDone]}>
+                      <Icon name={adventure.step3 ? 'check' : 'quiz'} size={18} color={adventure.step3 ? colors.success.emerald : colors.text.muted} />
+                      <Caption style={styles.dailyAdventureStepLabel}>Play Word Match</Caption>
+                    </View>
+                  </View>
+                  {!adventure.completed ? (
+                    <TouchableOpacity
+                      style={styles.dailyAdventureCta}
+                      onPress={() => {
+                        if (!adventure.step1) navigation.navigate('Explore', { screen: 'CountryWorld' });
+                        else if (!adventure.step2) navigation.navigate('Learn');
+                        else (navigation as any).navigate('WordMatch');
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Text variant="bodySmall" style={styles.dailyAdventureCtaText}>
+                        {!adventure.step1 ? "Let's go" : !adventure.step2 ? 'Do a lesson' : 'Play game'}
+                      </Text>
+                      <Icon name="chevronRight" size={16} color={colors.primary.wisteriaDark} />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.dailyAdventureDone}>
+                      <Icon name="trophy" size={18} color={colors.reward.gold} />
+                      <Caption style={styles.dailyAdventureDoneText}>Done! +{adventure.rewardAura} Aura</Caption>
+                    </View>
+                  )}
+                </View>
+                {showVisitWorld && (
+                  <TouchableOpacity
+                    style={styles.homeQuickCta}
+                    onPress={() => navigation.navigate('Explore', { screen: 'CountryWorld' })}
+                    activeOpacity={0.85}
+                  >
+                    <Icon name="globe" size={18} color={colors.primary.wisteriaDark} />
+                    <Text variant="bodySmall" style={styles.homeQuickCtaText}>Explore World</Text>
+                  </TouchableOpacity>
+                )}
               </Animated.View>
             );
           })()}
 
-          {/* ──── QUICK: Today's adventure + My Houses ──── */}
-          {(() => {
-            const adventure = getAdventureOfTheDay();
-            return (
-              <Animated.View entering={FadeInDown.duration(400).delay(320)} style={styles.homeQuickRow}>
-                {!adventure.completed && (
-                  <TouchableOpacity
-                    style={styles.homeQuickCta}
-                    onPress={() => {
-                      if (!adventure.step1) navigation.navigate('Explore', { screen: 'CountryWorld' });
-                      else if (!adventure.step2) navigation.navigate('Learn');
-                      else (navigation as any).navigate('WordMatch');
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
-                    <Text variant="bodySmall" style={styles.homeQuickCtaText}>Today&apos;s adventure</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.homeQuickCta}
-                  onPress={() => navigation.navigate('Explore', { screen: 'CountryWorld' })}
-                  activeOpacity={0.85}
-                >
-                  <Icon name="globe" size={18} color={colors.primary.wisteriaDark} />
-                  <Text variant="bodySmall" style={styles.homeQuickCtaText}>{userHouses.length > 0 ? 'Visit World' : 'Explore World'}</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })()}
+          {/* ──── DAILY MISSION ──── */}
+          {dailyMission && !dailyMissionCompletedAt && (
+            <Animated.View entering={FadeInDown.duration(400).delay(360)} style={styles.dailyMissionSection}>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="target" size={18} color={colors.primary.wisteriaDark} />
+                <Heading level={2} style={styles.sectionTitle}>Today&apos;s mission</Heading>
+              </View>
+              <TouchableOpacity
+                style={[styles.dailyMissionCard, { marginTop: spacing.xs }]}
+                onPress={() => {
+                  if (dailyMission.type === 'collect_stamp') navigation.navigate('Explore', { screen: 'Map' });
+                  else if (dailyMission.type === 'add_bite') navigation.navigate('AddBite');
+                  else if (dailyMission.type === 'play_minigame') (navigation as any).navigate('WordMatch');
+                  else if (dailyMission.type === 'chat_with_visby') setShowVisbyCheckIn(true);
+                  else if (dailyMission.type === 'read_facts') navigation.navigate('Explore', { screen: 'CountryWorld' });
+                  else if (dailyMission.type === 'complete_lesson') navigation.navigate('Learn');
+                }}
+                activeOpacity={0.9}
+              >
+                <LinearGradient colors={[colors.surface.lavender, colors.primary.wisteriaFaded]} style={styles.dailyMissionGradient}>
+                  <View style={styles.dailyMissionLeft}>
+                    <View style={styles.dailyMissionIconWrap}>
+                      <Icon name="target" size={22} color={colors.primary.wisteriaDark} />
+                    </View>
+                    <View>
+                      <Text variant="body" style={styles.dailyMissionTitle}>{dailyMission.label}</Text>
+                      <Caption style={styles.dailyMissionLabel}>
+                        {dailyMissionProgress}/{dailyMission.target} completed
+                      </Caption>
+                    </View>
+                  </View>
+                  <View style={styles.dailyMissionCta}>
+                    <Text variant="bodySmall" style={styles.dailyMissionCtaText}>Do it</Text>
+                    <Icon name="chevronRight" size={16} color={colors.primary.wisteriaDark} />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
 
           {userHouses.length > 0 && (
             <Animated.View entering={FadeInDown.duration(400).delay(360)} style={styles.myHousesSection}>
@@ -537,7 +571,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   {careHint.key === 'hunger'
                     ? 'Feed your Visby by logging the foods you eat! Try the Cooking Game too.'
                     : careHint.key === 'happiness'
-                    ? 'Make your Visby happy by collecting stamps, exploring countries, and playing mini-games!'
+                    ? 'Add places to your passport, explore countries, and play mini-games—your Visby loves adventure!'
                     : careHint.key === 'energy'
                     ? 'Your Visby rests when you check in each day. Come back tomorrow for more energy!'
                     : 'Teach your Visby by taking quizzes, completing lessons, and playing Word Match!'}
@@ -559,7 +593,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <>
                       <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); navigation.navigate('CollectStamp', { locationId: 'quick' }); }}>
                         <Icon name="stamp" size={20} color={careHint.color} />
-                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Collect Stamp</Text>
+                        <Text style={[styles.careBtnText, { color: careHint.color }]}>Add to passport</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.careBtn, { backgroundColor: careHint.bgColor }]} onPress={() => { setCareHint(null); (navigation as any).navigate('TreasureHunt'); }}>
                         <Icon name="compass" size={20} color={careHint.color} />
@@ -636,99 +670,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  /* Home Room (Club Penguin / Sims style) */
-  homeRoomWrap: {
+  /* Needs bars */
+  needsSection: {
     marginBottom: spacing.lg,
   },
-  homeRoomFrame: {
-    width: '100%',
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: colors.base.cream,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.2)',
-  },
-  homeRoomWindow: {
-    width: '100%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  homeRoomWall: {
-    width: '100%',
-    position: 'relative',
-  },
-  homeRoomObjectsLayer: {
-    position: 'relative',
-    height: HOME_ROOM_WALL_H - 32,
-    marginTop: 4,
-  },
-  homeRoomDecor: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -18 }, { translateY: -14 }],
-  },
-  homeRoomDecorIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  homeRoomPlaced: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -18 }, { translateY: -12 }],
-  },
-  homeRoomBaseboard: {
-    height: 8,
-    width: '100%',
-  },
-  homeRoomFloor: {
-    width: '100%',
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  homeVisbyTouch: {
-    alignSelf: 'center',
-    alignItems: 'center',
-  },
-  homeVisbyWrap: {
-    alignItems: 'center',
-    width: HOME_VISBY_SIZE,
-    height: HOME_VISBY_SIZE + 28,
-  },
-  homeVisbyShadow: {
-    position: 'absolute',
-    bottom: 2,
-    width: HOME_VISBY_SIZE * 0.5,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0,0,0,0.12)',
-  },
-  homeMoodBubble: {
+  needsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.3)',
+    gap: spacing.sm,
   },
-  homeMoodLabel: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 12,
-    color: colors.primary.wisteriaDark,
+  needsBarWrap: {
+    flex: 1,
+    alignItems: 'center',
   },
-  homeRoomSubtitle: {
-    marginTop: spacing.sm,
-    alignSelf: 'center',
+  needsBarIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
+  needsBarTrack: {
+    height: 6,
+    width: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.surface.subtle,
+    overflow: 'hidden',
+  },
+  needsBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+
   homeQuickRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -749,6 +723,66 @@ const styles = StyleSheet.create({
   homeQuickCtaText: {
     fontFamily: 'Nunito-SemiBold',
     color: colors.primary.wisteriaDark,
+  },
+
+  /* Daily adventure */
+  dailyAdventureSection: {
+    marginBottom: spacing.lg,
+  },
+  dailyAdventureCard: {
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.2)',
+    padding: spacing.md,
+    marginTop: spacing.xs,
+  },
+  dailyAdventureSteps: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  dailyAdventureStep: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  dailyAdventureStepDone: {
+    opacity: 1,
+  },
+  dailyAdventureStepLabel: {
+    fontSize: 10,
+    color: colors.text.muted,
+  },
+  dailyAdventureCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: colors.primary.wisteriaFaded,
+    borderRadius: 12,
+  },
+  dailyAdventureCtaText: {
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.primary.wisteriaDark,
+  },
+  dailyAdventureDone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+  },
+  dailyAdventureDoneText: {
+    color: colors.text.secondary,
+    fontFamily: 'Nunito-SemiBold',
+  },
+
+  /* Daily mission */
+  dailyMissionSection: {
+    marginBottom: spacing.lg,
   },
 
   /* Visby Hero Card (kept for modals / reuse) */

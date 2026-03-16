@@ -8,23 +8,14 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { ProgressBar } from '../../components/ui/ProgressBar';
-import { Icon, IconName } from '../../components/ui/Icon';
+import { Icon } from '../../components/ui/Icon';
 import { useStore, DEFAULT_SKILLS } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
-import type { SkillProgress } from '../../types';
+import { SKILL_CONFIG } from '../../config/skills';
 
 type ProgressScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Progress'>;
 };
-
-const SKILL_CONFIG: { key: keyof SkillProgress; label: string; icon: IconName; hint: string }[] = [
-  { key: 'language', label: 'Language', icon: 'language', hint: 'Lessons, Word Match, quizzes' },
-  { key: 'geography', label: 'Geography', icon: 'geography', hint: 'Treasure Hunt, map exploration' },
-  { key: 'culture', label: 'Culture', icon: 'culture', hint: 'Lessons, quizzes, stamps' },
-  { key: 'history', label: 'History', icon: 'history', hint: 'History lessons, quizzes' },
-  { key: 'cooking', label: 'Cooking', icon: 'food', hint: 'Cooking game, bites' },
-  { key: 'exploration', label: 'Exploration', icon: 'compass', hint: 'Treasure Hunt, locations' },
-];
 
 export const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) => {
   const user = useStore((s) => s.user);
@@ -48,7 +39,14 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) =>
           <Caption style={styles.subtitle}>Level up each skill by learning and playing. Max 100 per skill.</Caption>
           <Card style={styles.card}>
             {SKILL_CONFIG.map(({ key, label, icon, hint }) => (
-              <View key={key} style={styles.skillRow}>
+              <TouchableOpacity
+                key={key}
+                style={styles.skillRow}
+                onPress={() => navigation.navigate('SkillDetail', { skillKey: key })}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${label}, score ${skills[key]}. Tap to see how to improve.`}
+              >
                 <View style={styles.skillHeader}>
                   <View style={styles.skillIconWrap}>
                     <Icon name={icon} size={20} color={colors.primary.wisteriaDark} />
@@ -60,7 +58,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ navigation }) =>
                   <Text variant="h3" color={colors.primary.wisteriaDark}>{skills[key]}</Text>
                 </View>
                 <ProgressBar progress={skills[key]} variant="aura" height={8} style={styles.progressBar} />
-              </View>
+              </TouchableOpacity>
             ))}
           </Card>
         </ScrollView>

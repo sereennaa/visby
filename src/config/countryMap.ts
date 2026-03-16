@@ -108,7 +108,7 @@ export function getMapPin(countryId: string, pinId: string): CountryMapPin | nul
   return pins.find((p) => p.id === pinId) ?? null;
 }
 
-/** Optional region/direction hint for "Where is this?" (e.g. "in the north of France") */
+/** Optional region/direction hint for "Where is this?" and country map list (e.g. "in the north of France") */
 const PIN_REGION_HINTS: Record<string, string> = {
   fr_paris: 'the capital, in the north',
   fr_mont: 'in the north of France',
@@ -117,15 +117,56 @@ const PIN_REGION_HINTS: Record<string, string> = {
   jp_kyoto: 'in the south, near Osaka',
   it_rome: 'the capital, in the center',
   it_venice: 'in the north, on the coast',
+  it_pompeii: 'in the south, near Naples',
+  it_amalfi: 'in the south, on the coast',
   gb_london: 'the capital, in the south',
+  gb_stonehenge: 'in the south of England',
+  gb_lake: 'in the northwest',
+  gb_york: 'in the north of England',
   mx_cdmx: 'the capital, in the center',
-  pe_lima: 'the capital, on the coast',
+  mx_oaxaca: 'in the south',
+  mx_yucatan: 'in the southeast, on the peninsula',
+  br_rio: 'on the southeast coast',
+  br_amazon: 'in the north, the rainforest',
+  br_iguazu: 'in the south, on the border',
+  br_saopaulo: 'in the southeast',
   kr_seoul: 'the capital, in the northwest',
-  no_oslo: 'the capital, in the south',
-  gr_athens: 'the capital, in the south',
+  kr_jeju: 'off the south coast, an island',
+  kr_dmz: 'on the northern border',
+  th_bangkok: 'the capital, in the center',
+  th_phiphi: 'in the south, in the Andaman Sea',
+  th_chiangmai: 'in the north',
+  th_erawan: 'in the west',
+  ma_marrakech: 'in the center-south',
+  ma_sahara: 'in the east, the desert',
+  ma_chefchaouen: 'in the north, in the mountains',
+  ma_fez: 'in the north',
+  pe_lima: 'the capital, on the coast',
+  pe_cusco: 'in the south, in the mountains',
+  pe_rainbow: 'in the south, in the Andes',
+  pe_titicaca: 'in the southeast, on the border',
   ke_nairobi: 'the capital, in the south',
+  ke_mara: 'in the southwest',
+  ke_mtkenya: 'in the center',
+  ke_lamu: 'on the coast, in the east',
+  no_oslo: 'the capital, in the south',
+  no_geiranger: 'in the west, the fjords',
+  no_tromso: 'in the north',
+  no_trolltunga: 'in the west',
+  no_bergen: 'on the west coast',
   tr_istanbul: 'in the northwest, between two continents',
+  tr_cappadocia: 'in the center',
+  tr_pamukkale: 'in the west',
+  gr_athens: 'the capital, in the south',
+  gr_santorini: 'in the south, an island',
+  gr_olympia: 'in the west',
+  gr_meteora: 'in the center-north',
 };
+
+/** Returns optional one-line fact for a pin (e.g. "On the east coast") for country map list. */
+export function getPinRegionHint(pinId: string): string | null {
+  return PIN_REGION_HINTS[pinId] ?? null;
+}
 
 /** Returns a short educational line: "[Pin] is in [Country][, region]." */
 export function getPlaceLocationFact(pinName: string, countryName: string, pinId: string): string {

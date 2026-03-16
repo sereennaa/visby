@@ -291,6 +291,29 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             </Caption>
           </Card>
 
+          {/* Geography: link to World Map */}
+          <TouchableOpacity
+            style={styles.worldMapCard}
+            onPress={() => navigation.navigate('Main', { screen: 'Explore', params: { screen: 'WorldMap' } })}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[colors.calm.skyLight, colors.primary.wisteriaFaded]}
+              style={styles.worldMapCardGradient}
+            >
+              <View style={styles.worldMapCardLeft}>
+                <View style={[styles.worldMapCardIcon, { backgroundColor: colors.calm.ocean + '35' }]}>
+                  <Icon name="map" size={26} color={colors.calm.ocean} />
+                </View>
+                <View>
+                  <Text variant="body" style={styles.worldMapCardTitle}>Explore the World Map</Text>
+                  <Caption style={styles.worldMapCardSub}>See where every country is on the globe</Caption>
+                </View>
+              </View>
+              <Icon name="chevronRight" size={22} color={colors.primary.wisteriaDark} />
+            </LinearGradient>
+          </TouchableOpacity>
+
           {/* Quick Actions */}
           <View style={styles.quickActions}>
             <TouchableOpacity
@@ -485,6 +508,40 @@ const styles = StyleSheet.create({
   goalCaption: {
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  worldMapCard: {
+    marginBottom: spacing.lg,
+    borderRadius: spacing.radius.lg,
+    overflow: 'hidden',
+  },
+  worldMapCardGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary.wisteriaLight + '40',
+    borderRadius: spacing.radius.lg,
+  },
+  worldMapCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  worldMapCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  worldMapCardTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+  },
+  worldMapCardSub: {
+    marginTop: 2,
+    color: colors.text.secondary,
   },
   quickActions: {
     flexDirection: 'row',

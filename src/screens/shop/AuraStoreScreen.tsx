@@ -25,7 +25,7 @@ type AuraStoreScreenProps = {
 const EARN_TIPS: { icon: IconName; text: string }[] = [
   { icon: 'book', text: 'Complete lessons: +50 Aura' },
   { icon: 'quiz', text: 'Pass a quiz: up to +100 Aura' },
-  { icon: 'stamp', text: 'Collect a stamp: +50 Aura' },
+  { icon: 'stamp', text: 'Add to passport: +50 Aura' },
   { icon: 'food', text: 'Log food: +25 Aura' },
   { icon: 'globe', text: 'Visit a country: learn & earn!' },
   { icon: 'sparkles', text: 'Play mini-games: earn Aura & skills!' },

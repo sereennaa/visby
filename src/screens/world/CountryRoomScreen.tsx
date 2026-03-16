@@ -742,9 +742,9 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   <Icon name="stamp" size={20} color={country.accentColor} />
                   <View style={styles.collectionGoalText}>
                     <Text variant="bodySmall" style={styles.collectionGoalTitle}>
-                      {progress.remaining} more stamp{progress.remaining !== 1 ? 's' : ''} to complete your {country.name} set
+                      {progress.remaining} more place{progress.remaining !== 1 ? 's' : ''} and you&apos;ve completed your dreamy {country.name} set
                     </Text>
-                    <Caption style={styles.collectionGoalSub}>{progress.current}/{progress.target} collected</Caption>
+                    <Caption style={styles.collectionGoalSub}>{progress.current}/{progress.target} in your passport</Caption>
                   </View>
                   <Icon name="chevronRight" size={18} color={colors.text.muted} />
                 </TouchableOpacity>

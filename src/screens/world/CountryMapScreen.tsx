@@ -14,7 +14,7 @@ import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { COUNTRIES } from '../../config/constants';
-import { getCountryMapPins } from '../../config/countryMap';
+import { getCountryMapPins, getPinRegionHint } from '../../config/countryMap';
 import { getCountryOutlinePath } from '../../config/countryOutlines';
 import { CountryOutline } from '../../components/maps/CountryOutline';
 import { ExploreStackParamList } from '../../types';
@@ -114,23 +114,27 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {pins.map((pin) => (
-            <TouchableOpacity
-              key={pin.id}
-              style={[styles.listRow, { borderLeftColor: pin.type === 'city' ? colors.primary.wisteria : colors.reward.peach }]}
-              onPress={() => navigation.navigate('PlaceStreet', { countryId, pinId: pin.id })}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.listIconWrap, { backgroundColor: pin.type === 'city' ? colors.primary.wisteriaFaded : colors.reward.peachLight }]}>
-                <Icon name={pin.type === 'city' ? 'city' : 'landmark'} size={24} color={pin.type === 'city' ? colors.primary.wisteriaDark : colors.reward.peachDark} />
-              </View>
-              <View style={styles.listTextWrap}>
-                <Text style={styles.listTitle}>{pin.name}</Text>
-                <Caption style={styles.listMeta}>{pin.type === 'city' ? 'City' : 'Landmark'} · {pin.locationIds.length} stop{pin.locationIds.length !== 1 ? 's' : ''}</Caption>
-              </View>
-              <Icon name="chevronRight" size={20} color={colors.text.muted} />
-            </TouchableOpacity>
-          ))}
+          {pins.map((pin) => {
+            const regionHint = getPinRegionHint(pin.id);
+            return (
+              <TouchableOpacity
+                key={pin.id}
+                style={[styles.listRow, { borderLeftColor: pin.type === 'city' ? colors.primary.wisteria : colors.reward.peach }]}
+                onPress={() => navigation.navigate('PlaceStreet', { countryId, pinId: pin.id })}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.listIconWrap, { backgroundColor: pin.type === 'city' ? colors.primary.wisteriaFaded : colors.reward.peachLight }]}>
+                  <Icon name={pin.type === 'city' ? 'city' : 'landmark'} size={24} color={pin.type === 'city' ? colors.primary.wisteriaDark : colors.reward.peachDark} />
+                </View>
+                <View style={styles.listTextWrap}>
+                  <Text style={styles.listTitle}>{pin.name}</Text>
+                  <Caption style={styles.listMeta}>{pin.type === 'city' ? 'City' : 'Landmark'} · {pin.locationIds.length} stop{pin.locationIds.length !== 1 ? 's' : ''}</Caption>
+                  {regionHint ? <Caption style={styles.listHint}>{regionHint}</Caption> : null}
+                </View>
+                <Icon name="chevronRight" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -214,6 +218,7 @@ const styles = StyleSheet.create({
   listTextWrap: { flex: 1 },
   listTitle: { fontFamily: 'Baloo2-SemiBold', fontSize: 16, color: colors.text.primary },
   listMeta: { marginTop: 2 },
+  listHint: { marginTop: 2, fontStyle: 'italic', color: colors.text.muted },
 });
 
 export default CountryMapScreen;

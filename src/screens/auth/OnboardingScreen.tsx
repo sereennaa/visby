@@ -58,7 +58,7 @@ const GAME_ITEMS: { icon: IconName; iconColor: string; iconBg: string; label: st
 const WORLD_ITEMS: { icon: IconName; label: string; bg: string; color: string }[] = [
   { icon: 'globe', label: 'Countries', bg: colors.calm.skyLight, color: colors.calm.ocean },
   { icon: 'home', label: 'Rooms', bg: colors.accent.lavender, color: colors.primary.wisteriaDark },
-  { icon: 'stamp', label: 'Stamps', bg: colors.success.honeydew, color: colors.success.emerald },
+  { icon: 'stamp', label: 'Passport', bg: colors.success.honeydew, color: colors.success.emerald },
 ];
 
 const SPARKLE_POSITIONS = [
@@ -396,7 +396,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
                 color={colors.text.secondary}
                 style={styles.descriptionNunito}
               >
-                Visit countries, collect stamps, and decorate your house!
+                Visit countries, add places to your passport, and decorate your house!
               </Text>
               <View style={styles.worldIconsRow}>
                 {WORLD_ITEMS.map((item) => (
@@ -416,7 +416,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
                   <Text variant="h3" style={styles.miniCardTitle}>Japan</Text>
                   <View style={styles.miniCardRow}>
                     <Icon name="stamp" size={14} color={colors.text.muted} />
-                    <Text variant="caption" style={styles.miniCardStat}>12 stamps</Text>
+                    <Text variant="caption" style={styles.miniCardStat}>12 places</Text>
                   </View>
                 </LinearGradient>
               </View>

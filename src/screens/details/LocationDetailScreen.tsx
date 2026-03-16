@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { whimsicalGradients } from '../../theme/whimsical';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -26,7 +27,7 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
   if (!location) {
     return (
       <LinearGradient
-        colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+        colors={[...whimsicalGradients.hero]}
         style={styles.container}
       >
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -46,7 +47,7 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
 
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+      colors={[...whimsicalGradients.hero]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -62,7 +63,7 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
 
           {/* Header Card */}
           <Card style={styles.headerCard}>
-            <View style={[styles.iconCircle, { backgroundColor: typeInfo.color + '20' }]}>
+            <View style={[styles.iconCircle, { backgroundColor: typeInfo.color + '25', borderWidth: 2, borderColor: typeInfo.color + '40' }]}>
               <Icon name={typeInfo.icon} size={40} color={typeInfo.color} />
             </View>
 
@@ -80,7 +81,7 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
           <Card style={styles.descriptionCard}>
             <View style={styles.sectionTitleRow}>
               <Icon name="info" size={18} color={colors.primary.wisteriaDark} />
-              <Text variant="h3">About</Text>
+              <Text variant="h3">A little about this place</Text>
             </View>
             <Text variant="body" color={colors.text.secondary}>
               {location.description}
@@ -108,9 +109,9 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
           {/* Spacer before CTA */}
           <View style={styles.ctaSpacer} />
 
-          {/* Collect Stamp CTA */}
+          {/* Add to passport CTA */}
           <Button
-            title="Collect Stamp Here"
+            title="Add to passport"
             onPress={() => navigation.navigate('CollectStamp', { locationId: location.id })}
             variant="primary"
             size="lg"

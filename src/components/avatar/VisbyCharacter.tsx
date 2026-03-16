@@ -745,16 +745,18 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       <Ellipse cx={stage === 'adult' ? 125 : 122} cy={86 + bodyOffsetY / 3} rx={stage === 'adult' ? 13 : 11} ry={stage === 'adult' ? 9 : 8} fill={skin} />
       <Ellipse cx={stage === 'adult' ? 125 : 122} cy={85 + bodyOffsetY / 3} rx={stage === 'adult' ? 11 : 9} ry={stage === 'adult' ? 7.5 : 6.5} fill={skinL} />
 
-      {/* Cape / outfit */}
+      {/* Default outfit: open vest so arms and neck/torso show */}
       {!hasCustomOutfit && (
         <G>
-          <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#F07080" />
-          <Path d="M 38 96 Q 38 92 75 90 Q 112 92 112 96" fill="none" stroke="#FF8894" strokeWidth={0.8} opacity={0.5} />
-          <Rect x={36} y={110} width={78} height={5.5} rx={2.75} fill="#8B5E3C" />
-          <Rect x={36} y={111} width={78} height={2.5} rx={1.25} fill="#A07048" opacity={0.35} />
-          <Circle cx={CX} cy={113} r={4} fill="#FFD700" />
-          <Circle cx={CX} cy={112.5} r={2.5} fill="#FFF4B0" />
-          <Circle cx={74.5} cy={112} r={1} fill="#FFFFFF" opacity={0.7} />
+          {/* Vest body — narrower so arms stay visible (arm centers ~28 and 122) */}
+          <Path d="M 48 96 Q 48 92 75 90 Q 102 92 102 96 L 104 124 Q 75 130 46 124 Z" fill="#F07080" />
+          <Path d="M 50 94 Q 50 91 75 89.5 Q 100 91 100 94" fill="none" stroke="#FF8894" strokeWidth={0.8} opacity={0.5} />
+          {/* Belt and buckle */}
+          <Rect x={48} y={112} width={54} height={4} rx={2} fill="#8B5E3C" />
+          <Rect x={48} y={113} width={54} height={1.5} rx={0.75} fill="#A07048" opacity={0.35} />
+          <Circle cx={CX} cy={114} r={3.5} fill="#FFD700" />
+          <Circle cx={CX} cy={113.5} r={2} fill="#FFF4B0" />
+          <Circle cx={74.5} cy={113} r={0.8} fill="#FFFFFF" opacity={0.7} />
         </G>
       )}
 
@@ -789,6 +791,59 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
           <Path d="M 48 102 Q 75 94 102 102" stroke="#FFD700" strokeWidth={2} fill="none" />
         </G>
       )}
+      {hasCustomOutfit && equipped?.outfit === 'hawaiian_shirt' && (
+        <G>
+          <Path d="M 40 96 Q 40 92 75 90 Q 110 92 110 96 L 112 126 Q 75 132 38 126 Z" fill="#00AA66" />
+          <Path d="M 44 98 L 44 118 M 106 98 L 106 118" stroke="#FF6B9D" strokeWidth={2.5} fill="none" />
+          <Circle cx={58} cy={108} r={4} fill="#FFD700" />
+          <Circle cx={75} cy={112} r={4} fill="#FF6B9D" />
+          <Circle cx={92} cy={108} r={4} fill="#00AA66" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'lederhosen' && (
+        <G>
+          <Path d="M 44 100 L 44 128 Q 75 132 106 128 L 106 100 Q 75 96 44 100 Z" fill="#8B4513" />
+          <Path d="M 44 100 Q 75 92 106 100" stroke="#A0522D" strokeWidth={1.5} fill="none" />
+          <Rect x={70} y={98} width={10} height={14} fill="#8B4513" />
+          <Circle cx={75} cy={104} r={2} fill="#DAA520" />
+          <Path d="M 38 102 L 72 92 M 112 102 L 78 92" stroke="#5D3A1A" strokeWidth={3} fill="none" strokeLinecap="round" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'toga' && (
+        <G>
+          <Path d="M 32 94 L 75 88 L 118 94 L 116 130 Q 75 136 34 130 Z" fill="#F5F5DC" />
+          <Path d="M 40 98 Q 75 92 110 98" fill="none" stroke="#E8E8D0" strokeWidth={1} opacity={0.6} />
+          <Path d="M 50 100 L 75 124 L 100 100" fill="none" stroke="#DEB887" strokeWidth={1.5} opacity={0.5} />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'ninja_outfit' && (
+        <G>
+          <Path d="M 36 98 Q 36 90 75 88 Q 114 90 114 98 L 116 128 Q 75 136 34 128 Z" fill="#1A1A1A" />
+          <Path d="M 40 96 Q 75 94 110 96" fill="none" stroke="#2D2D2D" strokeWidth={1} opacity={0.6} />
+          <Rect x={70} y={108} width={10} height={6} rx={1} fill="#333" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'knight_armor' && (
+        <G>
+          <Path d="M 38 96 Q 38 92 75 90 Q 112 92 112 96 L 114 126 Q 75 132 36 126 Z" fill="#C0C0C0" />
+          <Path d="M 42 94 Q 75 91 108 94" fill="none" stroke="#A0A0A0" strokeWidth={1.2} />
+          <Circle cx={75} cy={110} r={5} fill="#B8860B" />
+          <Circle cx={75} cy={109.5} r={2.5} fill="#DAA520" />
+          <Path d="M 44 98 L 44 120 M 106 98 L 106 120" stroke="#8B8B8B" strokeWidth={2} fill="none" />
+        </G>
+      )}
+      {/* Generic fallback: any other outfit shows a colored tunic so every purchase is visible */}
+      {hasCustomOutfit && equipped?.outfit && !['kimono', 'hanbok', 'dashiki', 'poncho', 'sari', 'hawaiian_shirt', 'lederhosen', 'toga', 'default_tunic', 'ninja_outfit', 'knight_armor'].includes(equipped.outfit) && (() => {
+        const palette = ['#6B5B95', '#2E86AB', '#1B4332', '#5C4D7D', '#9B59B6', '#E74C3C', '#16A085', '#8E44AD'];
+        const idx = equipped.outfit.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % palette.length;
+        const fill = palette[idx];
+        return (
+          <G>
+            <Path d="M 38 98 Q 38 92 75 90 Q 112 92 112 98 L 114 128 Q 75 134 36 128 Z" fill={fill} />
+            <Path d="M 42 96 Q 42 93 75 91 Q 108 93 108 96" fill="none" stroke={fill} strokeWidth={1} opacity={0.4} />
+          </G>
+        );
+      })()}
 
       {/* Ears */}
       <Circle cx={32} cy={56} r={8} fill={skin} />

@@ -51,7 +51,7 @@ export const ParentDashboardScreen: React.FC<ParentDashboardScreenProps> = ({ na
             </View>
             <View style={styles.statRow}>
               <Icon name="stamp" size={20} color={colors.reward.peachDark} />
-              <Text variant="body">Stamps collected: {stamps.length}</Text>
+              <Text variant="body">Places in passport: {stamps.length}</Text>
             </View>
           </Card>
 

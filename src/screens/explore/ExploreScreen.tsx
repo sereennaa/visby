@@ -43,8 +43,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
     },
     {
       icon: 'stamp' as IconName,
-      label: 'Collect a Stamp',
-      subtitle: 'Remember a place',
+      label: 'Add to passport',
+      subtitle: 'A place to remember',
       gradient: [colors.surface.peach, colors.reward.peachLight] as [string, string],
       iconBg: colors.reward.peachDark,
       onPress: () => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'quick' }),

@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   useWindowDimensions,
-  Platform,
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { getShadowStyle } from '../../theme/shadows';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -284,9 +284,12 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text variant="caption" color={colors.primary.wisteriaDark} style={styles.headerSub}>
-              Browse &amp; Equip
+              Dress your Visby for adventure
             </Text>
             <Heading level={1}>Shop</Heading>
+            <Text variant="caption" color={colors.text.muted} style={styles.shopTagline}>
+              Every piece tells a story — find something magical
+            </Text>
           </View>
           <View style={styles.auraPill}>
             <Icon name="sparkles" size={16} color={colors.reward.gold} />
@@ -318,7 +321,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
               </View>
             ) : (
               <Text variant="caption" color={colors.text.muted} style={styles.previewHint}>
-                Tap an item to preview
+                Tap any item to see it on your Visby
               </Text>
             )}
           </LinearGradient>
@@ -442,6 +445,7 @@ const styles = StyleSheet.create({
   },
   headerCenter: { alignItems: 'center' },
   headerSub: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 1 },
+  shopTagline: { marginTop: 2, maxWidth: 220, textAlign: 'center' },
   backBtn: {
     width: 42,
     height: 42,
@@ -449,9 +453,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS !== 'web'
-      ? { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 }
-      : {}),
+    ...getShadowStyle({ shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 }),
   },
   auraPill: {
     flexDirection: 'row',
@@ -532,9 +534,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     position: 'relative',
-    ...(Platform.OS !== 'web'
-      ? { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 2 }
-      : {}),
+    ...getShadowStyle({ shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 2 }),
   },
   cardPreviewing: {
     borderColor: colors.primary.wisteria,

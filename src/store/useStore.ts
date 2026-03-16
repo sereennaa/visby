@@ -35,6 +35,8 @@ function getISOWeekKey(): string {
   return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 import { checkNewBadges, BadgeCheckContext } from '../services/badges';
+import { stampsService } from '../services/stamps';
+import { showToast } from './useToast';
 import { COUNTRY_SOUVENIRS } from '../config/cosmetics';
 
 export const DEFAULT_SKILLS: SkillProgress = {
@@ -214,7 +216,7 @@ interface AppStore {
   
   // Actions - Collections
   setStamps: (stamps: Stamp[]) => void;
-  addStamp: (stamp: Stamp) => void;
+  addStamp: (stamp: Stamp) => Promise<Stamp | null>;
   setBites: (bites: Bite[]) => void;
   addBite: (bite: Bite) => void;
   setBadges: (badges: UserBadge[]) => void;
@@ -260,6 +262,7 @@ interface AppStore {
   setLastVisbyCheckInAt: () => void;
   shouldShowVisbyCheckIn: () => boolean;
   getVisbyMemories: () => VisbyMemory[];
+  getVisbyChatMessages: () => VisbyChatMessage[];
 
   // Actions - Daily mission & surprise
   getDailyMission: () => DailyMission | null;
@@ -645,6 +648,7 @@ export const useStore = create<AppStore>()(
         return last.getDate() !== today.getDate() || last.getFullYear() !== today.getFullYear() || last.getMonth() !== today.getMonth();
       },
       getVisbyMemories: () => get().visbyMemories,
+      getVisbyChatMessages: () => get().visbyChatMessages,
 
       getDailyMission: () => {
         const today = todayDateKey();
@@ -922,7 +926,21 @@ export const useStore = create<AppStore>()(
       },
 
       // Visby Actions
-      setVisby: (visby) => set({ visby }),
+      setVisby: (visby) => {
+        if (!visby) {
+          set({ visby: null });
+          return;
+        }
+        const starters = ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet'];
+        const owned = visby.ownedCosmetics ?? [];
+        const merged = [...new Set([...starters, ...owned])];
+        const needsMerge = starters.some((id) => !owned.includes(id));
+        set({
+          visby: needsMerge
+            ? { ...visby, ownedCosmetics: merged }
+            : visby,
+        });
+      },
       updateVisbyAppearance: (appearance) => {
         const { visby } = get();
         if (visby) {
@@ -954,12 +972,20 @@ export const useStore = create<AppStore>()(
       
       // Collection Actions
       setStamps: (stamps) => set({ stamps }),
-      addStamp: (stamp) => {
-        set((state) => ({ stamps: [...state.stamps, stamp] }));
-        get().playWithVisby();
-        get().checkAndAwardBadges();
-        get().checkDailyMissionCompletion('collect_stamp', 1);
-        get().checkQuests();
+      addStamp: async (stamp) => {
+        try {
+          const saved = await stampsService.insertStamp(stamp);
+          set((state) => ({ stamps: [saved, ...state.stamps] }));
+          get().playWithVisby();
+          get().checkAndAwardBadges();
+          get().checkDailyMissionCompletion('collect_stamp', 1);
+          get().checkQuests();
+          return saved;
+        } catch (e) {
+          if (__DEV__) console.error('Failed to save stamp', e);
+          showToast('Could not save stamp. Try again.', 'error');
+          return null;
+        }
       },
       setBites: (bites) => set({ bites }),
       addBite: (bite) => {

@@ -155,11 +155,13 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.md,
     overflow: 'hidden',
     backgroundColor: colors.base.cream,
-    shadowColor: colors.shadow.medium,
+    shadowColor: colors.primary.wisteria,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.2)',
   },
   gradient: {
     flex: 1,
@@ -220,6 +222,8 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.base.parchment,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.15)',
   },
   // Mini stamp styles
   miniContainer: {

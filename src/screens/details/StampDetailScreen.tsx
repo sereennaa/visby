@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { whimsicalGradients } from '../../theme/whimsical';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -26,7 +27,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
   if (!stamp) {
     return (
       <LinearGradient
-        colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+        colors={[...whimsicalGradients.hero]}
         style={styles.container}
       >
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -51,7 +52,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
 
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+      colors={[...whimsicalGradients.hero]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -72,7 +73,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Icon name="camera" size={48} color={colors.text.muted} />
-                <Caption style={styles.photoCaption}>No photo</Caption>
+                <Caption style={styles.photoCaption}>A moment to remember</Caption>
               </View>
             )}
           </View>
@@ -103,6 +104,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
             <Heading level={2} style={styles.locationName}>
               {stamp.locationName}
             </Heading>
+            <Caption style={styles.journeyTagline}>A piece of your journey</Caption>
 
             <View style={styles.locationRow}>
               <Icon name="location" size={16} color={colors.text.secondary} />
@@ -133,7 +135,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
             <Card style={styles.notesCard}>
               <View style={styles.sectionTitleRow}>
                 <Icon name="edit" size={18} color={colors.primary.wisteriaDark} />
-                <Text variant="h3">Notes</Text>
+                <Text variant="h3">What made it special</Text>
               </View>
               <Text variant="body" color={colors.text.secondary}>
                 {stamp.notes}
@@ -232,6 +234,11 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.round,
   },
   locationName: {
+    marginBottom: spacing.xs,
+  },
+  journeyTagline: {
+    fontStyle: 'italic',
+    color: colors.text.muted,
     marginBottom: spacing.sm,
   },
   locationRow: {

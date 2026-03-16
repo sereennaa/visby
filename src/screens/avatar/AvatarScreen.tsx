@@ -4,8 +4,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { getShadowStyle } from '../../theme/shadows';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -38,7 +40,13 @@ import {
   ShopCosmetic,
 } from '../../config/cosmetics';
 
-const { width: SCREEN_W } = Dimensions.get('window');
+const SIDE = spacing.screenPadding;
+const GAP = spacing.sm;
+const NUM_COLS = 3;
+
+// Fallback for StyleSheet (used until useWindowDimensions runs). Inline width overrides this.
+const { width: INITIAL_WIDTH } = Dimensions.get('window');
+const ITEM_WIDTH = (INITIAL_WIDTH - SIDE * 2 - GAP * (NUM_COLS - 1)) / NUM_COLS;
 
 type AvatarScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
@@ -123,7 +131,12 @@ const RARITY_GLOW: Record<string, string> = {
   legendary: 'rgba(255, 215, 0, 0.25)',
 };
 
+const SLOTS_WITH_CHARACTER_PREVIEW: CosmeticType[] = ['hat', 'outfit', 'accessory'];
+
 export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
+  const { width: screenW } = useWindowDimensions();
+  const itemWidth = (screenW - SIDE * 2 - GAP * (NUM_COLS - 1)) / NUM_COLS;
+
   const { visby, updateVisbyAppearance, equipCosmetic } = useStore();
   const [wardrobeTab, setWardrobeTab] = useState<CosmeticType>('hat');
 
@@ -228,12 +241,16 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
           </View>
 
           {/* Character Display */}
-          <MagicBorder
-            borderRadius={28}
-            borderWidth={2}
-            colors={['#C7B8EA', '#FFD700', '#7FBDE8', '#FFB6C1', '#C7B8EA']}
-            style={styles.characterBorder}
+          <Animated.View
+            entering={FadeInDown.duration(500).springify().damping(14)}
+            style={styles.characterBorderWrapper}
           >
+            <MagicBorder
+              borderRadius={28}
+              borderWidth={2}
+              colors={['#C7B8EA', '#FFD700', '#7FBDE8', '#FFB6C1', '#C7B8EA']}
+              style={styles.characterBorder}
+            >
             <LinearGradient
               colors={['#F5F0FF', '#FFF6EE', '#F0ECFF']}
               start={{ x: 0, y: 0 }}
@@ -262,6 +279,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
               </View>
             </LinearGradient>
           </MagicBorder>
+          </Animated.View>
 
           {/* Current Mood (auto-derived from needs) */}
           <View style={styles.sectionCard}>
@@ -284,7 +302,10 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
           <View style={styles.wardrobeHeader}>
             <View style={styles.wardrobeHeaderLeft}>
               <Icon name="star" size={18} color={colors.reward.gold} />
-              <Heading level={2} style={styles.wardrobeTitle}>Wardrobe</Heading>
+              <View>
+                <Heading level={2} style={styles.wardrobeTitle}>Wardrobe</Heading>
+                <Caption style={styles.wardrobeTagline}>Make your Visby one of a kind</Caption>
+              </View>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('CosmeticShop')}
@@ -334,6 +355,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 style={[
                   styles.wardrobeItem,
+                  { width: itemWidth },
                   !equipped[wardrobeTab] && styles.wardrobeItemActive,
                 ]}
                 onPress={() => equipCosmetic(wardrobeTab, undefined)}
@@ -341,10 +363,22 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                 accessibilityLabel="Unequip"
               >
                 <View style={styles.wardrobeItemInner}>
-                  <View style={styles.wardrobeIconCircle}>
-                    <Icon name="close" size={20} color={colors.text.muted} />
-                  </View>
-                  <Caption style={styles.wardrobeItemName}>None</Caption>
+                  {showCharacterPreview ? (
+                    <View style={styles.wardrobePreviewBubble}>
+                      <VisbyCharacter
+                        appearance={appearance}
+                        equipped={{ ...equipped, [wardrobeTab]: undefined }}
+                        mood="happy"
+                        size={64}
+                        animated={false}
+                      />
+                    </View>
+                  ) : (
+                    <View style={styles.wardrobeIconCircle}>
+                      <Icon name="close" size={22} color={colors.text.muted} />
+                    </View>
+                  )}
+                  <Text variant="body" style={styles.wardrobeItemName}>None</Text>
                 </View>
                 {!equipped[wardrobeTab] && (
                   <View style={styles.equippedBadge}>
@@ -362,6 +396,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                     key={item.id}
                     style={[
                       styles.wardrobeItem,
+                      { width: itemWidth },
                       active && styles.wardrobeItemActive,
                       { backgroundColor: active ? rarityGlow : colors.base.cream },
                       active && { borderColor: rarityColor },
@@ -371,10 +406,22 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
                     accessibilityLabel={`${active ? 'Unequip' : 'Equip'} ${item.name}`}
                   >
                     <View style={styles.wardrobeItemInner}>
-                      <View style={[styles.wardrobeIconCircle, { backgroundColor: `${rarityColor}18` }]}>
-                        <Icon name={item.icon} size={26} color={rarityColor} />
-                      </View>
-                      <Caption numberOfLines={1} style={styles.wardrobeItemName}>{item.name}</Caption>
+                      {showCharacterPreview ? (
+                        <View style={[styles.wardrobePreviewBubble, { backgroundColor: `${rarityColor}12` }]}>
+                          <VisbyCharacter
+                            appearance={appearance}
+                            equipped={equippedForPreview(item)}
+                            mood="happy"
+                            size={64}
+                            animated={false}
+                          />
+                        </View>
+                      ) : (
+                        <View style={[styles.wardrobeIconCircle, { backgroundColor: `${rarityColor}18` }]}>
+                          <Icon name={item.icon} size={26} color={rarityColor} />
+                        </View>
+                      )}
+                      <Text variant="body" numberOfLines={1} style={styles.wardrobeItemName}>{item.name}</Text>
                       <View style={styles.rarityRow}>
                         <View style={[styles.rarityDot, { backgroundColor: rarityColor }]} />
                         <Text
@@ -398,9 +445,9 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
           ) : (
             <Card style={styles.emptyWardrobe}>
               <EmptyState
-                icon="shirt"
-                title={copy.empty.noWardrobe.title}
-                subtitle={copy.empty.noWardrobe.subtitle}
+                icon={WARDROBE_TABS.find((t) => t.type === wardrobeTab)?.icon ?? 'star'}
+                title={WARDROBE_EMPTY_COPY[wardrobeTab]?.title ?? copy.empty.noWardrobe.title}
+                subtitle={WARDROBE_EMPTY_COPY[wardrobeTab]?.subtitle ?? copy.empty.noWardrobe.subtitle}
                 actionLabel={copy.actions.goToShop}
                 onAction={() => navigation.navigate('CosmeticShop')}
               />
@@ -408,7 +455,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
           )}
 
           {/* Appearance Section */}
-          <SectionHeader icon="star" title="Appearance" />
+          <SectionHeader icon="star" title="Appearance" subtitle="Skin, hair, and eyes — make them yours" />
 
           <Card variant="magic" style={styles.section}>
             <View style={styles.sectionTitleRow}>
@@ -542,7 +589,7 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
   );
 };
 
-const SectionHeader: React.FC<{ icon: IconName; title: string }> = ({ icon, title }) => (
+const SectionHeader: React.FC<{ icon: IconName; title: string; subtitle?: string }> = ({ icon, title, subtitle }) => (
   <View style={styles.sectionHeader}>
     <View style={styles.sectionDivider} />
     <View style={styles.sectionHeaderContent}>
@@ -550,6 +597,7 @@ const SectionHeader: React.FC<{ icon: IconName; title: string }> = ({ icon, titl
       <Heading level={2} style={styles.sectionHeaderText}>{title}</Heading>
       <Icon name={icon} size={14} color={colors.reward.gold} />
     </View>
+    {subtitle ? <Caption style={styles.sectionHeaderSubtitle}>{subtitle}</Caption> : null}
     <View style={styles.sectionDivider} />
   </View>
 );
@@ -561,8 +609,6 @@ function isLightColor(hex: string): boolean {
   const b = parseInt(c.substring(4, 6), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 160;
 }
-
-const ITEM_WIDTH = (SCREEN_W - spacing.screenPadding * 2 - spacing.sm * 2) / 3;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -594,9 +640,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS !== 'web'
-      ? { shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 }
-      : {}),
+    ...getShadowStyle({ shadowColor: 'rgba(0,0,0,0.06)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2 }),
   },
   shopButton: {
     width: 42,
@@ -608,9 +652,10 @@ const styles = StyleSheet.create({
   },
 
   // Character
-  characterBorder: {
+  characterBorderWrapper: {
     marginBottom: spacing.xl,
   },
+  characterBorder: {},
   characterGradient: {
     alignItems: 'center',
     paddingVertical: spacing.xl + 4,
@@ -676,6 +721,10 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     marginBottom: 0,
   },
+  sectionHeaderSubtitle: {
+    marginTop: 2,
+    opacity: 0.85,
+  },
 
   // Wardrobe
   wardrobeHeader: {
@@ -691,6 +740,10 @@ const styles = StyleSheet.create({
   },
   wardrobeTitle: {
     marginBottom: 0,
+  },
+  wardrobeTagline: {
+    marginTop: 2,
+    opacity: 0.85,
   },
   shopLink: {
     borderRadius: spacing.radius.round,
@@ -743,9 +796,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     position: 'relative',
-    ...(Platform.OS !== 'web'
-      ? { shadowColor: 'rgba(0,0,0,0.04)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 1 }
-      : {}),
+    ...getShadowStyle({ shadowColor: 'rgba(0,0,0,0.04)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 1 }),
   },
   wardrobeItemActive: {
     borderWidth: 2,
@@ -753,6 +804,15 @@ const styles = StyleSheet.create({
   wardrobeItemInner: {
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  wardrobePreviewBubble: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(184, 165, 224, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   wardrobeIconCircle: {
     width: 48,
@@ -764,6 +824,8 @@ const styles = StyleSheet.create({
   },
   wardrobeItemName: {
     textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '700',
   },
   rarityRow: {
     flexDirection: 'row',
@@ -776,7 +838,7 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
   },
   rarityText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
   },
   equippedBadge: {

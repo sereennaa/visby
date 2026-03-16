@@ -171,7 +171,7 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
           <View style={styles.bottomSection}>
             <Icon name="sparkles" size={24} color={colors.reward.gold} />
             <Caption align="center" style={styles.bottomText}>
-              Earn Aura for free by completing lessons, collecting stamps, and exploring!
+              Earn Aura for free by completing lessons, adding places to your passport, and exploring!
             </Caption>
           </View>
         </ScrollView>

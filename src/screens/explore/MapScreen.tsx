@@ -18,10 +18,12 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { copy } from '../../config/copy';
+import { whimsicalGradients } from '../../theme/whimsical';
 import { useStore } from '../../store/useStore';
 import { locationService } from '../../services/location';
 import { STAMP_TYPES_INFO } from '../../config/constants';
 import { SAMPLE_LOCATIONS, SampleLocation } from '../../config/locations';
+import { NearbyMapView } from '../../components/maps/NearbyMapView';
 import { ExploreStackParamList, StampType } from '../../types';
 
 type MapScreenProps = {
@@ -139,7 +141,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
   if (locationError) {
     return (
       <LinearGradient
-        colors={[colors.calm.skyLight, colors.base.cream]}
+        colors={[...whimsicalGradients.hero]}
         style={styles.container}
       >
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -167,7 +169,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={[colors.calm.skyLight, colors.base.cream]}
+      colors={[...whimsicalGradients.hero]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -181,7 +183,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
           >
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Heading level={1} style={styles.headerTitle}>Nearby</Heading>
+          <Heading level={1} style={styles.headerTitle}>Places to discover</Heading>
           <TouchableOpacity onPress={fetchLocation} style={styles.headerIcon}>
             <Icon name="refresh" size={24} color={colors.text.secondary} />
           </TouchableOpacity>
@@ -206,6 +208,16 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
             </Text>
           )}
         </Card>
+
+        {/* Nearby map: You + places by distance */}
+        <View style={styles.nearbyMapWrap}>
+          <NearbyMapView
+            locations={sortedLocations}
+            onPlacePress={(locationId) => (navigation.getParent() as any)?.getParent()?.navigate('LocationDetail', { locationId })}
+          />
+          <Caption style={styles.mapHint}>{copy.stamps.mapHint}</Caption>
+          <Caption style={styles.sampleNotice}>{copy.stamps.samplePlacesNotice}</Caption>
+        </View>
 
         {/* Search */}
         <View style={styles.searchContainer}>
@@ -333,15 +345,17 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        {/* Quick Collect Button */}
-        <View style={styles.floatingButton}>
-          <Button
-            title="Collect Stamp Here"
-            onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'current' })}
-            variant="primary"
-            size="lg"
-            icon={<Icon name="stamp" size={20} color={colors.text.inverse} />}
-          />
+        {/* Add current location to passport — dreamy floating CTA */}
+        <View style={styles.floatingButtonWrap}>
+          <View style={styles.floatingButton}>
+            <Button
+              title="Add current location"
+              onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'current' })}
+              variant="primary"
+              size="lg"
+              icon={<Icon name="stamp" size={20} color={colors.text.inverse} />}
+            />
+          </View>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -372,6 +386,21 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     padding: spacing.xs,
+  },
+  nearbyMapWrap: {
+    marginHorizontal: spacing.screenPadding,
+  },
+  mapHint: {
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    color: colors.text.muted,
+  },
+  sampleNotice: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+    color: colors.text.muted,
+    fontStyle: 'italic',
   },
   currentLocationCard: {
     marginHorizontal: spacing.screenPadding,
@@ -541,11 +570,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.wisteriaFaded,
     borderRadius: spacing.radius.round,
   },
-  floatingButton: {
+  floatingButtonWrap: {
     position: 'absolute',
     bottom: spacing.xl,
     left: spacing.screenPadding,
     right: spacing.screenPadding,
+  },
+  floatingButton: {
+    borderRadius: spacing.radius.xl,
+    shadowColor: colors.primary.wisteriaDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });
 

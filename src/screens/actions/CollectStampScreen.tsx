@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { whimsicalGradients } from '../../theme/whimsical';
 import { Text, Heading } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -23,10 +24,13 @@ import { Icon } from '../../components/ui/Icon';
 import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
 import { soundService } from '../../services/sound';
-import { STAMP_TYPES_INFO, AURA_REWARDS } from '../../config/constants';
+import { STAMP_TYPES_INFO, AURA_REWARDS, COUNTRIES } from '../../config/constants';
+import { getCountryStampProgress } from '../../config/collectionGoals';
 import { copy } from '../../config/copy';
 import { showToast } from '../../store/useToast';
 import { RootStackParamList, Stamp, StampType } from '../../types';
+import { SAMPLE_LOCATIONS } from '../../config/locations';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 const getStampReward = (type: StampType): number => {
   const map: Record<string, number> = {
@@ -40,13 +44,13 @@ const getStampReward = (type: StampType): number => {
     restaurant: AURA_REWARDS.STAMP_RESTAURANT,
     cafe: AURA_REWARDS.STAMP_CAFE,
     market: AURA_REWARDS.STAMP_MARKET,
-    hiddenGem: AURA_REWARDS.STAMP_HIDDEN_GEM,
+    hidden_gem: AURA_REWARDS.STAMP_HIDDEN_GEM,
   };
   return map[type] || AURA_REWARDS.STAMP_CITY;
 };
 
 const SELECTABLE_TYPES: StampType[] = [
-  'city', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'market',
+  'city', 'park', 'beach', 'landmark', 'museum', 'cafe', 'restaurant', 'market', 'mountain', 'hidden_gem',
 ];
 
 type CollectStampScreenProps = {
@@ -69,6 +73,21 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [earnedAura, setEarnedAura] = useState(0);
   const [firstStampEver, setFirstStampEver] = useState(false);
+  const [countrySetCompleted, setCountrySetCompleted] = useState<string | null>(null);
+
+  // Pre-fill from locationId: known place from map, or "Current location"
+  const prefillLocation = locationId && locationId !== 'quick' && locationId !== 'current'
+    ? SAMPLE_LOCATIONS.find((l) => l.id === locationId)
+    : null;
+
+  useEffect(() => {
+    if (locationId === 'current') {
+      setLocationName('Current location');
+    } else if (prefillLocation) {
+      setLocationName(prefillLocation.name);
+      setSelectedType(prefillLocation.type);
+    }
+  }, [locationId, prefillLocation?.id, prefillLocation?.name, prefillLocation?.type]);
 
   const locationDisplay = currentLocation?.city && currentLocation?.country
     ? `${currentLocation.city}, ${currentLocation.country}`
@@ -99,7 +118,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
     }
   };
 
-  const handleCollect = () => {
+  const handleCollect = async () => {
     setFormError('');
 
     if (!locationName.trim()) {
@@ -128,18 +147,27 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
       likes: 0,
     };
 
-    addStamp(stamp);
+    const saved = await addStamp(stamp);
+    if (!saved) return;
+
     addAura(reward);
     addSkillPoints('exploration', 5);
     setEarnedAura(reward);
     setShowSuccess(true);
     soundService.playStampCollected();
-    if (useStore.getState().stamps.length === 1) setFirstStampEver(true);
+    const stampsNow = useStore.getState().stamps;
+    if (stampsNow.length === 1) setFirstStampEver(true);
+    // Check if this stamp completed a country set
+    const countryId = COUNTRIES.find((c) => c.name === saved.country || c.countryCode === saved.countryCode)?.id;
+    if (countryId) {
+      const progress = getCountryStampProgress(stampsNow, countryId);
+      if (progress?.completed && progress.remaining === 0) setCountrySetCompleted(progress.countryName);
+    }
   };
 
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+      colors={[...whimsicalGradients.hero]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -148,7 +176,10 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Heading level={2}>Collect Stamp</Heading>
+          <View style={styles.headerCenter}>
+            <Heading level={2} style={styles.headerTitle}>{copy.stamps.collectScreenTitle}</Heading>
+            <Text variant="bodySmall" color={colors.text.secondary} style={styles.headerSubtitle}>{copy.stamps.collectScreenSubtitle}</Text>
+          </View>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -158,12 +189,22 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {prefillLocation ? (
+            <Card style={styles.prefillCard}>
+              <Icon name="stamp" size={22} color={colors.primary.wisteriaDark} />
+              <View style={styles.prefillTextWrap}>
+                <Text variant="bodySmall" color={colors.text.secondary} style={styles.prefillLabel}>{copy.stamps.youAreAdding}</Text>
+                <Text variant="body" style={styles.prefillName}>{prefillLocation.name}</Text>
+              </View>
+            </Card>
+          ) : null}
+
           {/* Current Location */}
           <Card style={styles.locationCard}>
             <Icon name="location" size={28} color={colors.primary.wisteriaDark} />
             <View style={styles.locationText}>
               <Text variant="bodySmall" color={colors.text.secondary}>
-                Current Location
+                {copy.stamps.youAreHere}
               </Text>
               <Text variant="h3">{locationDisplay}</Text>
             </View>
@@ -172,10 +213,10 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           {/* Location Name */}
           <View style={styles.section}>
             <Input
-              label="Location Name"
+              label={copy.stamps.giveItAName}
               value={locationName}
               onChangeText={(text) => { setLocationName(text); setFormError(''); }}
-              placeholder="e.g. Central Park, Eiffel Tower"
+              placeholder={copy.stamps.giveItANamePlaceholder}
             />
             {formError ? (
               <Text variant="bodySmall" color={colors.status.error} style={styles.errorText}>
@@ -184,9 +225,9 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
             ) : null}
           </View>
 
-          {/* Stamp Type Selector */}
+          {/* Stamp Type Selector (with Aura reward) */}
           <View style={styles.section}>
-            <Text variant="body" style={styles.sectionLabel}>Stamp Type</Text>
+            <Text variant="body" style={styles.sectionLabel}>{copy.stamps.whatKindOfPlace}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -195,6 +236,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
               {SELECTABLE_TYPES.map((type) => {
                 const info = STAMP_TYPES_INFO[type];
                 const isSelected = selectedType === type;
+                const aura = getStampReward(type);
                 return (
                   <TouchableOpacity
                     key={type}
@@ -213,7 +255,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
                       variant="bodySmall"
                       color={isSelected ? colors.text.inverse : colors.text.primary}
                     >
-                      {info?.label || type}
+                      {info?.label || type} +{aura}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -227,7 +269,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
               label="Notes (optional)"
               value={notes}
               onChangeText={setNotes}
-              placeholder="What makes this place special?"
+              placeholder={copy.stamps.notesPlaceholder}
               multiline
             />
           </View>
@@ -247,7 +289,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
             <TouchableOpacity onPress={takePhoto} style={styles.photoButton}>
               <Icon name="camera" size={24} color={colors.primary.wisteriaDark} />
               <Text variant="body" color={colors.primary.wisteriaDark}>
-                Add a Photo
+                {copy.stamps.addAPhoto}
               </Text>
             </TouchableOpacity>
           )}
@@ -255,7 +297,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           {/* Collect Button */}
           <View style={styles.submitSection}>
             <Button
-              title="Collect Stamp!"
+              title={prefillLocation ? copy.stamps.addToPassportCta : locationId === 'quick' ? copy.stamps.addPlaceCta : copy.stamps.addToPassportCta}
               onPress={handleCollect}
               variant="primary"
               size="lg"
@@ -265,38 +307,52 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
         </ScrollView>
       </SafeAreaView>
 
-      {/* Success Modal */}
+      {/* Success Modal — dreamy celebration */}
       <Modal visible={showSuccess} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => {}}>
-          <Animated.View entering={ZoomIn.duration(400).springify()} style={styles.modalContent}>
-            <Animated.View entering={ZoomIn.delay(100).duration(300).springify()} style={styles.modalIconContainer}>
-              <Icon name="stamp" size={48} color={colors.primary.wisteriaDark} />
-            </Animated.View>
-            <Heading level={3} style={styles.modalTitle}>Stamp Collected!</Heading>
-            {firstStampEver && (
-              <Text variant="body" color={colors.primary.wisteriaDark} style={styles.modalFirstEver}>
-                Your first stamp! 🎉
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <FloatingParticles variant="sparkle" count={12} speed="slow" opacity={0.9} />
+          </View>
+          <Animated.View entering={ZoomIn.duration(500).springify()} style={styles.modalContentWrap}>
+            <LinearGradient
+              colors={[colors.base.cream, colors.primary.wisteriaFaded, colors.calm.skyLight]}
+              style={styles.modalContent}
+            >
+              <Animated.View entering={ZoomIn.delay(80).duration(350).springify()} style={styles.modalIconContainer}>
+                <Icon name="stamp" size={52} color={colors.primary.wisteriaDark} />
+              </Animated.View>
+              <Heading level={3} style={styles.modalTitle}>{copy.stamps.successTitle}</Heading>
+              {firstStampEver && (
+                <Text variant="body" color={colors.primary.wisteriaDark} style={styles.modalFirstEver}>
+                  {copy.stamps.successFirstStamp}
+                </Text>
+              )}
+              {countrySetCompleted && (
+                <Text variant="body" color={colors.primary.wisteriaDark} style={styles.modalCountrySet}>
+                  {copy.stamps.successCountrySet.replace('{country}', countrySetCompleted)}
+                </Text>
+              )}
+              <Animated.View entering={FadeIn.delay(180).duration(400)}>
+                <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
+                  {copy.stamps.successAura.replace('{aura}', String(earnedAura))}
+                </Text>
+              </Animated.View>
+              <Text variant="body" color={colors.text.secondary} style={styles.modalLocation}>
+                {locationName}
               </Text>
-            )}
-            <Animated.View entering={FadeIn.delay(200).duration(300)}>
-              <Text variant="h3" color={colors.reward.gold} style={styles.modalAura}>
-                +{earnedAura} Aura
-              </Text>
-            </Animated.View>
-            <Text variant="body" color={colors.text.secondary} style={styles.modalLocation}>
-              {locationName}
-            </Text>
-            <Button
-              title="Awesome!"
-              onPress={() => {
-                setShowSuccess(false);
-                showToast(copy.success.stampCollected, 'success');
-                navigation.goBack();
-              }}
-              variant="primary"
-              size="lg"
-              fullWidth
-            />
+              <Button
+                title={copy.stamps.successKeepDreaming}
+                onPress={() => {
+                  setShowSuccess(false);
+                  setCountrySetCompleted(null);
+                  showToast(copy.success.stampCollected, 'success');
+                  navigation.goBack();
+                }}
+                variant="primary"
+                size="lg"
+                fullWidth
+              />
+            </LinearGradient>
           </Animated.View>
         </Pressable>
       </Modal>
@@ -326,6 +382,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    textAlign: 'center',
+  },
   headerSpacer: {
     width: 40,
   },
@@ -336,6 +404,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxxl,
   },
+  prefillCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.primary.wisteriaFaded,
+    borderWidth: 0,
+    shadowColor: colors.primary.wisteria,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  prefillTextWrap: { flex: 1 },
+  prefillLabel: { color: colors.text.secondary, marginBottom: 2 },
+  prefillName: { fontFamily: 'Nunito-SemiBold', color: colors.text.primary },
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,7 +461,8 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.lg,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: colors.primary.wisteriaDark,
+    borderColor: colors.primary.wisteria + '99',
+    backgroundColor: colors.primary.wisteriaFaded + '60',
     marginBottom: spacing.xl,
   },
   photoPreviewContainer: {
@@ -411,27 +496,37 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(45, 45, 58, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.screenPadding,
   },
-  modalContent: {
-    backgroundColor: colors.base.cream,
-    borderRadius: spacing.radius.xl,
-    padding: spacing.xl,
-    alignItems: 'center',
+  modalContentWrap: {
     width: '100%',
     maxWidth: 340,
+    borderRadius: spacing.radius.xl + 4,
+    overflow: 'hidden',
+    shadowColor: colors.primary.wisteriaDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalContent: {
+    borderRadius: spacing.radius.xl + 4,
+    padding: spacing.xl,
+    alignItems: 'center',
   },
   modalIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: colors.primary.wisteriaFaded,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.primary.wisteriaLight,
   },
   modalTitle: {
     marginBottom: spacing.xs,
@@ -441,6 +536,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     textAlign: 'center',
     fontFamily: 'Nunito-Bold',
+  },
+  modalCountrySet: {
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+    fontFamily: 'Nunito-SemiBold',
   },
   modalAura: {
     marginBottom: spacing.sm,
