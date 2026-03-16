@@ -52,7 +52,7 @@ export const AuraPop: React.FC<AuraPopProps> = ({
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.container, containerStyle]} pointerEvents="none">
+    <Animated.View style={[styles.container, containerStyle, { pointerEvents: 'none' }]}>
       {Array.from({ length: PARTICLE_COUNT }).map((_, i) => {
         const angle = (i / PARTICLE_COUNT) * 2 * Math.PI;
         return (

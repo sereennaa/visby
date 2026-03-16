@@ -37,14 +37,17 @@ import { AuraBadge, LevelBadge } from '../../components/ui/Badge';
 import { Icon, IconName, IconBadge } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { VisbyCheckInModal } from '../../components/visby/VisbyCheckInModal';
-import { StampMini } from '../../components/collectibles/StampCard';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { copy } from '../../config/copy';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
-import { useStore, DEFAULT_NEEDS } from '../../store/useStore';
+import { useStore, getGrowthStage } from '../../store/useStore';
 import { LEVEL_THRESHOLDS, COUNTRIES } from '../../config/constants';
-import { getGameOfTheDay } from '../../config/gameOfTheDay';
-import { QUEST_DEFINITIONS } from '../../config/quests';
-import { RootStackParamList, StampType, VisbyNeeds, VisbyGrowthStage } from '../../types';
+import { RootStackParamList, VisbyNeeds, VisbyGrowthStage } from '../../types';
+import { DEFAULT_HOME_ROOM, HOME_ATMOSPHERE } from '../../config/homeRoom';
+import { getCountryAtmosphere } from '../../config/countryAtmosphere';
+import { COUNTRY_HOUSES } from '../../config/countryRooms';
+import { FURNITURE_CATALOG } from '../../config/furniture';
+import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 10;
@@ -57,93 +60,31 @@ const STAGE_LABELS: Record<VisbyGrowthStage, string> = {
   adult: 'Adult',
 };
 
+const MOOD_LABELS: Record<string, { label: string; icon: IconName }> = {
+  happy: { label: 'Happy', icon: 'heart' },
+  excited: { label: 'Excited', icon: 'star' },
+  curious: { label: 'Curious', icon: 'compass' },
+  sleepy: { label: 'Sleepy', icon: 'star' },
+  proud: { label: 'Proud', icon: 'trophy' },
+  adventurous: { label: 'Adventurous', icon: 'rocket' },
+  cozy: { label: 'Cozy', icon: 'home' },
+  hungry: { label: 'Hungry', icon: 'food' },
+  bored: { label: 'Bored', icon: 'time' },
+  confused: { label: 'Confused', icon: 'quiz' },
+  sick: { label: 'Sick', icon: 'flash' },
+  lonely: { label: 'Lonely', icon: 'chat' },
+};
+
+const HOME_ROOM_WINDOW_H = 40;
+const HOME_ROOM_WALL_H = 140;
+const HOME_ROOM_FLOOR_H = 100;
+const HOME_VISBY_SIZE = 88;
+
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
 };
 
-/* ─── Animated stat bubble ─── */
-const StatBubble: React.FC<{
-  icon: IconName;
-  value: number;
-  label: string;
-  delay: number;
-  iconBg: string;
-  iconColor: string;
-}> = ({ icon, value, label, delay, iconBg, iconColor }) => {
-  const scale = useSharedValue(0);
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    scale.value = withDelay(delay, withSpring(1, { damping: 12, stiffness: 90 }));
-    opacity.value = withDelay(delay, withTiming(1, { duration: 500 }));
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={[styles.statBubble, style]}>
-      <View style={[styles.statIconRing, { backgroundColor: iconBg }]}>
-        <Icon name={icon} size={18} color={iconColor} />
-      </View>
-      <Text variant="h2" style={styles.statValue}>{value}</Text>
-      <Caption style={styles.statLabel}>{label}</Caption>
-    </Animated.View>
-  );
-};
-
-/* ─── Adventure card (quick action) ─── */
-const AdventureCard: React.FC<{
-  icon: IconName;
-  label: string;
-  subtitle: string;
-  gradient: [string, string];
-  iconBg: string;
-  onPress: () => void;
-  delay: number;
-}> = ({ icon, label, subtitle, gradient, iconBg, onPress, delay }) => {
-  const translateY = useSharedValue(40);
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    translateY.value = withDelay(delay, withSpring(0, { damping: 14, stiffness: 80 }));
-    opacity.value = withDelay(delay, withTiming(1, { duration: 500 }));
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={[styles.adventureCard, style]}>
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        style={styles.adventureTouch}
-      >
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.adventureGradient}
-        >
-          <View style={[styles.adventureIconWrap, { backgroundColor: iconBg }]}>
-            <Icon name={icon} size={22} color={colors.text.inverse} />
-          </View>
-          <Text variant="bodySmall" style={styles.adventureLabel}>{label}</Text>
-          <Caption style={styles.adventureSub}>{subtitle}</Caption>
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
-/* ─── Needs HUD ─── */
+/* ─── Need config for Care Hint modal (opened from mood bubble when low) ─── */
 const NEED_CONFIG: { key: keyof Omit<VisbyNeeds, 'lastUpdated'>; icon: IconName; label: string; color: string; bgColor: string; hint: string; howTo: string }[] = [
   { key: 'hunger', icon: 'food', label: 'Food', color: colors.reward.peachDark, bgColor: colors.reward.peachLight, hint: 'Hungry!', howTo: 'Log a bite or play Cooking Game' },
   { key: 'happiness', icon: 'heart', label: 'Joy', color: colors.accent.coral, bgColor: colors.accent.blush, hint: 'Bored!', howTo: 'Collect stamps or play games' },
@@ -152,69 +93,17 @@ const NEED_CONFIG: { key: keyof Omit<VisbyNeeds, 'lastUpdated'>; icon: IconName;
   { key: 'socialBattery', icon: 'chat', label: 'Social', color: colors.accent.rose, bgColor: colors.accent.blush, hint: 'Lonely!', howTo: 'Chat with Visby or hang out with friends' },
 ];
 
-const NeedsHUD: React.FC<{
-  needs: VisbyNeeds;
-  onNeedTap: (need: typeof NEED_CONFIG[number]) => void;
-}> = ({ needs, onNeedTap }) => {
-  const lowestNeed = NEED_CONFIG.reduce((low, n) =>
-    (needs[n.key] as number) < (needs[low.key] as number) ? n : low
-  , NEED_CONFIG[0]);
-  const lowestVal = needs[lowestNeed.key] as number;
-
-  return (
-    <View style={styles.needsContainer}>
-      {/* Urgent hint */}
-      {lowestVal < 40 && (
-        <TouchableOpacity
-          style={[styles.needsAlert, { backgroundColor: lowestNeed.bgColor }]}
-          onPress={() => onNeedTap(lowestNeed)}
-          activeOpacity={0.8}
-        >
-          <Icon name={lowestNeed.icon} size={16} color={lowestNeed.color} />
-          <Text style={[styles.needsAlertText, { color: lowestNeed.color }]}>
-            {lowestNeed.hint} {lowestNeed.howTo}
-          </Text>
-          <Icon name="chevronRight" size={14} color={lowestNeed.color} />
-        </TouchableOpacity>
-      )}
-      {/* Bars */}
-      <View style={styles.needsBarsRow}>
-        {NEED_CONFIG.map((need) => {
-          const value = needs[need.key] as number;
-          const isLow = value < 30;
-          const isCritical = value < 15;
-          return (
-            <TouchableOpacity
-              key={need.key}
-              style={styles.needItem}
-              onPress={() => onNeedTap(need)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.needIconWrap, { backgroundColor: need.bgColor }]}>
-                <Icon name={need.icon} size={14} color={need.color} />
-              </View>
-              <View style={styles.needBarTrack}>
-                <View
-                  style={[
-                    styles.needBarFill,
-                    {
-                      width: `${value}%` as any,
-                      backgroundColor: isCritical ? colors.status.error : isLow ? colors.status.warning : need.color,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.needLabel, isLow && { color: colors.status.error }]}>{need.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
+/** Map mood to need key so tapping mood bubble can open the care hint for that need */
+const MOOD_TO_NEED_KEY: Record<string, keyof Omit<VisbyNeeds, 'lastUpdated'>> = {
+  hungry: 'hunger',
+  bored: 'happiness',
+  sleepy: 'energy',
+  curious: 'knowledge',
+  lonely: 'socialBattery',
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getGrowthStage, shouldShowVisbyCheckIn, getDailyMission, dailyMissionCompletedAt, dailyMissionProgress, trySurprise, pendingStreakFreezeOffer, useStreakFreeze, declineStreakFreezeOffer, streakFreezesRemaining, storyBeatsShown, markStoryBeatShown, getQuestProgress } = useStore();
+  const { user, visby, currentLocation, userHouses, dailyCheckIn, getStreakMultiplier, updateVisbyNeeds, getVisbyNeeds, getVisbyMood, getGrowthStage, shouldShowVisbyCheckIn, getDailyMission, dailyMissionCompletedAt, dailyMissionProgress, trySurprise, pendingStreakFreezeOffer, useStreakFreeze, declineStreakFreezeOffer, streakFreezesRemaining, storyBeatsShown, markStoryBeatShown, getAdventureOfTheDay, awardAdventureIfCompleted, settings } = useStore();
   const [refreshing, setRefreshing] = React.useState(false);
   const [careHint, setCareHint] = React.useState<typeof NEED_CONFIG[number] | null>(null);
   const [showDailyReward, setShowDailyReward] = useState(false);
@@ -248,7 +137,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setShowSurpriseBonus(true);
     }
     if (showFirstCountryBeat) setShowStoryBeat(true);
-  }, [showFirstCountryBeat]);
+    awardAdventureIfCompleted();
+  }, [showFirstCountryBeat, awardAdventureIfCompleted]);
 
   useEffect(() => {
     visbyFloat.value = withDelay(
@@ -324,31 +214,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     eyeShape: 'round',
   };
 
-  const stampCounts: Record<StampType, number> = {
-    city: 0, country: 0, landmark: 0, park: 0, beach: 0,
-    mountain: 0, museum: 0, restaurant: 0, cafe: 0, market: 0,
-    temple: 0, castle: 0, monument: 0, nature: 0, hidden_gem: 0,
+  const openCareHintForMood = (mood: string) => {
+    const needKey = MOOD_TO_NEED_KEY[mood];
+    if (needKey) {
+      const need = NEED_CONFIG.find((n) => n.key === needKey);
+      if (need) setCareHint(need);
+    }
   };
-  stamps.forEach(stamp => {
-    if (stampCounts[stamp.type] !== undefined) stampCounts[stamp.type]++;
-  });
-
-  const statItems = [
-    { icon: 'stamp' as IconName, value: stamps.length, label: 'Stamps', iconBg: colors.primary.wisteriaFaded, iconColor: colors.primary.wisteriaDark },
-    { icon: 'food' as IconName, value: bites.length, label: 'Bites', iconBg: colors.reward.peachLight, iconColor: colors.reward.peachDark },
-    { icon: 'trophy' as IconName, value: badges.length, label: 'Badges', iconBg: colors.success.honeydew, iconColor: colors.success.emerald },
-    { icon: 'globe' as IconName, value: user?.countriesVisited || 0, label: 'Places', iconBg: colors.calm.skyLight, iconColor: colors.calm.ocean },
-  ];
-
-  const adventures = [
-    { icon: 'globe' as IconName, label: 'World', subtitle: 'Explore', gradient: [colors.primary.wisteriaFaded, colors.primary.wisteriaLight] as [string, string], iconBg: colors.primary.wisteriaDark, onPress: () => navigation.navigate('Explore', { screen: 'CountryWorld' }) },
-    { icon: 'stamp' as IconName, label: 'Stamp', subtitle: 'Collect', gradient: [colors.reward.peachLight, colors.reward.peach] as [string, string], iconBg: colors.reward.peachDark, onPress: () => navigation.navigate('CollectStamp', { locationId: 'quick' }) },
-    { icon: 'bowl' as IconName, label: 'Bite', subtitle: 'Log food', gradient: [colors.accent.blush, colors.accent.rose] as [string, string], iconBg: colors.accent.coral, onPress: () => navigation.navigate('AddBite') },
-    { icon: 'book' as IconName, label: 'Learn', subtitle: 'Study', gradient: [colors.calm.skyLight, colors.calm.sky] as [string, string], iconBg: colors.calm.ocean, onPress: () => navigation.navigate('Learn') },
-    { icon: 'trophy' as IconName, label: 'Badges', subtitle: 'Earn', gradient: [colors.success.honeydew, colors.success.mint] as [string, string], iconBg: colors.success.emerald, onPress: () => navigation.navigate('Badges') },
-    { icon: 'shirt' as IconName, label: 'Shop', subtitle: 'Style', gradient: [colors.accent.blush, colors.accent.rose] as [string, string], iconBg: colors.accent.coral, onPress: () => navigation.navigate('CosmeticShop') },
-    { icon: 'home' as IconName, label: 'Furniture', subtitle: 'Decorate', gradient: [colors.primary.wisteriaFaded, colors.accent.lavender] as [string, string], iconBg: colors.primary.wisteriaDark, onPress: () => navigation.navigate('FurnitureShop') },
-  ];
 
   return (
     <View style={styles.container}>
@@ -359,7 +231,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         style={StyleSheet.absoluteFill}
       />
 
-      <FloatingParticles count={6} variant="sparkle" opacity={0.3} speed="slow" />
+      <FloatingParticles
+        count={(settings as { quieterMode?: boolean }).quieterMode ? 2 : 6}
+        variant="sparkle"
+        opacity={(settings as { quieterMode?: boolean }).quieterMode ? 0.12 : 0.3}
+        speed="slow"
+      />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
@@ -395,217 +272,142 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* ──── VISBY CHARACTER HERO ──── */}
-          <Animated.View entering={FadeInDown.duration(600).delay(200)}>
-            <TouchableOpacity
-              activeOpacity={0.92}
-              onPress={() => navigation.navigate('Avatar')}
-              accessibilityRole="button"
-              accessibilityLabel="Customize your Visby"
-            >
-              <MagicBorder
-                borderRadius={28}
-                borderWidth={2}
-                colors={[colors.primary.wisteriaLight, colors.reward.gold, colors.calm.skyDark, colors.accent.rose, colors.primary.wisteriaLight]}
-                style={styles.visbyCardOuter}
-              >
-                <LinearGradient
-                  colors={['#FAF5FF', '#FFF9F0', '#F0F7FF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.visbyCardInner}
-                >
-                  {/* Decorative background circles */}
-                  <View style={styles.decorCircle1} />
-                  <View style={styles.decorCircle2} />
-
-                  <View style={styles.visbyContent}>
-                    <Animated.View style={[styles.visbyLeft, visbyAnimStyle]}>
-                      <VisbyCharacter
-                        appearance={defaultAppearance}
-                        equipped={visby?.equipped}
-                        mood={visby?.currentMood || 'happy'}
-                        size={110}
-                        animated={true}
-                        stage={getGrowthStage()}
-                      />
-                      <Caption style={styles.stageLabel}>
-                        {STAGE_LABELS[getGrowthStage()]} Visby
-                      </Caption>
-                    </Animated.View>
-
-                    <View style={styles.visbyRight}>
-                      <View style={styles.visbyNameRow}>
-                        <Text variant="h2" style={styles.visbyName}>
-                          {visby?.name || 'Your Visby'}
-                        </Text>
-                        <LevelBadge level={user?.level || 1} />
-                      </View>
-
-                      <LevelProgress
-                        currentXP={progressAura}
-                        requiredXP={requiredAura}
-                        level={user?.level || 1}
-                        style={styles.levelProgress}
-                      />
-
-                      <View style={styles.tapHintRow}>
-                        <Icon name="sparkles" size={12} color={colors.reward.gold} />
-                        <Caption color={colors.text.muted}>Tap to customize</Caption>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.chatWithVisbyBtn}
-                        onPress={() => setShowVisbyCheckIn(true)}
-                        activeOpacity={0.8}
-                      >
-                        <Icon name="chat" size={14} color={colors.primary.wisteriaDark} />
-                        <Caption color={colors.primary.wisteriaDark}>Chat with Visby</Caption>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </MagicBorder>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* ──── VISBY NEEDS ──── */}
-          <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-            <NeedsHUD
-              needs={getVisbyNeeds()}
-              onNeedTap={(need) => setCareHint(need)}
-            />
-          </Animated.View>
-
-          {/* ──── QUICK STATS ──── */}
-          <View style={styles.statsRow}>
-            {statItems.map((stat, i) => (
-              <StatBubble
-                key={stat.label}
-                icon={stat.icon}
-                value={stat.value}
-                label={stat.label}
-                delay={350 + i * 80}
-                iconBg={stat.iconBg}
-                iconColor={stat.iconColor}
-              />
-            ))}
-          </View>
-
-          {/* ──── DAILY MISSION ──── */}
-          {dailyMission && (
-            <Animated.View entering={FadeInDown.duration(500).delay(480)} style={styles.dailyMissionCard}>
-              <LinearGradient
-                colors={dailyMissionCompletedAt ? [colors.success.honeydew, colors.success.mint] : [colors.primary.wisteriaFaded, colors.calm.skyLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.dailyMissionGradient}
-              >
-                <View style={styles.dailyMissionLeft}>
-                  {dailyMissionCompletedAt ? (
-                    <Animated.View entering={ZoomIn.duration(350).springify()} style={[styles.dailyMissionIconWrap, { backgroundColor: colors.success.emerald + '30' }]}>
-                      <Icon name="checkCircle" size={24} color={colors.success.emerald} />
-                    </Animated.View>
-                  ) : (
-                    <View style={[styles.dailyMissionIconWrap, { backgroundColor: colors.primary.wisteria + '30' }]}>
-                      <Icon name="target" size={24} color={colors.primary.wisteriaDark} />
-                    </View>
-                  )}
-                  <View>
-                    <Text variant="body" style={styles.dailyMissionTitle}>
-                      {dailyMissionCompletedAt ? "Today's mission complete!" : "Today's mission"}
-                    </Text>
-                    <Caption style={styles.dailyMissionLabel}>
-                      {dailyMissionCompletedAt ? `+25 Aura` : `${dailyMission.label} • ${Math.min(dailyMissionProgress, dailyMission.target)}/${dailyMission.target}`}
-                    </Caption>
-                  </View>
-                </View>
-                {!dailyMissionCompletedAt && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (dailyMission.type === 'collect_stamp') navigation.navigate('CollectStamp', { locationId: 'quick' });
-                      else if (dailyMission.type === 'add_bite') navigation.navigate('AddBite');
-                      else if (dailyMission.type === 'play_minigame') (navigation as any).navigate('WordMatch');
-                      else if (dailyMission.type === 'chat_with_visby') setShowVisbyCheckIn(true);
-                      else if (dailyMission.type === 'read_facts' || dailyMission.type === 'complete_lesson') navigation.navigate('Learn');
-                    }}
-                    style={styles.dailyMissionCta}
+          {/* ──── HOME ROOM: Visby in their space (Club Penguin / Sims style) ──── */}
+          {(() => {
+            const firstHouse = userHouses[0];
+            const homeCountryId = firstHouse?.countryId ?? null;
+            const houseData = homeCountryId ? COUNTRY_HOUSES[homeCountryId] : null;
+            const homeRoom = houseData?.rooms?.[0] ?? DEFAULT_HOME_ROOM;
+            const roomCustomization = firstHouse?.roomCustomizations?.[homeRoom.id];
+            const placedItems = roomCustomization?.placedFurniture ?? [];
+            const effectiveWallColor = roomCustomization?.wallColor || homeRoom.wallColor;
+            const effectiveFloorColor = roomCustomization?.floorColor || homeRoom.floorColor;
+            const atmosphere = homeCountryId ? getCountryAtmosphere(homeCountryId) : { windowSky: HOME_ATMOSPHERE.windowSky };
+            const currentMood = getVisbyMood?.() ?? visby?.currentMood ?? 'happy';
+            const moodInfo = MOOD_LABELS[currentMood] ?? MOOD_LABELS.happy;
+            return (
+              <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.homeRoomWrap}>
+                <View style={styles.homeRoomFrame}>
+                  <LinearGradient
+                    colors={[...atmosphere.windowSky]}
+                    style={[styles.homeRoomWindow, { height: HOME_ROOM_WINDOW_H }]}
+                    locations={[0, 0.6, 1]}
+                  />
+                  <LinearGradient
+                    colors={[effectiveWallColor, effectiveWallColor, (COUNTRIES.find(c => c.id === homeCountryId)?.accentColor ?? colors.primary.wisteria) + '18']}
+                    style={[styles.homeRoomWall, { height: HOME_ROOM_WALL_H }]}
+                    locations={[0, 0.7, 1]}
                   >
-                    <Text variant="bodySmall" style={styles.dailyMissionCtaText}>Do it</Text>
-                    <Icon name="chevronForward" size={14} color={colors.primary.wisteriaDark} />
+                    <View style={styles.homeRoomObjectsLayer}>
+                      {homeRoom.objects.slice(0, 4).map((obj) => (
+                        <View key={obj.id} style={[styles.homeRoomDecor, { left: `${obj.x}%`, top: `${obj.y}%` }]}>
+                          <View style={styles.homeRoomDecorIconWrap}>
+                            <Icon name={obj.icon as IconName} size={20} color={colors.text.secondary} />
+                          </View>
+                        </View>
+                      ))}
+                      {placedItems.slice(0, 6).map((placed) => {
+                        const catalogItem = FURNITURE_CATALOG.find(f => f.id === placed.furnitureId);
+                        if (!catalogItem) return null;
+                        return (
+                          <View key={placed.id} style={[styles.homeRoomPlaced, { left: `${placed.x}%`, top: `${placed.y}%` }]}>
+                            {catalogItem.interactionType ? (
+                              <FurnitureVisual
+                                interactionType={catalogItem.interactionType}
+                                icon={catalogItem.icon as IconName}
+                                size="small"
+                                showHint={false}
+                              />
+                            ) : (
+                              <View style={styles.homeRoomDecorIconWrap}>
+                                <Icon name={catalogItem.icon as IconName} size={20} color={colors.text.secondary} />
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </LinearGradient>
+                  <View style={[styles.homeRoomBaseboard, { backgroundColor: effectiveFloorColor }]} />
+                  <LinearGradient
+                    colors={[effectiveFloorColor, effectiveFloorColor, (COUNTRIES.find(c => c.id === homeCountryId)?.accentColor ?? '#000') + '08']}
+                    style={[styles.homeRoomFloor, { height: HOME_ROOM_FLOOR_H }]}
+                    locations={[0, 0.6, 1]}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.95}
+                      onPress={() => setShowVisbyCheckIn(true)}
+                      style={styles.homeVisbyTouch}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${visby?.name || 'Visby'}, ${moodInfo.label}. Tap to chat.`}
+                    >
+                      <Animated.View style={[styles.homeVisbyWrap, visbyAnimStyle]}>
+                        <View style={styles.homeVisbyShadow} />
+                        <VisbyCharacter
+                          appearance={defaultAppearance}
+                          equipped={visby?.equipped}
+                          mood={currentMood}
+                          size={HOME_VISBY_SIZE}
+                          animated
+                          stage={getGrowthStage()}
+                        />
+                        <TouchableOpacity
+                          style={[styles.homeMoodBubble, { backgroundColor: colors.base.cream }]}
+                          onPress={() => openCareHintForMood(currentMood)}
+                          activeOpacity={MOOD_TO_NEED_KEY[currentMood] ? 0.7 : 1}
+                          disabled={!MOOD_TO_NEED_KEY[currentMood]}
+                        >
+                          <Icon name={moodInfo.icon} size={14} color={colors.primary.wisteriaDark} />
+                          <Text style={styles.homeMoodLabel}>{moodInfo.label}</Text>
+                        </TouchableOpacity>
+                      </Animated.View>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                </View>
+                <TouchableOpacity
+                  style={styles.homeRoomSubtitle}
+                  onPress={() => navigation.navigate('Avatar')}
+                  activeOpacity={0.8}
+                >
+                  <Caption color={colors.text.muted}>{visby?.name || 'Your Visby'} · Tap to chat or customize</Caption>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })()}
+
+          {/* ──── QUICK: Today's adventure + My Houses ──── */}
+          {(() => {
+            const adventure = getAdventureOfTheDay();
+            return (
+              <Animated.View entering={FadeInDown.duration(400).delay(320)} style={styles.homeQuickRow}>
+                {!adventure.completed && (
+                  <TouchableOpacity
+                    style={styles.homeQuickCta}
+                    onPress={() => {
+                      if (!adventure.step1) navigation.navigate('Explore', { screen: 'CountryWorld' });
+                      else if (!adventure.step2) navigation.navigate('Learn');
+                      else (navigation as any).navigate('WordMatch');
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
+                    <Text variant="bodySmall" style={styles.homeQuickCtaText}>Today&apos;s adventure</Text>
                   </TouchableOpacity>
                 )}
-              </LinearGradient>
-            </Animated.View>
-          )}
+                <TouchableOpacity
+                  style={styles.homeQuickCta}
+                  onPress={() => navigation.navigate('Explore', { screen: 'CountryWorld' })}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="globe" size={18} color={colors.primary.wisteriaDark} />
+                  <Text variant="bodySmall" style={styles.homeQuickCtaText}>{userHouses.length > 0 ? 'Visit World' : 'Explore World'}</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })()}
 
-          {/* ──── QUESTS ──── */}
-          {QUEST_DEFINITIONS.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(500).delay(490)} style={styles.questsCard}>
-              <View style={styles.sectionHeader}>
-                <Heading level={3} style={styles.questsTitle}>Quests</Heading>
-                <Caption>Bonus Aura for challenges</Caption>
-              </View>
-              {QUEST_DEFINITIONS.map((def) => {
-                const prog = getQuestProgress(def.id);
-                if (!prog) return null;
-                return (
-                  <TouchableOpacity
-                    key={def.id}
-                    style={[styles.questRow, prog.completed && styles.questRowDone]}
-                    onPress={() => {
-                      if (def.progressType === 'lessons_completed') navigation.navigate('Learn');
-                      else navigation.navigate('Stamps');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.questRowLeft}>
-                      <Text variant="body" style={styles.questLabel}>{def.label}</Text>
-                      <Caption style={styles.questSub}>{prog.completed ? `+${def.rewardAura} Aura earned` : `${prog.current}/${prog.target}`}</Caption>
-                    </View>
-                    {prog.completed ? (
-                      <Icon name="checkCircle" size={22} color={colors.success.emerald} />
-                    ) : (
-                      <Icon name="chevronRight" size={18} color={colors.text.muted} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </Animated.View>
-          )}
-
-          {/* ──── STREAK ──── */}
-          {user?.currentStreak !== undefined && user.currentStreak > 0 && (
-            <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.streakCard}>
-              <LinearGradient
-                colors={[colors.status.streakBg, colors.reward.peachLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.streakGradient}
-              >
-                <View style={styles.streakLeft}>
-                  <View style={styles.streakFireWrap}>
-                    <Icon name="flame" size={28} color={colors.status.streak} />
-                  </View>
-                  <View>
-                    <Text variant="h3" style={styles.streakDays}>
-                      {user.currentStreak} day streak
-                    </Text>
-                    <Caption color={colors.text.secondary}>
-                      {getStreakMultiplier().toFixed(1)}x aura multiplier
-                      {streakFreezesRemaining > 0 && ` · ${streakFreezesRemaining} freeze${streakFreezesRemaining > 1 ? 's' : ''}`}
-                    </Caption>
-                  </View>
-                </View>
-                <View style={styles.streakBadge}>
-                  <Icon name="flash" size={14} color={colors.text.inverse} />
-                </View>
-              </LinearGradient>
-            </Animated.View>
-          )}
-
-          {/* ──── MY HOUSES ──── */}
           {userHouses.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(500).delay(530)} style={styles.myHousesSection}>
+            <Animated.View entering={FadeInDown.duration(400).delay(360)} style={styles.myHousesSection}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Icon name="home" size={18} color={colors.primary.wisteriaDark} />
@@ -640,179 +442,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </ScrollView>
             </Animated.View>
           )}
-
-          {/* ──── LOCATION ──── */}
-          <Animated.View entering={FadeInDown.duration(500).delay(550)}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Map')}
-              activeOpacity={0.88}
-              accessibilityRole="button"
-              accessibilityLabel="Explore nearby"
-            >
-              <LinearGradient
-                colors={[colors.surface.card, colors.primary.wisteriaFaded]}
-                style={styles.locationCard}
-              >
-                <View style={styles.locationLeft}>
-                  <View style={styles.locationPulse} />
-                  <View style={styles.locationIconWrap}>
-                    <Icon name="location" size={22} color={colors.primary.wisteriaDark} />
-                  </View>
-                  <View style={styles.locationTextWrap}>
-                    <Text variant="h3" numberOfLines={1}>
-                      {currentLocation?.city || 'Unknown Location'}
-                    </Text>
-                    <Caption color={colors.text.muted} numberOfLines={1}>
-                      {currentLocation?.country || 'Enable location to explore'}
-                    </Caption>
-                  </View>
-                </View>
-                <View style={styles.locationArrow}>
-                  <Icon name="chevronRight" size={18} color={colors.primary.wisteria} />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* ──── YOUR STAMPS ──── */}
-          <Animated.View entering={FadeInDown.duration(500).delay(600)}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Icon name="stamp" size={18} color={colors.primary.wisteriaDark} />
-                <Heading level={2} style={styles.sectionTitle}>Your Stamps</Heading>
-              </View>
-              {stamps.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Stamps')}
-                  accessibilityRole="button"
-                  accessibilityLabel="See all stamps"
-                  style={styles.seeAllBtn}
-                >
-                  <Text variant="bodySmall" color={colors.primary.wisteriaDark}>See All</Text>
-                  <Icon name="chevronRight" size={14} color={colors.primary.wisteriaDark} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {stamps.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.stampsScroll}
-              >
-                {(['city', 'park', 'beach', 'landmark', 'restaurant'] as StampType[]).map(
-                  (type) => (
-                    <StampMini
-                      key={type}
-                      type={type}
-                      count={stampCounts[type]}
-                      onPress={() => navigation.navigate('Stamps')}
-                    />
-                  )
-                )}
-              </ScrollView>
-            ) : (
-              <LinearGradient
-                colors={[colors.primary.wisteriaFaded, colors.reward.peachLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.emptyStampCard}
-              >
-                <View style={styles.emptyStampIconWrap}>
-                  <Icon name="stamp" size={32} color={colors.primary.wisteriaDark} />
-                </View>
-                <View style={styles.emptyStampText}>
-                  <Text variant="h3">Start Your Collection</Text>
-                  <Caption color={colors.text.muted}>
-                    Visit a place nearby to collect your first stamp!
-                  </Caption>
-                </View>
-                <Button
-                  title="Collect a Stamp"
-                  onPress={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
-                  variant="primary"
-                  size="sm"
-                />
-              </LinearGradient>
-            )}
-          </Animated.View>
-
-          {/* ──── MINI-GAMES ──── */}
-          <Animated.View entering={FadeInDown.duration(500).delay(700)}>
-            <View style={styles.sectionHeader}>
-              <Heading level={2}>Play</Heading>
-              <Caption>Learn while having fun</Caption>
-            </View>
-            {(() => {
-              const gotd = getGameOfTheDay();
-              return (
-                <View style={styles.gameOfTheDayChipWrap}>
-                  <View style={styles.gameOfTheDayChip}>
-                    <Icon name="sparkles" size={16} color={colors.reward.gold} />
-                    <Text variant="bodySmall" style={styles.gameOfTheDayChipText}>
-                      Today's bonus: {gotd.shortLabel} +{gotd.bonusAura} Aura
-                    </Text>
-                  </View>
-                </View>
-              );
-            })()}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gamesScrollRow}>
-              {([
-                { key: 'WordMatch', label: 'Word\nMatch', icon: 'language' as IconName, gradient: [colors.primary.wisteriaFaded, colors.primary.wisteriaLight] as [string, string], iconColor: colors.primary.wisteriaDark },
-                { key: 'MemoryCards', label: 'Memory\nCards', icon: 'flashcard' as IconName, gradient: [colors.calm.skyLight, colors.calm.sky] as [string, string], iconColor: colors.calm.ocean },
-                { key: 'CookingGame', label: 'World\nCooking', icon: 'food' as IconName, gradient: [colors.reward.peachLight, colors.reward.peach] as [string, string], iconColor: colors.reward.peachDark },
-                { key: 'TreasureHunt', label: 'Treasure\nHunt', icon: 'compass' as IconName, gradient: [colors.success.honeydew, colors.success.mint] as [string, string], iconColor: colors.success.emerald },
-              ] as const).map((game, i) => {
-                const gotd = getGameOfTheDay();
-                const isGameOfTheDay = gotd.gameKey === game.key;
-                return (
-                <Animated.View key={game.key} entering={FadeInDown.duration(400).delay(750 + i * 80)}>
-                  <TouchableOpacity
-                    style={[styles.gameHomeCard, isGameOfTheDay && styles.gameHomeCardHighlight]}
-                    onPress={() => (navigation as any).navigate(game.key)}
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={game.gradient}
-                      style={styles.gameHomeGradient}
-                    >
-                      {isGameOfTheDay && <View style={styles.gameOfTheDayBadge}><Icon name="sparkles" size={12} color="#FFF" /></View>}
-                      <View style={[styles.gameHomeIconWrap, { backgroundColor: game.iconColor + '20' }]}>
-                        <Icon name={game.icon} size={28} color={game.iconColor} />
-                      </View>
-                      <Text style={styles.gameHomeLabel}>{game.label}</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-              })}
-            </ScrollView>
-          </Animated.View>
-
-          {/* ──── ADVENTURES GRID ──── */}
-          <Animated.View entering={FadeInDown.duration(500).delay(900)}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Icon name="rocket" size={18} color={colors.primary.wisteriaDark} />
-                <Heading level={2} style={styles.sectionTitle}>Adventures</Heading>
-              </View>
-            </View>
-
-            <View style={styles.adventuresGrid}>
-              {adventures.map((adv, i) => (
-                <AdventureCard
-                  key={adv.label}
-                  icon={adv.icon}
-                  label={adv.label}
-                  subtitle={adv.subtitle}
-                  gradient={adv.gradient}
-                  iconBg={adv.iconBg}
-                  onPress={adv.onPress}
-                  delay={700 + i * 60}
-                />
-              ))}
-            </View>
-          </Animated.View>
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -1007,7 +636,122 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  /* Visby Hero Card */
+  /* Home Room (Club Penguin / Sims style) */
+  homeRoomWrap: {
+    marginBottom: spacing.lg,
+  },
+  homeRoomFrame: {
+    width: '100%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: colors.base.cream,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.2)',
+  },
+  homeRoomWindow: {
+    width: '100%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  homeRoomWall: {
+    width: '100%',
+    position: 'relative',
+  },
+  homeRoomObjectsLayer: {
+    position: 'relative',
+    height: HOME_ROOM_WALL_H - 32,
+    marginTop: 4,
+  },
+  homeRoomDecor: {
+    position: 'absolute',
+    alignItems: 'center',
+    transform: [{ translateX: -18 }, { translateY: -14 }],
+  },
+  homeRoomDecorIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  homeRoomPlaced: {
+    position: 'absolute',
+    alignItems: 'center',
+    transform: [{ translateX: -18 }, { translateY: -12 }],
+  },
+  homeRoomBaseboard: {
+    height: 8,
+    width: '100%',
+  },
+  homeRoomFloor: {
+    width: '100%',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  homeVisbyTouch: {
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  homeVisbyWrap: {
+    alignItems: 'center',
+    width: HOME_VISBY_SIZE,
+    height: HOME_VISBY_SIZE + 28,
+  },
+  homeVisbyShadow: {
+    position: 'absolute',
+    bottom: 2,
+    width: HOME_VISBY_SIZE * 0.5,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  homeMoodBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.3)',
+  },
+  homeMoodLabel: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 12,
+    color: colors.primary.wisteriaDark,
+  },
+  homeRoomSubtitle: {
+    marginTop: spacing.sm,
+    alignSelf: 'center',
+  },
+  homeQuickRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  homeQuickCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.2)',
+  },
+  homeQuickCtaText: {
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.primary.wisteriaDark,
+  },
+
+  /* Visby Hero Card (kept for modals / reuse) */
   visbyCardOuter: {
     marginBottom: spacing.xl,
     ...(Platform.OS !== 'web' ? {
@@ -1114,6 +858,57 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.text.muted,
     marginTop: 1,
+  },
+
+  /* Adventure of the day */
+  adventureOfDayCard: {
+    marginBottom: spacing.sm,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  adventureOfDayGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderRadius: 20,
+  },
+  adventureOfDayLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  adventureOfDayIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  adventureOfDayTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+  },
+  adventureOfDaySteps: {
+    marginTop: 2,
+  },
+  adventureOfDayCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+  },
+  adventureOfDayCtaText: {
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.primary.wisteriaDark,
+  },
+  moreToDoLabel: {
+    marginBottom: spacing.xs,
+    marginLeft: spacing.xs,
   },
 
   /* Streak */
@@ -1341,23 +1136,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: spacing.xl,
     alignItems: 'center',
-    gap: spacing.md,
     marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.15)',
-    borderStyle: 'dashed',
-  },
-  emptyStampIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     backgroundColor: colors.primary.wisteriaFaded,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  emptyStampText: {
-    alignItems: 'center',
-    gap: 4,
+  emptyStampState: {
+    paddingVertical: spacing.sm,
   },
 
   /* Mini-games row */

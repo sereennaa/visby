@@ -260,7 +260,6 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                 key={country.id}
                 variant="elevated"
                 style={{...styles.countryCard, borderLeftColor: country.accentColor, borderLeftWidth: 4 }}
-                onPress={() => handleVisit(country.id)}
               >
                 <View style={styles.countryRow}>
                   <View style={styles.flagCircle}>

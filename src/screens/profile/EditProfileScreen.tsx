@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
+import { copy } from '../../config/copy';
+import { showToast } from '../../store/useToast';
 import { RootStackParamList } from '../../types';
 
 type EditProfileScreenProps = {
@@ -32,6 +34,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
       setUser({ ...user, displayName: displayName.trim(), username: username.trim() });
     }
     setMessage({ text: 'Your profile has been updated!', type: 'success' });
+    showToast(copy.success.profileSaved, 'success');
     setTimeout(() => navigation.goBack(), 1500);
   };
 

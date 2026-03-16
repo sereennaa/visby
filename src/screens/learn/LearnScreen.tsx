@@ -15,6 +15,7 @@ import { Card } from '../../components/ui/Card';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
+import { SkeletonCard } from '../../components/ui/SkeletonCard';
 import { RootStackParamList } from '../../types';
 import { LESSON_CONTENT } from '../../config/learningContent';
 
@@ -113,7 +114,7 @@ const SAMPLE_LESSONS: Lesson[] = [
 ];
 
 export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
-  const { getLessonsCompletedToday, lessonProgress } = useStore();
+  const { getLessonsCompletedToday, lessonProgress, isLoading } = useStore();
 
   const dailyGoal = 3;
   const lessonsToday = getLessonsCompletedToday();
@@ -229,6 +230,20 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          {isLoading ? (
+            <View style={styles.skeletonBlock}>
+              <SkeletonCard height={80} style={styles.skeletonRow} />
+              <SkeletonCard height={100} style={styles.skeletonRow} />
+              <View style={styles.skeletonRowWrap}>
+                <SkeletonCard width={160} height={100} style={styles.skeletonSmall} />
+                <SkeletonCard width={160} height={100} style={styles.skeletonSmall} />
+              </View>
+              {[1, 2, 3, 4].map((i) => (
+                <SkeletonCard key={i} height={72} style={styles.skeletonRow} />
+              ))}
+            </View>
+          ) : (
+            <>
           {/* Next up — suggested next step */}
           {nextLesson && (
             <TouchableOpacity
@@ -362,6 +377,8 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
               </View>
             ))}
           </View>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -381,6 +398,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxxl,
+  },
+  skeletonBlock: {
+    gap: spacing.md,
+  },
+  skeletonRow: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  skeletonRowWrap: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  skeletonSmall: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

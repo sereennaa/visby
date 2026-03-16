@@ -24,6 +24,8 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { copy } from '../../config/copy';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
@@ -395,15 +397,12 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
             </View>
           ) : (
             <Card style={styles.emptyWardrobe}>
-              <Text variant="h3" align="center">No {wardrobeTab}s yet!</Text>
-              <Text variant="body" align="center" color={colors.text.secondary} style={styles.emptyText}>
-                Visit the shop to find treasures
-              </Text>
-              <Button
-                title="Browse Shop"
-                onPress={() => navigation.navigate('CosmeticShop')}
-                variant="primary"
-                size="sm"
+              <EmptyState
+                icon="shirt"
+                title={copy.empty.noWardrobe.title}
+                subtitle={copy.empty.noWardrobe.subtitle}
+                actionLabel={copy.actions.goToShop}
+                onAction={() => navigation.navigate('CosmeticShop')}
               />
             </Card>
           )}

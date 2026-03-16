@@ -12,7 +12,8 @@ import { useStore } from '../../store/useStore';
 import { getGameOfTheDay } from '../../config/gameOfTheDay';
 import { RootStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
-import { whimsicalCopy } from '../../theme/whimsical';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { copy } from '../../config/copy';
 
 type InboxScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Inbox'>;
@@ -164,15 +165,12 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
             </View>
 
             {activityItems.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <View style={styles.emptyIconWrap}>
-                  <Icon name="mailOpen" size={32} color={colors.text.muted} />
-                </View>
-                <Text variant="body" style={styles.emptyTitle}>No activity yet</Text>
-                <Caption style={styles.emptySubtitle}>
-                  {whimsicalCopy.noActivityYet}
-                </Caption>
-              </View>
+              <EmptyState
+                icon="mailOpen"
+                title={copy.empty.noInbox.title}
+                subtitle={copy.empty.noInbox.subtitle}
+                style={styles.emptyCard}
+              />
             ) : (
               activityItems.map((item, i) => (
                 <Animated.View
@@ -206,7 +204,7 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.comingSoonCard}>
               <Icon name="mailOutline" size={36} color={colors.primary.wisteria} />
-              <Text variant="body" style={styles.comingSoonTitle}>{whimsicalCopy.comingSoon}</Text>
+              <Text variant="body" style={styles.comingSoonTitle}>{copy.comingSoon}</Text>
               <Caption style={styles.comingSoonSubtitle}>
                 Messages and notifications from your trips will appear here.
               </Caption>

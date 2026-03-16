@@ -297,7 +297,7 @@ const AuraPopup: React.FC<{ visible: boolean }> = ({ visible }) => {
 };
 
 export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion, getVisbyMood, addVisbyChatMessage, storyBeatsShown, markStoryBeatShown } = useStore();
+  const { addAura, studyWithVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion, setAdventureGamePlayed, getVisbyMood, addVisbyChatMessage, storyBeatsShown, markStoryBeatShown } = useStore();
   const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   React.useEffect(() => {
     if (storyBeatsShown.includes('hint_WordMatch')) return;
@@ -404,6 +404,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
           addSkillPoints('language', 5);
           incrementGameStat('gamesPlayed');
           checkDailyMissionCompletion('play_minigame', 1);
+          setAdventureGamePlayed();
           const finalAccuracy = (newMatched / (newMatched + wrongAttempts)) * 100;
           if (finalAccuracy >= 100) {
             incrementGameStat('perfectWordMatches');

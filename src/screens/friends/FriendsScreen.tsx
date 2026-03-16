@@ -15,6 +15,8 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { LevelBadge } from '../../components/ui/Badge';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { copy } from '../../config/copy';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
@@ -106,10 +108,13 @@ export const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Your friends ({friends.length})</Text>
             {friends.length === 0 ? (
               <Card style={styles.emptyCard}>
-                <Icon name="people" size={48} color={colors.text.muted} />
-                <Text variant="h3" style={styles.emptyTitle}>No friends yet</Text>
-                <Caption style={styles.emptySub}>Add friends to see their levels, badges, and visit their houses!</Caption>
-                <Button title="Add friend" onPress={() => navigation.navigate('AddFriend')} variant="primary" style={{ marginTop: spacing.md }} />
+                <EmptyState
+                  icon="people"
+                  title={copy.empty.noFriends.title}
+                  subtitle={copy.empty.noFriends.subtitle}
+                  actionLabel={copy.actions.addFriend}
+                  onAction={() => navigation.navigate('AddFriend')}
+                />
               </Card>
             ) : (
               friends.map((friend) => (

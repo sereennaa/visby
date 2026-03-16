@@ -24,6 +24,8 @@ import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
 import { soundService } from '../../services/sound';
 import { STAMP_TYPES_INFO, AURA_REWARDS } from '../../config/constants';
+import { copy } from '../../config/copy';
+import { showToast } from '../../store/useToast';
 import { RootStackParamList, Stamp, StampType } from '../../types';
 
 const getStampReward = (type: StampType): number => {
@@ -101,7 +103,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
     setFormError('');
 
     if (!locationName.trim()) {
-      setFormError('Please enter a location name.');
+      setFormError(copy.errors.formValidation.locationRequired);
       return;
     }
 
@@ -288,6 +290,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
               title="Awesome!"
               onPress={() => {
                 setShowSuccess(false);
+                showToast(copy.success.stampCollected, 'success');
                 navigation.goBack();
               }}
               variant="primary"

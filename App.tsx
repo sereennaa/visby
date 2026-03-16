@@ -28,11 +28,15 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Icon } from './src/components/ui/Icon';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { ProgressionOverlay } from './src/components/ui/ProgressionOverlay';
+import { SessionRestOverlay } from './src/components/ui/SessionRestOverlay';
+import { ToastContainer } from './src/components/ui/Toast';
 import { useStore } from './src/store/useStore';
 import { supabase, isSupabaseConfigured } from './src/config/supabase';
 import { authService } from './src/services/auth';
+import { setupNotifications } from './src/services/notifications';
 import { stampsService } from './src/services/stamps';
 import { bitesService } from './src/services/bites';
+import { useWidgetSync } from './src/hooks/useWidgetSync';
 import { colors } from './src/theme/colors';
 
 class ErrorBoundary extends React.Component<
@@ -71,6 +75,8 @@ class ErrorBoundary extends React.Component<
 }
 
 export default function App() {
+  // Must be first: same hook order every render (no early return before this)
+  useWidgetSync();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const { setUser, setVisby, setStamps, setBites, setLoading, isLoading } = useStore();
 
@@ -176,6 +182,15 @@ export default function App() {
     };
   }, []);
 
+  // Schedule local notifications when app is ready (respects settings.notifications)
+  useEffect(() => {
+    if (fontsLoaded && !isLoading) {
+      const state = useStore.getState();
+      const enabled = (state.settings as { notifications?: boolean }).notifications !== false;
+      setupNotifications(enabled, state.user?.currentStreak ?? 0).catch(() => {});
+    }
+  }, [fontsLoaded, isLoading]);
+
   if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -195,6 +210,8 @@ export default function App() {
         <ErrorBoundary>
           <AppNavigator />
           <ProgressionOverlay />
+          <SessionRestOverlay />
+          <ToastContainer />
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

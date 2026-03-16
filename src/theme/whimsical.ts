@@ -13,6 +13,7 @@ export const whimsicalGradients = {
   reward: [colors.reward.peachLight, colors.reward.goldSoft] as const,
 };
 
+/** @deprecated Prefer copy from src/config/copy.ts for new code */
 export const whimsicalCopy = {
   comingSoon: "We're brewing something special here.",
   noActivityYet: "Your adventure is just beginning. Go explore!",

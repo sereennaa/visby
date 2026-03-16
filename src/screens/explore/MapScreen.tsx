@@ -15,6 +15,9 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { copy } from '../../config/copy';
 import { useStore } from '../../store/useStore';
 import { locationService } from '../../services/location';
 import { STAMP_TYPES_INFO } from '../../config/constants';
@@ -28,6 +31,7 @@ type MapScreenProps = {
 export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
   const { currentLocation, setLocation, stamps } = useStore();
   const [loading, setLoading] = useState(false);
+  const [locationError, setLocationError] = useState(false);
   const [selectedType, setSelectedType] = useState<StampType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,6 +41,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
 
   const fetchLocation = async () => {
     setLoading(true);
+    setLocationError(false);
     try {
       const location = await locationService.getCurrentLocation();
       if (location) {
@@ -44,6 +49,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
       }
     } catch (error) {
       if (__DEV__) console.error('Location error:', error);
+      setLocationError(true);
     } finally {
       setLoading(false);
     }
@@ -129,6 +135,35 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
       </Card>
     );
   };
+
+  if (locationError) {
+    return (
+      <LinearGradient
+        colors={[colors.calm.skyLight, colors.base.cream]}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Icon name="chevronLeft" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <Heading level={1} style={styles.headerTitle}>Nearby</Heading>
+            <View style={{ width: 40 }} />
+          </View>
+          <ErrorState
+            title={copy.errors.loadFailed}
+            subtitle={copy.errors.connection}
+            onRetry={fetchLocation}
+          />
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -286,27 +321,14 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
               </>
             }
             ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Icon name="search" size={48} color={colors.text.light} />
-                <Text variant="h3" align="center" color={colors.text.secondary} style={styles.emptyTitle}>
-                  No places found
-                </Text>
-                <Text variant="body" align="center" color={colors.text.muted} style={styles.emptyText}>
-                  {searchQuery.trim()
-                    ? `Nothing matches "${searchQuery}". Try a different search or clear your filters.`
-                    : 'Try selecting a different category above.'}
-                </Text>
-                {(searchQuery.trim() || selectedType !== 'all') && (
-                  <TouchableOpacity
-                    style={styles.emptyResetButton}
-                    onPress={() => { setSearchQuery(''); setSelectedType('all'); }}
-                  >
-                    <Text variant="body" color={colors.primary.wisteriaDark}>
-                      Reset filters
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              <EmptyState
+                icon="search"
+                title={copy.empty.noPlacesFound.title}
+                subtitle={searchQuery.trim() ? copy.empty.noPlacesFound.subtitleFilter : copy.empty.noPlacesFound.subtitleCategory}
+                secondaryLabel={(searchQuery.trim() || selectedType !== 'all') ? copy.actions.resetFilters : undefined}
+                onSecondary={(searchQuery.trim() || selectedType !== 'all') ? () => { setSearchQuery(''); setSelectedType('all'); } : undefined}
+                style={styles.emptyState}
+              />
             }
           />
         </View>

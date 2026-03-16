@@ -15,6 +15,8 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { COUNTRIES } from '../../config/constants';
 import { getCountryMapPins } from '../../config/countryMap';
+import { getCountryOutlinePath } from '../../config/countryOutlines';
+import { CountryOutline } from '../../components/maps/CountryOutline';
 import { ExploreStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
@@ -57,14 +59,30 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
           <View style={styles.headerSpacer} />
         </View>
 
-        <Caption style={styles.subtitle}>Tap a city or landmark to walk through and explore stops</Caption>
+        <Caption style={styles.subtitle}>
+          You&apos;re in {country.name}. Cities and landmarks are shown on the map. Tap one to explore.
+        </Caption>
 
-        {/* Map canvas: rounded area with pins positioned by x/y percent */}
+        {/* Map canvas: country outline with pins positioned by x/y percent */}
         <View style={styles.mapWrap}>
-          <LinearGradient
-            colors={[colors.base.cream + 'ee', colors.base.skyLight + 'cc']}
-            style={styles.mapCanvas}
-          >
+          <View style={styles.mapCanvas}>
+            {getCountryOutlinePath(countryId) ? (
+              <View style={styles.mapOutlineWrap}>
+                <CountryOutline
+                  countryId={countryId}
+                  width={MAP_WIDTH}
+                  height={MAP_HEIGHT}
+                  fill={country.accentColor + '35'}
+                  stroke={colors.primary.wisteriaLight + '80'}
+                  strokeWidth={2}
+                />
+              </View>
+            ) : (
+              <LinearGradient
+                colors={[colors.base.cream + 'ee', colors.base.skyLight + 'cc']}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
             {pins.map((pin) => {
               const x = (pin.xPercent / 100) * (MAP_WIDTH - PIN_SIZE);
               const y = (pin.yPercent / 100) * (MAP_HEIGHT - PIN_SIZE);
@@ -87,7 +105,7 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
                 </TouchableOpacity>
               );
             })}
-          </LinearGradient>
+          </View>
         </View>
 
         {/* List of pins for accessibility / small screens */}
@@ -148,6 +166,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary.wisteriaLight + '60',
     overflow: 'hidden',
     position: 'relative',
+  },
+  mapOutlineWrap: {
+    ...StyleSheet.absoluteFillObject,
   },
   pin: {
     position: 'absolute',

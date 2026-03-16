@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Modal } from 'react-native';
+import { View, StyleSheet, Modal, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ZoomIn, BounceIn } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { getShadowStyle } from '../../theme/shadows';
 import { Text, Heading, Caption } from './Text';
 import { Button } from './Button';
 import { Icon, IconName } from './Icon';
 import { useStore, getGrowthStage } from '../../store/useStore';
 import { soundService } from '../../services/sound';
+import type { StoryChapter } from '../../config/storyChapters';
 
 const LEVEL_TITLES: Record<number, string> = {
   1: 'Novice Explorer',
@@ -35,11 +37,16 @@ const STAGE_LABELS = ['E', 'B', 'K', 'T', 'A'];
 const STAGES = ['egg', 'baby', 'kid', 'teen', 'adult'];
 
 export const ProgressionOverlay: React.FC = () => {
-  const { user } = useStore();
+  const { user, getNextChapterToShow, markStoryBeatShown } = useStore();
   const [lastCelebratedLevel, setLastCelebratedLevel] = useState(user?.level || 1);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showStageUp, setShowStageUp] = useState(false);
   const [lastStage, setLastStage] = useState(getGrowthStage(user?.totalCarePoints || 0));
+  const [chapterToShow, setChapterToShow] = useState<StoryChapter | null>(null);
+
+  const chapterUnlockKey = useStore((s) =>
+    `${s.user?.visitedCountries?.length ?? 0}-${s.stamps.length}-${s.badges.length}-${s.lessonProgress.filter((p) => p.completed).length}-${s.storyBeatsShown.length}`
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -58,11 +65,38 @@ export const ProgressionOverlay: React.FC = () => {
     }
   }, [user?.level, user?.totalCarePoints]);
 
+  useEffect(() => {
+    const next = getNextChapterToShow();
+    if (next) setChapterToShow(next);
+  }, [chapterUnlockKey, getNextChapterToShow]);
+
   const stage = getGrowthStage(user?.totalCarePoints || 0);
   const info = STAGE_INFO[stage];
 
+  const dismissChapter = () => {
+    if (chapterToShow) {
+      markStoryBeatShown(chapterToShow.storyBeatId);
+      setChapterToShow(null);
+    }
+  };
+
   return (
     <>
+      <Modal visible={!!chapterToShow} transparent animationType="fade">
+        <View style={s.overlay}>
+          <Animated.View entering={ZoomIn.duration(500)} style={s.card}>
+            <LinearGradient colors={[colors.primary.wisteriaLight, colors.primary.wisteriaDark]} style={s.iconCircle}>
+              <Icon name="compass" size={48} color="#FFFFFF" />
+            </LinearGradient>
+            <Animated.View entering={BounceIn.delay(300)}>
+              <Heading level={1} style={s.title}>{chapterToShow?.title}</Heading>
+            </Animated.View>
+            <Text style={s.desc}>{chapterToShow?.subtitle}</Text>
+            <Button title="Let's go!" onPress={dismissChapter} variant="primary" style={s.btn} />
+          </Animated.View>
+        </View>
+      </Modal>
+
       <Modal visible={showLevelUp} transparent animationType="fade">
         <View style={s.overlay}>
           <Animated.View entering={ZoomIn.duration(500)} style={s.card}>
@@ -125,11 +159,8 @@ const s = StyleSheet.create({
     width: '85%',
     alignItems: 'center',
     padding: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
     elevation: 12,
+    ...getShadowStyle({ shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 24 }),
   },
   iconCircle: {
     width: 96,

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Widget.Visby.ProgressBar" parent="android:Widget.ProgressBar.Horizontal">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">4dp</item>
+        <item name="android:max">100</item>
+        <item name="android:progress">80</item>
+        <item name="android:progressDrawable">@drawable/visby_progress_bar</item>
+    </style>
+</resources>

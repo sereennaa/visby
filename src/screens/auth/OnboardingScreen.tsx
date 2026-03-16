@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import ReAnimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { getShadowStyle } from '../../theme/shadows';
 import { Button } from '../../components/ui/Button';
 import { Text } from '../../components/ui/Text';
 import { Icon, IconName } from '../../components/ui/Icon';
@@ -548,12 +549,9 @@ const styles = StyleSheet.create({
 
   // Step 0
   eggGlow: {
-    shadowColor: colors.reward.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
     elevation: 8,
     marginBottom: spacing.xxxl,
+    ...getShadowStyle({ shadowColor: colors.reward.gold, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 30 }),
   },
 
   // Step 1
@@ -607,11 +605,8 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.06)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
     elevation: 3,
+    ...getShadowStyle({ shadowColor: 'rgba(0, 0, 0, 0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 12 }),
   },
   worldIconLabel: {
     fontFamily: 'Nunito-Bold',
@@ -621,11 +616,8 @@ const styles = StyleSheet.create({
     width: '70%',
     borderRadius: spacing.radius.lg,
     overflow: 'hidden',
-    shadowColor: 'rgba(0, 0, 0, 0.08)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
     elevation: 4,
+    ...getShadowStyle({ shadowColor: 'rgba(0, 0, 0, 0.08)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 16 }),
   },
   miniCardInner: {
     padding: spacing.lg,
@@ -663,11 +655,8 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.06)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
     elevation: 3,
+    ...getShadowStyle({ shadowColor: 'rgba(0, 0, 0, 0.06)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 12 }),
   },
   gameLabel: {
     fontFamily: 'Nunito-Bold',

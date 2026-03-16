@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { getShadowStyle } from '../../theme/shadows';
 import { Button } from '../../components/ui/Button';
 import { Text } from '../../components/ui/Text';
 import { Input } from '../../components/ui/Input';
@@ -233,11 +234,13 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.xxl,
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.xl,
-    shadowColor: 'rgba(0,0,0,0.06)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
     elevation: 3,
+    ...getShadowStyle({
+      shadowColor: 'rgba(0,0,0,0.06)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 20,
+    }),
   },
   errorBanner: {
     backgroundColor: colors.status.errorLight,

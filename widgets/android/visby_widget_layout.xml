@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/visby_widget_bg">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/widget_mood"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="24sp" android:text="😊" />
+        <TextView android:id="@+id/widget_name"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textSize="16sp" android:textStyle="bold" android:text="Visby" />
+    </LinearLayout>
+
+    <ProgressBar android:id="@+id/bar_hunger" style="@style/Widget.Visby.ProgressBar" android:layout_marginTop="6dp" />
+    <ProgressBar android:id="@+id/bar_happiness" style="@style/Widget.Visby.ProgressBar" />
+    <ProgressBar android:id="@+id/bar_energy" style="@style/Widget.Visby.ProgressBar" />
+    <ProgressBar android:id="@+id/bar_knowledge" style="@style/Widget.Visby.ProgressBar" />
+    <ProgressBar android:id="@+id/bar_social" style="@style/Widget.Visby.ProgressBar" />
+
+    <TextView android:id="@+id/widget_alert"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textSize="11sp" android:textColor="#FF9800"
+        android:visibility="gone" android:maxLines="1" android:ellipsize="end" />
+</LinearLayout>

@@ -31,6 +31,7 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
+import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
 
 type MemoryCardsScreenProps = {
@@ -205,7 +206,7 @@ const MemoryCard: React.FC<{
 };
 
 export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, playWithVisby, incrementGameStat, addSkillPoints, checkDailyMissionCompletion } = useStore();
+  const { addAura, studyWithVisby, playWithVisby, incrementGameStat, addSkillPoints, checkDailyMissionCompletion, setAdventureGamePlayed, getVisbyMood, addVisbyChatMessage } = useStore();
   const [deck, setDeck] = useState(() => buildDeck());
   const [cardStates, setCardStates] = useState<FlipState[]>(
     () => Array(PAIRS_PER_GAME * 2).fill('down'),
@@ -301,7 +302,10 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
           playWithVisby();
           incrementGameStat('gamesPlayed');
           checkDailyMissionCompletion('play_minigame', 1);
+          setAdventureGamePlayed();
           addSkillPoints('culture', 3);
+          const outcome = finalMoves <= 15 ? 'perfect' : 'won';
+          addVisbyChatMessage('visby', getPostGameLine('MemoryCards', outcome, getVisbyMood()));
           setTimeout(() => setIsFinished(true), 500);
         }
       } else {
@@ -414,6 +418,11 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
                     </Text>
                   </Animated.View>
                 )}
+                <View style={styles.visbyLineWrap}>
+                  <Text variant="body" style={styles.visbyLine}>
+                    — Visby: "{getPostGameLine('MemoryCards', starRating >= 3 ? 'perfect' : 'won', getVisbyMood())}"
+                  </Text>
+                </View>
               </View>
             </Card>
 
@@ -669,6 +678,15 @@ const styles = StyleSheet.create({
   },
   resultsContent: {
     alignItems: 'center',
+  },
+  visbyLineWrap: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  visbyLine: {
+    fontStyle: 'italic',
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
   resultsIconWrap: {
     marginBottom: spacing.lg,

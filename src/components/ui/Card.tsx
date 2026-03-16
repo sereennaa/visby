@@ -5,6 +5,7 @@ import {
   ViewStyle,
   StyleProp,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -62,13 +63,19 @@ export const Card: React.FC<CardProps> = ({
     transform: [{ scale: scale.value }],
   }));
 
+  const isWeb = Platform.OS === 'web';
   const magicStyle = useAnimatedStyle(() => {
     if (variant !== 'magic') return {};
+    const opacity = interpolate(magicGlow.value, [0, 1], [0.15, 0.5]);
+    const radius = interpolate(magicGlow.value, [0, 1], [8, 24]);
+    if (isWeb) {
+      return { boxShadow: `0 0 ${radius}px rgba(199,184,234,${opacity})` };
+    }
     return {
       shadowColor: '#C7B8EA',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: interpolate(magicGlow.value, [0, 1], [0.15, 0.5]),
-      shadowRadius: interpolate(magicGlow.value, [0, 1], [8, 24]),
+      shadowOpacity: opacity,
+      shadowRadius: radius,
       elevation: interpolate(magicGlow.value, [0, 1], [3, 10]),
     };
   });

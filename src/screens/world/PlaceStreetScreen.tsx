@@ -6,6 +6,7 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,9 +15,12 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Icon, IconName } from '../../components/ui/Icon';
+import { NavBreadcrumb } from '../../components/ui/NavBreadcrumb';
 import { COUNTRIES } from '../../config/constants';
-import { getMapPin } from '../../config/countryMap';
+import { getMapPin, getPlaceLocationFact } from '../../config/countryMap';
 import { getCountryLocations, CountryLocation } from '../../config/learningContent';
+import { MiniCountryMap } from '../../components/maps/MiniCountryMap';
+import { getCountryOutlinePath } from '../../config/countryOutlines';
 import { ExploreStackParamList } from '../../types';
 import { useStore } from '../../store/useStore';
 
@@ -69,6 +73,13 @@ export const PlaceStreetScreen: React.FC<PlaceStreetScreenProps> = ({ navigation
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
+            <NavBreadcrumb
+              items={[
+                { label: 'World', onPress: () => navigation.navigate('CountryWorld') },
+                { label: country.name, onPress: () => navigation.navigate('CountryRoom', { countryId }) },
+                { label: pin.name },
+              ]}
+            />
             <Heading level={3} style={styles.headerTitle}>{pin.name}</Heading>
             <Caption style={styles.headerSub}>{country.name} · Walk the street</Caption>
           </View>
@@ -80,6 +91,38 @@ export const PlaceStreetScreen: React.FC<PlaceStreetScreenProps> = ({ navigation
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Where is this? – mini map + educational fact */}
+          <View style={styles.whereSection}>
+            <Text variant="body" style={styles.whereLabel}>Where is {pin.name}?</Text>
+            {getCountryOutlinePath(countryId) ? (
+              <View style={styles.whereMapRow}>
+                <MiniCountryMap
+                  countryId={countryId}
+                  pinXPercent={pin.xPercent}
+                  pinYPercent={pin.yPercent}
+                  size={140}
+                  accentColor={country.accentColor + '40'}
+                />
+                <View style={styles.whereFactWrap}>
+                  <Text variant="body" style={styles.whereFact}>
+                    {getPlaceLocationFact(pin.name, country.name, pin.id)}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.whereMapLink}
+                    onPress={() => navigation.navigate('CountryMap', { countryId })}
+                  >
+                    <Text variant="caption" style={styles.whereMapLinkText}>See full map of {country.name}</Text>
+                    <Icon name="chevronRight" size={14} color={colors.primary.wisteriaDark} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <Text variant="body" style={styles.whereFact}>
+                {getPlaceLocationFact(pin.name, country.name, pin.id)}
+              </Text>
+            )}
+          </View>
+
           {stops.map((loc, index) => (
             <View key={loc.id} style={styles.stopCard}>
               {/* Full-bleed style image */}
@@ -138,19 +181,64 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl * 2,
     paddingTop: spacing.sm,
   },
-  stopCard: {
+  whereSection: {
     marginBottom: spacing.xl,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: colors.base.cream + 'ee',
+    padding: spacing.md,
+    backgroundColor: colors.base.parchment + 'cc',
+    borderRadius: spacing.radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary.wisteriaLight + '40',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    borderColor: colors.primary.wisteriaLight + '50',
   },
+  whereLabel: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  whereMapRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  whereFactWrap: { flex: 1 },
+  whereFact: {
+    color: colors.text.secondary,
+    lineHeight: 22,
+  },
+  whereMapLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: 4,
+  },
+  whereMapLinkText: {
+    color: colors.primary.wisteriaDark,
+    fontFamily: 'Nunito-SemiBold',
+  },
+  stopCard: Platform.select({
+    web: {
+      marginBottom: spacing.xl,
+      borderRadius: 20,
+      overflow: 'hidden',
+      backgroundColor: colors.base.cream + 'ee',
+      borderWidth: 1,
+      borderColor: colors.primary.wisteriaLight + '40',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      elevation: 4,
+    },
+    default: {
+      marginBottom: spacing.xl,
+      borderRadius: 20,
+      overflow: 'hidden',
+      backgroundColor: colors.base.cream + 'ee',
+      borderWidth: 1,
+      borderColor: colors.primary.wisteriaLight + '40',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+  }),
   imageWrap: {
     width: '100%',
     height: IMAGE_HEIGHT,
@@ -196,12 +284,18 @@ const styles = StyleSheet.create({
     color: '#FFF',
     textTransform: 'capitalize',
   },
-  stopName: {
-    color: '#FFF',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
+  stopName: Platform.select({
+    web: {
+      color: '#FFF',
+      textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+    },
+    default: {
+      color: '#FFF',
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
+    },
+  }),
   stopBody: {
     padding: spacing.lg,
   },

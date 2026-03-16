@@ -12,7 +12,7 @@ import { ExploreStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 type ExploreScreenProps = {
-  navigation: NativeStackNavigationProp<ExploreStackParamList, 'Explore'>;
+  navigation: NativeStackNavigationProp<ExploreStackParamList, 'ExploreHome'>;
 };
 
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
@@ -24,6 +24,14 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
       gradient: [colors.primary.wisteriaFaded, colors.primary.wisteriaLight] as [string, string],
       iconBg: colors.primary.wisteriaDark,
       onPress: () => navigation.navigate('CountryWorld'),
+    },
+    {
+      icon: 'map' as IconName,
+      label: 'World map',
+      subtitle: 'See where you\'ve been',
+      gradient: [colors.calm.skyLight, colors.calm.sky] as [string, string],
+      iconBg: colors.calm.ocean,
+      onPress: () => navigation.navigate('WorldMap'),
     },
     {
       icon: 'compass' as IconName,
@@ -109,7 +117,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
           <View style={styles.tip}>
             <Icon name="info" size={18} color={colors.primary.wisteriaDark} />
             <Text variant="bodySmall" color={colors.text.secondary} style={styles.tipText}>
-              Tap Visit the World to see all countries. Spend Aura to visit or buy a house there.
+              World map shows where every country is on the globe. Tap Visit the World to see all countries, or spend Aura to visit and buy a house there.
             </Text>
           </View>
 

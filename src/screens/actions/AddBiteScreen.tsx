@@ -20,6 +20,8 @@ import { Icon } from '../../components/ui/Icon';
 import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
 import { BITE_CATEGORIES_INFO, AURA_REWARDS } from '../../config/constants';
+import { copy } from '../../config/copy';
+import { showToast } from '../../store/useToast';
 import { RootStackParamList, Bite, BiteCategory } from '../../types';
 
 const SELECTABLE_CATEGORIES: BiteCategory[] = [
@@ -312,6 +314,7 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
               title="Yum!"
               onPress={() => {
                 setShowSuccess(false);
+                showToast(copy.success.biteLogged, 'success');
                 navigation.goBack();
               }}
               variant="primary"

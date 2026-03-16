@@ -33,6 +33,7 @@ import { Card } from '../../components/ui/Card';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../../store/useStore';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
+import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
 
 const RECIPES = [
@@ -196,7 +197,7 @@ const IngredientButton: React.FC<IngredientButtonProps> = ({ name, onPress, disa
 };
 
 export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation }) => {
-  const { addAura, feedVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion } = useStore();
+  const { addAura, feedVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion, setAdventureGamePlayed, getVisbyMood, addVisbyChatMessage } = useStore();
 
   const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * RECIPES.length));
   const recipe = RECIPES[recipeIndex];
@@ -260,9 +261,12 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             const bonus = getGameOfTheDayBonusAura('CookingGame');
             if (bonus > 0) addAura(bonus);
             feedVisby();
+            const outcome = lives === 3 ? 'perfect' : 'won';
+            addVisbyChatMessage('visby', getPostGameLine('CookingGame', outcome, getVisbyMood()));
             addSkillPoints('cooking', 5);
             incrementGameStat('gamesPlayed');
             checkDailyMissionCompletion('play_minigame', 1);
+            setAdventureGamePlayed();
             if (lives === 3) {
               incrementGameStat('perfectCookingGames');
             }
@@ -285,12 +289,14 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             const finalScore = score;
             if (finalScore > 0) addAura(finalScore);
             feedVisby();
+            addVisbyChatMessage('visby', getPostGameLine('CookingGame', 'lost', getVisbyMood()));
             checkDailyMissionCompletion('play_minigame', 1);
+            setAdventureGamePlayed();
           }, 700);
         }
       }
     },
-    [gamePhase, recipe, nextCorrectIndex, lives, score, addAura, feedVisby, addSkillPoints, incrementGameStat, potScale, checkDailyMissionCompletion],
+    [gamePhase, recipe, nextCorrectIndex, lives, score, addAura, feedVisby, addSkillPoints, incrementGameStat, potScale, checkDailyMissionCompletion, setAdventureGamePlayed],
   );
 
   const handlePlayAgain = () => {
@@ -356,6 +362,11 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
                     </Text>
                   </Animated.View>
                 )}
+                <View style={styles.visbyLineWrap}>
+                  <Text variant="body" style={styles.visbyLine}>
+                    — Visby: "{getPostGameLine('CookingGame', gamePhase === 'won' ? (lives === 3 ? 'perfect' : 'won') : 'lost', getVisbyMood())}"
+                  </Text>
+                </View>
               </View>
             </Card>
 
@@ -673,6 +684,15 @@ const styles = StyleSheet.create({
   },
   resultsContent: {
     alignItems: 'center',
+  },
+  visbyLineWrap: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  visbyLine: {
+    fontStyle: 'italic',
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
   resultsTitle: {
     textAlign: 'center',

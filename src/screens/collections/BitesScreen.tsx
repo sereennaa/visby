@@ -16,6 +16,8 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { BiteCard, BiteGridItem } from '../../components/collectibles/BiteCard';
 import { SkeletonCard } from '../../components/ui/SkeletonCard';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { copy } from '../../config/copy';
 import { useStore } from '../../store/useStore';
 import { BITE_CATEGORIES_INFO } from '../../config/constants';
 import { RootStackParamList, Bite, BiteCategory } from '../../types';
@@ -205,35 +207,14 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconWrap}>
-              <Icon name="food" size={64} color={colors.reward.peachDark} />
-            </View>
-            <Text
-              variant="h3"
-              align="center"
-              color={colors.text.primary}
-              style={styles.emptyTitle}
-            >
-              No bites yet!
-            </Text>
-            <Text
-              variant="body"
-              align="center"
-              color={colors.text.muted}
-              style={styles.emptyText}
-            >
-              Log what you eat and feed your Visby. Add a bite from a restaurant, a recipe you made, or a snack — and earn Aura!
-            </Text>
-            <Button
-              title="Add your first bite"
-              onPress={() => navigation.navigate('AddBite')}
-              variant="primary"
-              size="md"
-              style={styles.emptyPrimaryBtn}
-              icon={<Icon name="add" size={20} color={colors.text.inverse} />}
-            />
-          </View>
+          <EmptyState
+            icon="food"
+            title={copy.empty.noBites.title}
+            subtitle={copy.empty.noBites.subtitle}
+            actionLabel={copy.actions.addFirstBite}
+            onAction={() => navigation.navigate('AddBite')}
+            style={styles.emptyState}
+          />
         )}
       </SafeAreaView>
     </LinearGradient>

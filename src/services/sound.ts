@@ -1,8 +1,8 @@
 /**
  * Optional sound effects for game actions.
- * Respects settings.soundEffects; no-op when muted or when expo-av fails to load.
+ * Respects settings.soundEffects; no-op when muted or when expo-audio fails to load.
  */
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useStore } from '../store/useStore';
 
 const SOUNDS = {
@@ -15,11 +15,8 @@ let audioModeSet = false;
 async function ensureAudioMode() {
   if (audioModeSet) return;
   try {
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
+    await setAudioModeAsync({
+      playsInSilentMode: true,
     });
     audioModeSet = true;
   } catch {
@@ -30,11 +27,15 @@ async function ensureAudioMode() {
 async function playUrl(uri: string): Promise<void> {
   try {
     await ensureAudioMode();
-    const { sound } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: true }
-    );
-    setTimeout(() => sound.unloadAsync().catch(() => {}), 2000);
+    const player = createAudioPlayer(uri);
+    player.play();
+    setTimeout(() => {
+      try {
+        player.release();
+      } catch {
+        // ignore
+      }
+    }, 2000);
   } catch {
     // ignore (network, unsupported, etc.)
   }

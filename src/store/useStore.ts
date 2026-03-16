@@ -2,9 +2,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory, DailyMission, DailyMissionType, TreasureHuntProgress, PlaceChatMessage } from '../types';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory, DailyMission, DailyMissionType, TreasureHuntProgress, PlaceChatMessage, Discovery } from '../types';
 import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
-import { QUEST_DEFINITIONS, getQuestById, type QuestDefinition } from '../config/quests';
+import { QUEST_DEFINITIONS, getQuestById, getSeasonalExplorerQuest, type QuestDefinition } from '../config/quests';
+import { getCurrentSeasonKey } from '../config/worldCalendar';
+import { STORY_CHAPTERS, getChapterUnlockCurrent, type StoryChapter } from '../config/storyChapters';
 
 const DAILY_MISSION_BONUS_AURA = 25;
 const SURPRISE_AURA_MIN = 5;
@@ -128,6 +130,13 @@ interface AppStore {
   /** Per-country treasure hunt: completed room IDs (and optionally location IDs) */
   treasureHuntProgress: TreasureHuntProgress;
 
+  /** Discovery log: facts and quizzes learned in country rooms */
+  discoveryLog: Discovery[];
+  /** Room visit count for micro-events (key = countryId_roomId) */
+  roomVisitCount: Record<string, number>;
+  /** Micro-event already shown for this room (key = countryId_roomId) */
+  roomMicroEventShown: Record<string, boolean>;
+
   // Friends (Club Penguin–style)
   friends: Friend[];
   friendRequests: FriendRequest[];
@@ -144,6 +153,13 @@ interface AppStore {
   dailyMissionProgress: number;
   lastSurpriseDateKey: string; // 'YYYY-MM-DD' — at most one surprise per day
 
+  // Adventure of the day (visit + read 2 facts + play 1 game)
+  adventureDateKey: string;
+  adventureVisitDone: boolean;
+  adventureFactsCount: number;
+  adventureGameDone: boolean;
+  adventureCompletedAt: string | null;
+
   // Place chat (Phase 2: Club Penguin–style room chat)
   placeChatMessages: Record<string, PlaceChatMessage[]>; // key = e.g. room_jp_living
 
@@ -154,6 +170,11 @@ interface AppStore {
 
   // Story beats (milestone messages from Visby)
   storyBeatsShown: string[]; // e.g. ['first_country', 'first_lesson']
+
+  // World calendar: seasonal quest progress (resets each season)
+  lastSeasonKey: string;
+  seasonalVisitCountThisSeason: number;
+  seasonalQuestCompletedSeasonKey: string | null;
 
   // Quest chains (multi-step challenges)
   questProgress: Record<string, { completedAt: string | null }>;
@@ -168,7 +189,17 @@ interface AppStore {
     locationTracking: boolean;
     privateProfile: boolean;
     soundEffects: boolean;
+    /** 0 = off, 10/15/20 = minutes before "Visby is resting" prompt */
+    sessionTimerMinutes: 0 | 10 | 15 | 20;
+    /** When true, Home shows only Adventure of the day (single-goal focus). */
+    focusMode: boolean;
+    /** Fewer particles, no auto sounds except rewards. */
+    quieterMode: boolean;
+    /** Optional ambient sound in home/country rooms (placeholder for future). */
+    ambientSound: boolean;
   };
+  /** When session timer is used, timestamp of session start or last rest dismiss. */
+  sessionStartedAt: number | null;
   
   // Actions - Auth
   setUser: (user: User | null) => void;
@@ -207,6 +238,14 @@ interface AppStore {
   markQuizCompleted: (countryId: string) => void;
   markGamePlayed: (countryId: string) => void;
 
+  /** Add a discovery (fact or quiz) to the log; call when user reads a fact or completes quiz in a room. */
+  addDiscovery: (title: string, countryId: string, type: 'fact' | 'quiz') => void;
+  getDiscoveryLog: () => Discovery[];
+  /** Call when user enters a country room; increments visit count. */
+  recordRoomVisit: (countryId: string, roomId: string) => void;
+  /** If this is 3rd+ visit and micro-event not yet shown, show it (add Aura, return true). */
+  tryRoomMicroEvent: (countryId: string, roomId: string) => boolean;
+
   // Actions - Friends
   sendFriendRequest: (toUsername: string) => { success: boolean; error?: string };
   acceptFriendRequest: (requestId: string) => void;
@@ -227,6 +266,17 @@ interface AppStore {
   checkDailyMissionCompletion: (type: DailyMissionType, amount?: number) => boolean; // returns true if mission just completed
   trySurprise: () => { granted: boolean; aura?: number }; // maybe grant surprise Aura once per day
 
+  // Adventure of the day
+  getAdventureOfTheDay: () => {
+    step1: boolean;
+    step2: boolean;
+    step3: boolean;
+    completed: boolean;
+    rewardAura: number;
+  };
+  setAdventureGamePlayed: () => void;
+  awardAdventureIfCompleted: () => boolean; // returns true if just awarded
+
   // Actions - Place chat
   addPlaceChatMessage: (placeKey: string, message: string) => void;
   getPlaceChatMessages: (placeKey: string) => PlaceChatMessage[];
@@ -240,6 +290,11 @@ interface AppStore {
   // Actions - Quests
   getQuestProgress: (questId: string) => { current: number; target: number; completed: boolean; definition: QuestDefinition } | null;
   checkQuests: () => void;
+  /** Call when user enters any country room (for seasonal "visit a country this season" quest). */
+  recordSeasonalCountryEntry: () => void;
+
+  /** First story chapter that is unlocked but not yet shown (for ProgressionOverlay). */
+  getNextChapterToShow: () => StoryChapter | null;
 
   getWeeklyAura: () => number; // current user's Aura earned this week (resets by week)
 
@@ -286,6 +341,8 @@ interface AppStore {
 
   // Actions - Settings
   updateSettings: (settings: Partial<AppStore['settings']>) => void;
+  /** Call when user dismisses "Visby is resting" to start a new session. */
+  setSessionStartedNow: () => void;
 }
 
 export const useStore = create<AppStore>()(
@@ -305,6 +362,9 @@ export const useStore = create<AppStore>()(
       ownedFurniture: [],
       countryProgress: {},
       treasureHuntProgress: {},
+      discoveryLog: [],
+      roomVisitCount: {},
+      roomMicroEventShown: {},
       friends: [],
       friendRequests: [],
       visbyChatMessages: [],
@@ -315,11 +375,19 @@ export const useStore = create<AppStore>()(
       dailyMissionCompletedAt: null,
       dailyMissionProgress: 0,
       lastSurpriseDateKey: '',
+      adventureDateKey: '',
+      adventureVisitDone: false,
+      adventureFactsCount: 0,
+      adventureGameDone: false,
+      adventureCompletedAt: null,
       placeChatMessages: {},
       streakFreezesRemaining: 1,
       lastFreezeGrantMonth: '',
       pendingStreakFreezeOffer: false,
       storyBeatsShown: [],
+      lastSeasonKey: '',
+      seasonalVisitCountThisSeason: 0,
+      seasonalQuestCompletedSeasonKey: null,
       questProgress: {},
       userWeeklyAura: 0,
       lastWeeklyResetDateKey: '',
@@ -328,7 +396,12 @@ export const useStore = create<AppStore>()(
         locationTracking: true,
         privateProfile: false,
         soundEffects: true,
+        sessionTimerMinutes: 0,
+        focusMode: false,
+        quieterMode: false,
+        ambientSound: false,
       },
+      sessionStartedAt: null,
 
       // Auth Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -342,8 +415,19 @@ export const useStore = create<AppStore>()(
         badges: [],
         lessonProgress: [],
         userHouses: [],
-        countryProgress: {},
-        treasureHuntProgress: {},
+      countryProgress: {},
+      treasureHuntProgress: {},
+      discoveryLog: [],
+      roomVisitCount: {},
+      roomMicroEventShown: {},
+      lastSeasonKey: '',
+        seasonalVisitCountThisSeason: 0,
+        seasonalQuestCompletedSeasonKey: null,
+        adventureDateKey: '',
+        adventureVisitDone: false,
+        adventureFactsCount: 0,
+        adventureGameDone: false,
+        adventureCompletedAt: null,
         friends: [],
         friendRequests: [],
         visbyChatMessages: [],
@@ -369,7 +453,8 @@ export const useStore = create<AppStore>()(
         return progress || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
       },
       markFactRead: (countryId) => {
-        const { countryProgress } = get();
+        const { countryProgress, adventureDateKey, adventureFactsCount } = get();
+        const today = todayDateKey();
         const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
         set({
           countryProgress: {
@@ -377,7 +462,19 @@ export const useStore = create<AppStore>()(
             [countryId]: { ...current, factsReadCount: Math.min((current.factsReadCount || 0) + 1, 999) },
           },
         });
+        if (adventureDateKey === today) {
+          set({ adventureFactsCount: Math.min(2, adventureFactsCount + 1) });
+        } else {
+          set({
+            adventureDateKey: today,
+            adventureVisitDone: false,
+            adventureFactsCount: 1,
+            adventureGameDone: false,
+            adventureCompletedAt: null,
+          });
+        }
         get().checkDailyMissionCompletion('read_facts', 1);
+        get().awardAdventureIfCompleted();
       },
       markQuizCompleted: (countryId) => {
         const { countryProgress } = get();
@@ -398,6 +495,37 @@ export const useStore = create<AppStore>()(
             [countryId]: { ...current, gamesPlayedCount: (current.gamesPlayedCount || 0) + 1 },
           },
         });
+      },
+
+      addDiscovery: (title, countryId, type) => {
+        const { discoveryLog } = get();
+        const entry: Discovery = {
+          id: `disc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          title: title.slice(0, 120),
+          countryId,
+          learnedAt: new Date().toISOString(),
+          type,
+        };
+        set({ discoveryLog: [entry, ...discoveryLog].slice(0, 100) });
+      },
+      getDiscoveryLog: () => get().discoveryLog,
+      recordRoomVisit: (countryId, roomId) => {
+        const key = `${countryId}_${roomId}`;
+        const { roomVisitCount } = get();
+        const count = (roomVisitCount[key] ?? 0) + 1;
+        set({ roomVisitCount: { ...roomVisitCount, [key]: count } });
+      },
+      tryRoomMicroEvent: (countryId, roomId) => {
+        const key = `${countryId}_${roomId}`;
+        const state = get();
+        const count = state.roomVisitCount[key] ?? 0;
+        const shown = state.roomMicroEventShown[key] ?? false;
+        if (count < 3 || shown) return false;
+        set({
+          roomMicroEventShown: { ...state.roomMicroEventShown, [key]: true },
+        });
+        get().addAura(5);
+        return true;
       },
 
       // Friends Actions (works with local/demo; backend can sync later)
@@ -547,7 +675,7 @@ export const useStore = create<AppStore>()(
         import('../services/sound').then((m) => m.soundService.playMissionComplete()).catch(() => {});
         return true;
       },
-      trySurprise: () => {
+          trySurprise: () => {
         const today = todayDateKey();
         const { lastSurpriseDateKey } = get();
         if (lastSurpriseDateKey === today) return { granted: false };
@@ -556,6 +684,77 @@ export const useStore = create<AppStore>()(
         set({ lastSurpriseDateKey: today });
         get().addAura(aura);
         return { granted: true, aura };
+      },
+
+      getAdventureOfTheDay: () => {
+        const today = todayDateKey();
+        const state = get();
+        if (state.adventureDateKey !== today) {
+          set({
+            adventureDateKey: today,
+            adventureVisitDone: false,
+            adventureFactsCount: 0,
+            adventureGameDone: false,
+            adventureCompletedAt: null,
+          });
+          return {
+            step1: false,
+            step2: false,
+            step3: false,
+            completed: false,
+            rewardAura: 60,
+          };
+        }
+        const step1 = state.adventureVisitDone;
+        const step2 = state.adventureFactsCount >= 2;
+        const step3 = state.adventureGameDone;
+        const completed = step1 && step2 && step3;
+        return { step1, step2, step3, completed, rewardAura: 60 };
+      },
+      setAdventureGamePlayed: () => {
+        const today = todayDateKey();
+        const state = get();
+        if (state.adventureDateKey !== today) {
+          set({
+            adventureDateKey: today,
+            adventureVisitDone: false,
+            adventureFactsCount: 0,
+            adventureGameDone: true,
+          });
+        } else {
+          set({ adventureGameDone: true });
+        }
+        get().awardAdventureIfCompleted();
+      },
+      awardAdventureIfCompleted: () => {
+        const today = todayDateKey();
+        const state = get();
+        if (state.adventureDateKey !== today || state.adventureCompletedAt) return false;
+        const step1 = state.adventureVisitDone;
+        const step2 = state.adventureFactsCount >= 2;
+        const step3 = state.adventureGameDone;
+        if (!step1 || !step2 || !step3) return false;
+        set({ adventureCompletedAt: new Date().toISOString() });
+        get().addAura(60);
+        import('../services/sound').then((m) => m.soundService.playMissionComplete()).catch(() => {});
+        return true;
+      },
+
+      getNextChapterToShow: () => {
+        const state = get();
+        const user = state.user;
+        const context = {
+          countriesVisited: user?.visitedCountries?.length ?? 0,
+          lessonsCompleted: state.lessonProgress.filter((p) => p.completed).length,
+          stampsCount: state.stamps.length,
+          badgesCount: state.badges.length,
+        };
+        for (const chapter of STORY_CHAPTERS) {
+          if (state.storyBeatsShown.includes(chapter.storyBeatId)) continue;
+          const current = getChapterUnlockCurrent(chapter.unlock.type, context);
+          if (current >= chapter.unlock.value) return chapter;
+        }
+        return null;
       },
 
       addPlaceChatMessage: (placeKey, message) => {
@@ -613,26 +812,58 @@ export const useStore = create<AppStore>()(
       },
 
       getQuestProgress: (questId) => {
-        const def = getQuestById(questId);
-        if (!def) return null;
         const state = get();
+        const seasonKey = getCurrentSeasonKey();
+        if (state.lastSeasonKey !== seasonKey) {
+          set({
+            lastSeasonKey: seasonKey,
+            seasonalVisitCountThisSeason: 0,
+          });
+        }
+        const def = questId === 'seasonal_explorer' ? getSeasonalExplorerQuest() : getQuestById(questId);
+        if (!def) return null;
         const completedAt = state.questProgress[questId]?.completedAt ?? null;
         let current = 0;
         if (def.progressType === 'lessons_completed') {
           current = state.lessonProgress.filter((p) => p.completed).length;
         } else if (def.progressType === 'stamp_countries') {
           current = new Set(state.stamps.map((s) => s.country)).size;
+        } else if (def.progressType === 'seasonal_visit') {
+          current = get().seasonalVisitCountThisSeason;
+        } else if (def.progressType === 'first_country') {
+          current = state.user?.visitedCountries?.length ?? 0;
+        } else if (def.progressType === 'facts_read_total') {
+          current = Object.values(state.countryProgress).reduce((sum, p) => sum + (p?.factsReadCount ?? 0), 0);
         }
+        const completed = def.progressType === 'seasonal_visit'
+          ? (state.seasonalQuestCompletedSeasonKey === seasonKey)
+          : !!completedAt;
         return {
           current,
           target: def.target,
-          completed: !!completedAt,
+          completed,
           definition: def,
         };
       },
       checkQuests: () => {
         const state = get();
+        const seasonKey = getCurrentSeasonKey();
         QUEST_DEFINITIONS.forEach((def) => {
+          if (def.progressType === 'seasonal_visit') {
+            if (state.seasonalQuestCompletedSeasonKey === seasonKey) return;
+            const current = state.seasonalVisitCountThisSeason;
+            if (current >= def.target) {
+              set((s) => ({
+                seasonalQuestCompletedSeasonKey: seasonKey,
+                questProgress: {
+                  ...s.questProgress,
+                  [def.id]: { completedAt: new Date().toISOString() },
+                },
+              }));
+              get().addAura(def.rewardAura);
+            }
+            return;
+          }
           const existing = state.questProgress[def.id]?.completedAt;
           if (existing) return;
           let current = 0;
@@ -640,6 +871,10 @@ export const useStore = create<AppStore>()(
             current = state.lessonProgress.filter((p) => p.completed).length;
           } else if (def.progressType === 'stamp_countries') {
             current = new Set(state.stamps.map((s) => s.country)).size;
+          } else if (def.progressType === 'first_country') {
+            current = state.user?.visitedCountries?.length ?? 0;
+          } else if (def.progressType === 'facts_read_total') {
+            current = Object.values(state.countryProgress).reduce((sum, p) => sum + (p?.factsReadCount ?? 0), 0);
           }
           if (current >= def.target) {
             set((s) => ({
@@ -651,6 +886,30 @@ export const useStore = create<AppStore>()(
             get().addAura(def.rewardAura);
           }
         });
+      },
+      recordSeasonalCountryEntry: () => {
+        const state = get();
+        const seasonKey = getCurrentSeasonKey();
+        const today = todayDateKey();
+        const updates: Record<string, unknown> = {};
+        if (state.lastSeasonKey !== seasonKey) {
+          updates.lastSeasonKey = seasonKey;
+          updates.seasonalVisitCountThisSeason = 1;
+        } else {
+          updates.seasonalVisitCountThisSeason = Math.min(99, state.seasonalVisitCountThisSeason + 1);
+        }
+        if (state.adventureDateKey !== today) {
+          updates.adventureDateKey = today;
+          updates.adventureVisitDone = true;
+          updates.adventureFactsCount = 0;
+          updates.adventureGameDone = false;
+          updates.adventureCompletedAt = null;
+        } else {
+          updates.adventureVisitDone = true;
+        }
+        set(updates);
+        get().checkQuests();
+        get().awardAdventureIfCompleted();
       },
       getWeeklyAura: () => {
         const weekKey = getISOWeekKey();
@@ -925,6 +1184,8 @@ export const useStore = create<AppStore>()(
           },
         });
 
+        get().recordSeasonalCountryEntry();
+
         const souvenir = COUNTRY_SOUVENIRS[countryId];
         if (souvenir && !visby.ownedCosmetics.includes(souvenir.cosmeticId)) {
           const currentVisby = get().visby!;
@@ -1184,6 +1445,7 @@ export const useStore = create<AppStore>()(
       updateSettings: (newSettings) => set((state) => ({
         settings: { ...state.settings, ...newSettings },
       })),
+      setSessionStartedNow: () => set({ sessionStartedAt: Date.now() }),
     }),
     {
       name: 'visby-store',
@@ -1199,6 +1461,9 @@ export const useStore = create<AppStore>()(
         ownedFurniture: state.ownedFurniture,
         countryProgress: state.countryProgress,
         treasureHuntProgress: state.treasureHuntProgress,
+        discoveryLog: state.discoveryLog,
+        roomVisitCount: state.roomVisitCount,
+        roomMicroEventShown: state.roomMicroEventShown,
         friends: state.friends,
         friendRequests: state.friendRequests,
         visbyChatMessages: state.visbyChatMessages,
@@ -1214,10 +1479,19 @@ export const useStore = create<AppStore>()(
         lastFreezeGrantMonth: state.lastFreezeGrantMonth,
         pendingStreakFreezeOffer: state.pendingStreakFreezeOffer,
         storyBeatsShown: state.storyBeatsShown,
+        lastSeasonKey: state.lastSeasonKey,
+        seasonalVisitCountThisSeason: state.seasonalVisitCountThisSeason,
+        seasonalQuestCompletedSeasonKey: state.seasonalQuestCompletedSeasonKey,
+        adventureDateKey: state.adventureDateKey,
+        adventureVisitDone: state.adventureVisitDone,
+        adventureFactsCount: state.adventureFactsCount,
+        adventureGameDone: state.adventureGameDone,
+        adventureCompletedAt: state.adventureCompletedAt,
         questProgress: state.questProgress,
         userWeeklyAura: state.userWeeklyAura,
         lastWeeklyResetDateKey: state.lastWeeklyResetDateKey,
         settings: state.settings,
+        sessionStartedAt: state.sessionStartedAt,
         isAuthenticated: state.isAuthenticated,
       }),
     }

@@ -7,11 +7,14 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { whimsicalGradients, whimsicalText } from '../../theme/whimsical';
+import { copy } from '../../config/copy';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -20,6 +23,8 @@ import { LevelProgress } from '../../components/ui/ProgressBar';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { ProgressBar } from '../../components/ui/ProgressBar';
+import { Section } from '../../components/ui/Section';
+import { PulseGlow, MagicBorder } from '../../components/effects/Shimmer';
 import { useStore, DEFAULT_SKILLS, getGrowthStage } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { LEVEL_THRESHOLDS } from '../../config/constants';
@@ -106,6 +111,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const menuItems: { icon: IconName; label: string; screen: keyof RootStackParamList }[] = [
     { icon: 'people', label: 'Friends', screen: 'Friends' },
+    { icon: 'target', label: 'Progress', screen: 'Progress' },
+    { icon: 'book', label: 'Discovery log', screen: 'DiscoveryLog' },
     { icon: 'person', label: 'Edit Profile', screen: 'EditProfile' },
     { icon: 'shirt', label: 'Wardrobe & Avatar', screen: 'Avatar' },
     { icon: 'sparkles', label: 'Cosmetic Shop', screen: 'CosmeticShop' },
@@ -114,12 +121,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     { icon: 'settings', label: 'Settings', screen: 'Settings' },
   ];
 
+  const hasAnyStats = (stamps.length + bites.length + badges.length) > 0;
+  const firstAchievedStatIndex = statItems.findIndex((s) => s.value > 0);
+  const showNextLevelTease =
+    user?.level != null &&
+    user.level < LEVEL_THRESHOLDS.length &&
+    nextLevel.aura > currentLevel.aura;
+  const nextLevelTeaseStr = showNextLevelTease
+    ? copy.profile.nextLevelTease
+        .replace('{title}', nextLevel.title)
+        .replace('{aura}', nextLevel.aura.toLocaleString())
+    : null;
+
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded]}
+      colors={[...whimsicalGradients.hero]}
       style={styles.container}
     >
-      <FloatingParticles count={5} variant="sparkle" opacity={0.2} speed="slow" />
+      <FloatingParticles count={12} variant="sparkle" opacity={0.25} speed="slow" />
+      <FloatingParticles count={8} variant="petals" opacity={0.12} speed="normal" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
@@ -127,211 +147,335 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <Heading level={1}>Profile</Heading>
+          <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.header}>
+            <Text variant="body" color={colors.text.muted} style={styles.heroGreeting}>
+              {copy.profile.heroGreeting}
+            </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
               <Icon name="settings" size={24} color={colors.text.secondary} />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
           {/* Profile Card */}
-          <Card
-            variant="gradient"
-            gradientColors={[colors.primary.wisteriaFaded, colors.base.cream]}
-            style={styles.profileCard}
-          >
-            <View style={styles.profileTop}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Avatar')}
-                style={styles.avatarContainer}
-              >
-                <VisbyCharacter
-                  appearance={defaultAppearance}
-                  equipped={visby?.equipped}
-                  mood="happy"
-                  size={100}
-                  animated={true}
+          <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+            <PulseGlow color="rgba(199, 184, 234, 0.5)" intensity={18} speed={2500}>
+              <Card variant="magic" style={styles.profileCard}>
+                <View style={styles.profileTop}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Avatar')}
+                    style={styles.avatarContainer}
+                  >
+                    <MagicBorder borderRadius={70} borderWidth={2}>
+                      <View style={styles.avatarWrap}>
+                        <VisbyCharacter
+                          appearance={defaultAppearance}
+                          equipped={visby?.equipped}
+                          mood="happy"
+                          size={120}
+                          animated={true}
+                        />
+                        <View style={styles.editBadge}>
+                          <Icon name="edit" size={14} color={colors.text.secondary} />
+                        </View>
+                      </View>
+                    </MagicBorder>
+                  </TouchableOpacity>
+
+                  <View style={styles.profileInfo}>
+                    <View style={styles.nameRow}>
+                      <Text variant="h2">{user?.displayName || user?.username}</Text>
+                      <LevelBadge level={user?.level || 1} />
+                    </View>
+                    <Text variant="body" color={colors.text.secondary}>
+                      @{user?.username}
+                    </Text>
+                    <Text style={[whimsicalText.heroTitle, styles.levelTitleHero]} numberOfLines={1}>
+                      {currentLevel.title}
+                    </Text>
+                    <Text variant="caption" color={colors.text.muted} style={styles.heroSubtitle}>
+                      {copy.profile.levelTitleSubtitle}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.auraRow}>
+                  <AuraBadge amount={currentAura} />
+                  <Text variant="caption" color={colors.text.secondary}>
+                    Total earned: {user?.totalAuraEarned?.toLocaleString() || 0}
+                  </Text>
+                </View>
+
+                <LevelProgress
+                  currentXP={progressAura}
+                  requiredXP={requiredAura}
+                  level={user?.level || 1}
                 />
-                <View style={styles.editBadge}>
-                  <Icon name="edit" size={14} color={colors.text.secondary} />
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.profileInfo}>
-                <View style={styles.nameRow}>
-                  <Text variant="h2">{user?.displayName || user?.username}</Text>
-                  <LevelBadge level={user?.level || 1} />
-                </View>
-                <Text variant="body" color={colors.text.secondary}>
-                  @{user?.username}
-                </Text>
-                <Text variant="caption" color={colors.text.muted}>
-                  {currentLevel.title}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.auraRow}>
-              <AuraBadge amount={currentAura} />
-              <Text variant="caption" color={colors.text.secondary}>
-                Total earned: {user?.totalAuraEarned?.toLocaleString() || 0}
-              </Text>
-            </View>
-
-            <LevelProgress
-              currentXP={progressAura}
-              requiredXP={requiredAura}
-              level={user?.level || 1}
-            />
-          </Card>
+                {nextLevelTeaseStr != null && (
+                  <Text variant="caption" color={colors.text.muted} style={styles.nextLevelTease}>
+                    {nextLevelTeaseStr}
+                  </Text>
+                )}
+              </Card>
+            </PulseGlow>
+          </Animated.View>
 
           {/* Stats Grid */}
-          {(stamps.length + bites.length + badges.length) > 0 ? (
+          {hasAnyStats ? (
             <View style={styles.statsGrid}>
-              {statItems.map((stat, index) => (
-                <Card key={index} style={styles.statCard}>
-                  <Icon name={stat.icon} size={20} color={colors.primary.wisteriaDark} />
-                  <Text variant="h2" align="center">
-                    {stat.value}
-                  </Text>
-                  <Caption align="center">{stat.label}</Caption>
-                </Card>
-              ))}
+              {statItems.map((stat, index) => {
+                const isUnlocked = stat.value > 0;
+                const isFirstAchieved = firstAchievedStatIndex === index;
+                const cardContent = (
+                  <>
+                    <Icon
+                      name={stat.icon}
+                      size={20}
+                      color={isUnlocked ? colors.primary.wisteriaDark : colors.text.muted}
+                    />
+                    <Text
+                      variant="h2"
+                      align="center"
+                      style={!isUnlocked && styles.statValueMuted}
+                    >
+                      {stat.value}
+                    </Text>
+                    <Caption align="center" style={!isUnlocked && styles.statLabelMuted}>
+                      {isUnlocked ? stat.label : copy.profile.statNotYet}
+                    </Caption>
+                  </>
+                );
+                return (
+                  <Animated.View
+                    key={index}
+                    entering={FadeInDown.duration(400).delay(200 + index * 60)}
+                    style={styles.statCardWrap}
+                  >
+                    {isFirstAchieved ? (
+                      <MagicBorder borderRadius={spacing.radius.lg} borderWidth={1.5}>
+                        <Card variant="glow" style={styles.statCard}>
+                          {cardContent}
+                        </Card>
+                      </MagicBorder>
+                    ) : (
+                      <Card
+                        variant={isUnlocked ? 'glow' : 'default'}
+                        style={[styles.statCard, !isUnlocked && styles.statCardMuted]}
+                      >
+                        {cardContent}
+                      </Card>
+                    )}
+                  </Animated.View>
+                );
+              })}
             </View>
           ) : (
-            <Card style={styles.welcomeCard}>
-              <View style={styles.welcomeContent}>
-                <Icon name="rocket" size={40} color={colors.primary.wisteriaDark} />
-                <Text variant="h3" align="center">Your Adventure Begins</Text>
-                <Caption align="center">Start exploring, collecting stamps, and learning to fill up your stats!</Caption>
-              </View>
-            </Card>
+            <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+              <Card style={styles.welcomeCard}>
+                <View style={styles.welcomeContent}>
+                  <Icon name="rocket" size={40} color={colors.primary.wisteriaDark} />
+                  <Text variant="h3" align="center" style={styles.welcomeTitle}>
+                    {copy.profile.emptyStats.title}
+                  </Text>
+                  <Caption align="center" style={styles.welcomeSubtitle}>
+                    {copy.profile.emptyStats.subtitle}
+                  </Caption>
+                  <Button
+                    title={copy.profile.emptyStats.cta}
+                    onPress={() => navigation.navigate('Map')}
+                    variant="primary"
+                    size="md"
+                    style={styles.welcomeCta}
+                  />
+                </View>
+              </Card>
+            </Animated.View>
           )}
 
           {/* Streak Info */}
           {user?.currentStreak !== undefined && user.currentStreak > 0 && (
-            <Card style={styles.streakCard}>
-              <View style={styles.streakContent}>
-                <Icon name="flame" size={32} color={colors.reward.coral} />
-                <View style={styles.streakInfo}>
-                  <Text variant="h3">
-                    {user.currentStreak} Day Streak!
-                  </Text>
-                  <Caption>
-                    Keep exploring to maintain your streak
-                  </Caption>
-                </View>
-              </View>
-            </Card>
+            <Animated.View entering={FadeInDown.duration(500).delay(620)}>
+              <PulseGlow color="rgba(255, 144, 128, 0.4)" intensity={14} speed={2200}>
+                <Card
+                  variant="gradient"
+                  gradientColors={[colors.status.streakBg, colors.reward.peachLight]}
+                  style={styles.streakCard}
+                >
+                  <View style={styles.streakContent}>
+                    <Icon name="flame" size={32} color={colors.reward.coral} />
+                    <View style={styles.streakInfo}>
+                      <Text variant="h3">{user.currentStreak} Day Streak!</Text>
+                      <Caption>{copy.profile.streakKeepGoing}</Caption>
+                    </View>
+                  </View>
+                </Card>
+              </PulseGlow>
+            </Animated.View>
           )}
 
           {/* Game Stats */}
-          <Card style={styles.gameStatsCard}>
-            <View style={styles.sectionHeader}>
-              <Heading level={2}>Game Stats</Heading>
-              <Caption>Your mini-game achievements</Caption>
-            </View>
-            <View style={styles.gameStatsGrid}>
-              {([
-                { icon: 'sparkles' as IconName, label: 'Games Played', value: user?.gamesPlayed || 0, color: '#6B9BD9' },
-                { icon: 'language' as IconName, label: 'Perfect Words', value: user?.perfectWordMatches || 0, color: '#8B6FC0' },
-                { icon: 'food' as IconName, label: 'Perfect Cooking', value: user?.perfectCookingGames || 0, color: '#E8A04E' },
-                { icon: 'compass' as IconName, label: 'Treasures Found', value: user?.treasureHuntsCompleted || 0, color: '#48B048' },
-              ]).map((stat, i) => (
-                <View key={i} style={styles.gameStatItem}>
-                  <View style={[styles.gameStatIcon, { backgroundColor: stat.color + '20' }]}>
-                    <Icon name={stat.icon} size={18} color={stat.color} />
-                  </View>
-                  <Text variant="h3" style={styles.gameStatValue}>{stat.value}</Text>
-                  <Caption style={styles.gameStatLabel}>{stat.label}</Caption>
+          <Animated.View entering={FadeInDown.duration(500).delay(640)}>
+            <Card variant="magic" style={styles.gameStatsCard}>
+              <Section
+                title={copy.profile.sections.gameStats.title}
+                caption={copy.profile.sections.gameStats.caption}
+              >
+                <View style={styles.gameStatsGrid}>
+                  {([
+                    { icon: 'sparkles' as IconName, label: 'Games Played', value: user?.gamesPlayed || 0, color: '#6B9BD9' },
+                    { icon: 'language' as IconName, label: 'Perfect Words', value: user?.perfectWordMatches || 0, color: '#8B6FC0' },
+                    { icon: 'food' as IconName, label: 'Perfect Cooking', value: user?.perfectCookingGames || 0, color: '#E8A04E' },
+                    { icon: 'compass' as IconName, label: 'Treasures Found', value: user?.treasureHuntsCompleted || 0, color: '#48B048' },
+                  ]).map((stat, i) => (
+                    <View key={i} style={styles.gameStatItem}>
+                      <View style={[styles.gameStatIcon, { backgroundColor: stat.color + '20' }]}>
+                        <Icon name={stat.icon} size={18} color={stat.color} />
+                      </View>
+                      <Text variant="h3" style={styles.gameStatValue}>{stat.value}</Text>
+                      <Caption style={styles.gameStatLabel}>{stat.label}</Caption>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          </Card>
+              </Section>
+            </Card>
+          </Animated.View>
 
           {/* Skills Radar */}
-          <Card style={styles.skillsCard}>
-            <View style={styles.sectionHeader}>
-              <Heading level={2}>Skills</Heading>
-              <Caption>Grow by learning and exploring</Caption>
-            </View>
-            <RadarChart
-              data={[
-                { label: 'Language', value: skills.language },
-                { label: 'Geography', value: skills.geography },
-                { label: 'Culture', value: skills.culture },
-                { label: 'History', value: skills.history },
-                { label: 'Cooking', value: skills.cooking },
-                { label: 'Exploration', value: skills.exploration },
-              ]}
-              size={220}
-            />
-          </Card>
+          <Animated.View entering={FadeInDown.duration(500).delay(660)}>
+            <PulseGlow color="rgba(199, 184, 234, 0.4)" intensity={16} speed={2800}>
+              <Card variant="magic" style={styles.skillsCard}>
+                <View style={styles.sectionHeader}>
+                  <Heading level={2}>{copy.profile.sections.skills.title}</Heading>
+                  <Caption>{copy.profile.sections.skills.caption}</Caption>
+                </View>
+                <View style={styles.radarWrap}>
+                  <RadarChart
+                    data={[
+                      { label: 'Language', value: skills.language },
+                      { label: 'Geography', value: skills.geography },
+                      { label: 'Culture', value: skills.culture },
+                      { label: 'History', value: skills.history },
+                      { label: 'Cooking', value: skills.cooking },
+                      { label: 'Exploration', value: skills.exploration },
+                    ]}
+                    size={220}
+                    animateFill={true}
+                  />
+                </View>
+                {Object.values(skills).every((v) => v === 0) && (
+                  <View style={styles.skillsEmpty}>
+                    <Caption style={styles.skillsEmptyHint}>
+                      {copy.profile.sections.skills.emptyHint}
+                    </Caption>
+                    <Button
+                      title={copy.profile.sections.skills.cta}
+                      onPress={() => navigation.navigate('Learn')}
+                      variant="primary"
+                      size="sm"
+                      style={styles.skillsCta}
+                    />
+                  </View>
+                )}
+              </Card>
+            </PulseGlow>
+          </Animated.View>
 
           {/* Growth Stage */}
-          <Card style={styles.stageCard}>
-            <Heading level={2}>Growth Stage</Heading>
-            <View style={styles.stageTracker}>
-              {([
-                { stage: 'egg', label: 'Egg', icon: 'sparkles' as IconName },
-                { stage: 'baby', label: 'Baby', icon: 'heart' as IconName },
-                { stage: 'kid', label: 'Kid', icon: 'star' as IconName },
-                { stage: 'teen', label: 'Teen', icon: 'flash' as IconName },
-                { stage: 'adult', label: 'Adult', icon: 'trophy' as IconName },
-              ]).map((s, i) => {
-                const isCurrent = currentStage === s.stage;
-                const isPast = stageOrder.indexOf(currentStage) > i;
-                return (
-                  <View key={s.stage} style={styles.stageStep}>
+          <Animated.View entering={FadeInDown.duration(500).delay(680)}>
+            <Card style={styles.stageCard}>
+              <Heading level={2}>{copy.profile.sections.growthStage.title}</Heading>
+              <Caption style={styles.stageCaption}>{copy.profile.sections.growthStage.caption}</Caption>
+              <View style={styles.stageTracker}>
+                {([
+                  { stage: 'egg', label: 'Egg', icon: 'sparkles' as IconName },
+                  { stage: 'baby', label: 'Baby', icon: 'heart' as IconName },
+                  { stage: 'kid', label: 'Kid', icon: 'star' as IconName },
+                  { stage: 'teen', label: 'Teen', icon: 'flash' as IconName },
+                  { stage: 'adult', label: 'Adult', icon: 'trophy' as IconName },
+                ]).map((s, i) => {
+                  const isCurrent = currentStage === s.stage;
+                  const isPast = stageOrder.indexOf(currentStage) > i;
+                  const circle = (
                     <View style={[styles.stageCircle, isCurrent && styles.stageCircleCurrent, isPast && styles.stageCirclePast]}>
                       <Icon name={s.icon} size={isCurrent ? 20 : 16} color={isCurrent || isPast ? '#FFFFFF' : colors.text.muted} />
                     </View>
-                    <Caption style={isCurrent ? styles.stageLabelCurrent : undefined}>{s.label}</Caption>
-                  </View>
-                );
-              })}
-            </View>
-            <ProgressBar
-              progress={stageProgress}
-              variant="aura"
-              height={8}
-            />
-            <Caption style={styles.stageHint}>
-              {currentStage === 'adult'
-                ? 'Max stage reached! You are legendary!'
-                : `${carePointsToNext} more care points to become ${nextStageName}!`}
-            </Caption>
-          </Card>
+                  );
+                  return (
+                    <View key={s.stage} style={styles.stageStep}>
+                      {isCurrent ? (
+                        <PulseGlow color="rgba(184, 165, 224, 0.6)" intensity={12} speed={2000}>
+                          {circle}
+                        </PulseGlow>
+                      ) : (
+                        circle
+                      )}
+                      <Caption style={isCurrent ? styles.stageLabelCurrent : undefined}>{s.label}</Caption>
+                    </View>
+                  );
+                })}
+              </View>
+              <ProgressBar progress={stageProgress} variant="aura" height={8} />
+              <Caption style={styles.stageHint}>
+                {currentStage === 'adult'
+                  ? copy.profile.stageMaxReached
+                  : copy.profile.stageCarePointsToNext
+                      .replace('{count}', String(carePointsToNext))
+                      .replace('{stage}', nextStageName)}
+              </Caption>
+            </Card>
+          </Animated.View>
 
           {/* Menu Items */}
-          <View style={styles.menuSection}>
-            {menuItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.menuItem}
-                onPress={() => navigation.navigate(item.screen as never)}
-              >
-                <Icon name={item.icon} size={20} color={colors.text.secondary} />
-                <Text variant="body" style={styles.menuLabel}>
-                  {item.label}
-                </Text>
-                <Icon name="chevronRight" size={16} color={colors.text.muted} />
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Animated.View entering={FadeInDown.duration(500).delay(700)}>
+            <Section
+              title={copy.profile.sections.menu.title}
+              caption={copy.profile.sections.menu.caption}
+              compact
+            >
+              <View style={styles.menuSection}>
+                {menuItems.map((item, index) => {
+                  const isDiscoveryLog = item.screen === 'DiscoveryLog';
+                  const row = (
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => navigation.navigate(item.screen as never)}
+                    >
+                      <Icon name={item.icon} size={20} color={colors.text.secondary} />
+                      <Text variant="body" style={styles.menuLabel}>
+                        {item.label}
+                      </Text>
+                      <Icon name="chevronRight" size={16} color={colors.text.muted} />
+                    </TouchableOpacity>
+                  );
+                  return (
+                    <View key={index}>
+                      {isDiscoveryLog ? (
+                        <MagicBorder borderRadius={spacing.radius.md} borderWidth={1}>
+                          {row}
+                        </MagicBorder>
+                      ) : (
+                        row
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </Section>
+          </Animated.View>
 
           {/* Logout */}
-          <Button
-            title="Log Out"
-            onPress={handleLogout}
-            variant="ghost"
-            size="md"
-            fullWidth
-            style={styles.logoutButton}
-          />
+          <Animated.View entering={FadeInDown.duration(400).delay(720)}>
+            <Button
+              title="Log Out"
+              onPress={handleLogout}
+              variant="ghost"
+              size="md"
+              fullWidth
+              style={styles.logoutButton}
+            />
+          </Animated.View>
 
           {/* App Info */}
-          <View style={styles.appInfo}>
+          <Animated.View entering={FadeInDown.duration(400).delay(740)} style={styles.appInfo}>
             <Text variant="caption" align="center" color={colors.text.muted}>
               Visby v1.0.1
             </Text>
@@ -340,7 +484,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               <Icon name="heart" size={12} color={colors.primary.wisteria} />
               <Text variant="caption" color={colors.text.muted}> for explorers</Text>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
 
         {/* Logout Confirmation Modal */}
@@ -396,6 +540,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
+  heroGreeting: {
+    flex: 1,
+  },
   profileCard: {
     marginBottom: spacing.lg,
   },
@@ -406,6 +553,11 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
+  },
+  avatarWrap: {
+    position: 'relative',
+    borderRadius: 999,
+    overflow: 'hidden',
   },
   editBadge: {
     position: 'absolute',
@@ -430,6 +582,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.xxs,
   },
+  levelTitleHero: {
+    color: colors.primary.wisteriaDark,
+    marginTop: spacing.xxs,
+    marginBottom: spacing.xxs,
+  },
+  heroSubtitle: {
+    marginTop: 0,
+  },
+  nextLevelTease: {
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
   auraRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -438,6 +602,21 @@ const styles = StyleSheet.create({
   },
   welcomeCard: { marginBottom: spacing.lg },
   welcomeContent: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  welcomeTitle: { marginBottom: spacing.xxs },
+  welcomeSubtitle: { marginBottom: spacing.md },
+  welcomeCta: { marginTop: spacing.xs },
+  statCardWrap: {
+    width: '31%',
+  },
+  statCardMuted: {
+    opacity: 0.85,
+  },
+  statValueMuted: {
+    color: colors.text.muted,
+  },
+  statLabelMuted: {
+    color: colors.text.muted,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -445,7 +624,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   statCard: {
-    width: '31%',
+    width: '100%',
     alignItems: 'center',
     paddingVertical: spacing.md,
     gap: spacing.xs,
@@ -497,6 +676,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     alignItems: 'center',
   },
+  radarWrap: {
+    marginVertical: spacing.sm,
+  },
+  skillsEmpty: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.base.parchment,
+    marginTop: spacing.sm,
+    width: '100%',
+  },
+  skillsEmptyHint: {
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  skillsCta: {
+    alignSelf: 'center',
+  },
   sectionHeader: {
     alignItems: 'center',
     marginBottom: spacing.md,
@@ -504,6 +703,10 @@ const styles = StyleSheet.create({
   stageCard: {
     marginBottom: spacing.lg,
     alignItems: 'center',
+  },
+  stageCaption: {
+    marginTop: spacing.xxs,
+    marginBottom: spacing.sm,
   },
   stageTracker: {
     flexDirection: 'row',

@@ -107,3 +107,31 @@ export function getMapPin(countryId: string, pinId: string): CountryMapPin | nul
   const pins = COUNTRY_MAP_PINS[countryId] || [];
   return pins.find((p) => p.id === pinId) ?? null;
 }
+
+/** Optional region/direction hint for "Where is this?" (e.g. "in the north of France") */
+const PIN_REGION_HINTS: Record<string, string> = {
+  fr_paris: 'the capital, in the north',
+  fr_mont: 'in the north of France',
+  fr_nice: 'in the south, on the Mediterranean',
+  jp_tokyo: 'the capital, on the east coast',
+  jp_kyoto: 'in the south, near Osaka',
+  it_rome: 'the capital, in the center',
+  it_venice: 'in the north, on the coast',
+  gb_london: 'the capital, in the south',
+  mx_cdmx: 'the capital, in the center',
+  pe_lima: 'the capital, on the coast',
+  kr_seoul: 'the capital, in the northwest',
+  no_oslo: 'the capital, in the south',
+  gr_athens: 'the capital, in the south',
+  ke_nairobi: 'the capital, in the south',
+  tr_istanbul: 'in the northwest, between two continents',
+};
+
+/** Returns a short educational line: "[Pin] is in [Country][, region]." */
+export function getPlaceLocationFact(pinName: string, countryName: string, pinId: string): string {
+  const hint = PIN_REGION_HINTS[pinId];
+  if (hint) {
+    return `${pinName} is in ${countryName}, ${hint}.`;
+  }
+  return `${pinName} is in ${countryName}.`;
+}

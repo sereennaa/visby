@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
+import { getShadowStyle } from '../theme/shadows';
 import { Icon, IconName } from '../components/ui/Icon';
 import { RootStackParamList, MainTabParamList, ExploreStackParamList } from '../types';
 import { useStore } from '../store/useStore';
@@ -20,6 +21,7 @@ import { OnboardingScreen } from '../screens/auth/OnboardingScreen';
 // Main Screens (tab roots)
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { ExploreScreen } from '../screens/explore/ExploreScreen';
+import { WorldMapScreen } from '../screens/explore/WorldMapScreen';
 import { InboxScreen } from '../screens/inbox/InboxScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 // Stack screens (reachable from tabs)
@@ -40,6 +42,9 @@ import { AddBiteScreen } from '../screens/actions/AddBiteScreen';
 
 // Profile Screens
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
+import { ProgressScreen } from '../screens/profile/ProgressScreen';
+import { DiscoveryLogScreen } from '../screens/profile/DiscoveryLogScreen';
+import { ParentDashboardScreen } from '../screens/profile/ParentDashboardScreen';
 import { FriendsScreen, AddFriendScreen, FriendProfileScreen } from '../screens/friends';
 
 // Feature Screens
@@ -96,10 +101,11 @@ const ExploreStackNavigator = () => (
       contentStyle: { backgroundColor: colors.base.cream },
       animation: 'slide_from_right',
     }}
-    initialRouteName="Explore"
+    initialRouteName="ExploreHome"
   >
-    <ExploreStack.Screen name="Explore" component={ExploreScreen} />
+    <ExploreStack.Screen name="ExploreHome" component={ExploreScreen} />
     <ExploreStack.Screen name="Map" component={MapScreen} />
+    <ExploreStack.Screen name="WorldMap" component={WorldMapScreen} />
     <ExploreStack.Screen name="CountryWorld" component={CountryWorldScreen} />
     <ExploreStack.Screen name="CountryRoom" component={CountryRoomScreen} />
     <ExploreStack.Screen name="CountryMap" component={CountryMapScreen} />
@@ -118,10 +124,10 @@ const MainTabs = () => {
             <BlurView
               intensity={60}
               tint="systemChromeMaterialLight"
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, styles.tabBarFallbackBg]} />
+            <View style={[StyleSheet.absoluteFill, styles.tabBarFallbackBg, { pointerEvents: 'none' }]} />
           ),
         tabBarShowLabel: true,
         tabBarLabelStyle: styles.tabBarLabel,
@@ -134,6 +140,7 @@ const MainTabs = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
+          tabBarAccessibilityLabel: 'Home',
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
@@ -148,6 +155,7 @@ const MainTabs = () => {
         component={ExploreStackNavigator}
         options={{
           tabBarLabel: 'Explore',
+          tabBarAccessibilityLabel: 'Explore',
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
@@ -162,6 +170,7 @@ const MainTabs = () => {
         component={InboxScreen}
         options={{
           tabBarLabel: 'Inbox',
+          tabBarAccessibilityLabel: 'Inbox',
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
@@ -176,6 +185,7 @@ const MainTabs = () => {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',
+          tabBarAccessibilityLabel: 'Profile',
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
@@ -231,7 +241,10 @@ export const AppNavigator = () => {
         <Stack.Screen name="Avatar" component={AvatarScreen} />
         <Stack.Screen name="Badges" component={BadgesScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Progress" component={ProgressScreen} />
+        <Stack.Screen name="DiscoveryLog" component={DiscoveryLogScreen} />
         <Stack.Screen name="Friends" component={FriendsScreen} />
         <Stack.Screen name="AddFriend" component={AddFriendScreen} />
         <Stack.Screen name="FriendProfile" component={FriendProfileScreen} />
@@ -266,13 +279,10 @@ const styles = StyleSheet.create({
     height: 88,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg + 4,
-    shadowColor: 'rgba(184, 165, 224, 0.2)',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
     elevation: 16,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+    ...getShadowStyle({ shadowColor: 'rgba(184, 165, 224, 0.2)', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 1, shadowRadius: 24 }),
   },
   tabBarFallbackBg: {
     backgroundColor: 'rgba(253, 251, 248, 0.95)',
@@ -306,10 +316,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.primary.wisteriaDark,
     marginTop: 4,
-    shadowColor: colors.primary.wisteria,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
+    ...getShadowStyle({ shadowColor: colors.primary.wisteria, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6 }),
   },
 });
 

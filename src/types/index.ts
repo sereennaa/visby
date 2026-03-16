@@ -271,6 +271,17 @@ export type CosmeticRarity =
   | 'legendary';
 
 // ===================================
+// DISCOVERY LOG (learned in country rooms)
+// ===================================
+export interface Discovery {
+  id: string;
+  title: string;
+  countryId: string;
+  learnedAt: string; // ISO
+  type: 'fact' | 'quiz';
+}
+
+// ===================================
 // STAMPS (Location Collectibles)
 // ===================================
 
@@ -729,6 +740,8 @@ export type RootStackParamList = {
   
   // Learning
   Learn: undefined;
+  Progress: undefined;
+  DiscoveryLog: undefined;
   LessonCategory: { categoryId: string };
   Lesson: { lessonId: string };
   Quiz: { category?: string } | undefined;
@@ -738,6 +751,7 @@ export type RootStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
   Settings: undefined;
+  ParentDashboard: undefined;
   Friends: undefined;
   AddFriend: undefined;
   FriendProfile: { friendUserId: string };
@@ -757,8 +771,9 @@ export type RootStackParamList = {
 
 // Explore tab has its own stack so Map/CountryWorld/CountryRoom keep the tab bar visible
 export type ExploreStackParamList = {
-  Explore: undefined;
+  ExploreHome: undefined;
   Map: undefined;
+  WorldMap: undefined;
   CountryWorld: undefined;
   CountryRoom: { countryId: string; /** When set, viewing a friend's house (read-only) */ friendUserId?: string };
   /** Map of the country with pinned cities and landmarks */

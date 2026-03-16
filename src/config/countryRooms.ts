@@ -8,6 +8,8 @@ export interface RoomObject {
   learnTitle?: string;
   learnContent?: string;
   auraReward?: number;
+  /** Optional image URL for treasure hunt reveal (e.g. real photo of the object) */
+  imageUrl?: string;
 }
 
 export interface HouseRoom {
@@ -17,6 +19,8 @@ export interface HouseRoom {
   wallColor: string;
   floorColor: string;
   objects: RoomObject[];
+  /** Optional background image for treasure hunt room stage (subtle, behind wall) */
+  roomImageUrl?: string;
 }
 
 export interface CountryHouseData {
@@ -29,10 +33,11 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
       {
         id: 'jp_living', name: 'Tatami Room', icon: 'temple',
         wallColor: '#FFF8F0', floorColor: '#D4C5A0',
+        roomImageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800',
         objects: [
           { id: 'jp_l1', icon: 'culture', label: 'Paper Fan', x: 15, y: 25 },
-          { id: 'jp_l2', icon: 'culture', label: 'Hina Dolls', x: 75, y: 20, interactive: true, learnTitle: 'Hina Dolls', learnContent: "These dolls are displayed during Hinamatsuri (Girls' Day) on March 3rd. Each doll represents a member of the imperial court — families pass them down for generations!", auraReward: 8 },
-          { id: 'jp_l3', icon: 'cafe', label: 'Tea Set', x: 45, y: 55, interactive: true, learnTitle: 'Japanese Tea Ceremony', learnContent: 'The Japanese tea ceremony (Chadō) is an art form hundreds of years old. Every movement — from holding the bowl to sipping — has meaning. It teaches patience and respect.', auraReward: 8 },
+          { id: 'jp_l2', icon: 'culture', label: 'Hina Dolls', x: 75, y: 20, interactive: true, learnTitle: 'Hina Dolls', learnContent: "These dolls are displayed during Hinamatsuri (Girls' Day) on March 3rd. Each doll represents a member of the imperial court — families pass them down for generations!", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1580309237429-66190167e2b6?w=800' },
+          { id: 'jp_l3', icon: 'cafe', label: 'Tea Set', x: 45, y: 55, interactive: true, learnTitle: 'Japanese Tea Ceremony', learnContent: 'The Japanese tea ceremony (Chadō) is an art form hundreds of years old. Every movement — from holding the bowl to sipping — has meaning. It teaches patience and respect.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800' },
           { id: 'jp_l4', icon: 'home', label: 'Kotatsu Table', x: 50, y: 70 },
           { id: 'jp_l5', icon: 'culture', label: 'Scroll Painting', x: 85, y: 15 },
         ],
@@ -40,9 +45,10 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
       {
         id: 'jp_kitchen', name: 'Kitchen', icon: 'food',
         wallColor: '#FFF5F5', floorColor: '#C9B99A',
+        roomImageUrl: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800',
         objects: [
-          { id: 'jp_k1', icon: 'food', label: 'Sushi Plate', x: 30, y: 45, interactive: true, learnTitle: 'Sushi', learnContent: 'Real sushi is made with vinegared rice and fresh fish. In Japan, sushi chefs train for years — some spend 3 years just learning to cook rice properly!', auraReward: 8 },
-          { id: 'jp_k2', icon: 'food', label: 'Ramen Bowl', x: 65, y: 50, interactive: true, learnTitle: 'Ramen', learnContent: 'Ramen comes in many styles: tonkotsu (pork bone), miso, shio (salt), and shoyu (soy sauce). Each region of Japan has its own special recipe!', auraReward: 8 },
+          { id: 'jp_k1', icon: 'food', label: 'Sushi Plate', x: 30, y: 45, interactive: true, learnTitle: 'Sushi', learnContent: 'Real sushi is made with vinegared rice and fresh fish. In Japan, sushi chefs train for years — some spend 3 years just learning to cook rice properly!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=800' },
+          { id: 'jp_k2', icon: 'food', label: 'Ramen Bowl', x: 65, y: 50, interactive: true, learnTitle: 'Ramen', learnContent: 'Ramen comes in many styles: tonkotsu (pork bone), miso, shio (salt), and shoyu (soy sauce). Each region of Japan has its own special recipe!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a2853994fc7?w=800' },
           { id: 'jp_k3', icon: 'food', label: 'Chopsticks', x: 50, y: 65 },
           { id: 'jp_k4', icon: 'cafe', label: 'Teapot', x: 15, y: 30 },
           { id: 'jp_k5', icon: 'food', label: 'Dango', x: 80, y: 35, interactive: true, learnTitle: 'Dango', learnContent: 'Dango are sweet rice dumplings on a stick, often colored pink, white, and green. They\'re eaten during hanami (cherry blossom viewing) season!', auraReward: 8 },
@@ -52,8 +58,8 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         id: 'jp_garden', name: 'Zen Garden', icon: 'nature',
         wallColor: '#F0FFF0', floorColor: '#A8C8A0',
         objects: [
-          { id: 'jp_g1', icon: 'nature', label: 'Cherry Tree', x: 20, y: 15, interactive: true, learnTitle: 'Sakura', learnContent: 'Cherry blossoms (sakura) bloom for just 1-2 weeks each spring. Japanese people celebrate with picnics under the trees — it reminds them that beautiful things are precious because they don\'t last forever.', auraReward: 8 },
-          { id: 'jp_g2', icon: 'temple', label: 'Torii Gate', x: 75, y: 20, interactive: true, learnTitle: 'Torii Gates', learnContent: 'These red gates mark the entrance to Shinto shrines. Fushimi Inari in Kyoto has over 10,000 of them forming a tunnel path up a mountain!', auraReward: 8 },
+          { id: 'jp_g1', icon: 'nature', label: 'Cherry Tree', x: 20, y: 15, interactive: true, learnTitle: 'Sakura', learnContent: 'Cherry blossoms (sakura) bloom for just 1-2 weeks each spring. Japanese people celebrate with picnics under the trees — it reminds them that beautiful things are precious because they don\'t last forever.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=800' },
+          { id: 'jp_g2', icon: 'temple', label: 'Torii Gate', x: 75, y: 20, interactive: true, learnTitle: 'Torii Gates', learnContent: 'These red gates mark the entrance to Shinto shrines. Fushimi Inari in Kyoto has over 10,000 of them forming a tunnel path up a mountain!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800' },
           { id: 'jp_g3', icon: 'nature', label: 'Rock Garden', x: 50, y: 60 },
           { id: 'jp_g4', icon: 'nature', label: 'Koi Pond', x: 35, y: 75, interactive: true, learnTitle: 'Koi Fish', learnContent: 'Koi fish can live over 100 years! In Japanese culture, they represent perseverance — legend says a koi that swims upstream becomes a dragon.', auraReward: 8 },
           { id: 'jp_g5', icon: 'nature', label: 'Bamboo', x: 90, y: 40 },
@@ -77,9 +83,10 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
       {
         id: 'fr_living', name: 'Le Salon', icon: 'home',
         wallColor: '#FFF8F0', floorColor: '#C8A882',
+        roomImageUrl: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800',
         objects: [
-          { id: 'fr_l1', icon: 'landmark', label: 'Eiffel Tower Model', x: 20, y: 20, interactive: true, learnTitle: 'Eiffel Tower', learnContent: "The Eiffel Tower was built in 1889 and was supposed to be temporary! It's 330 meters tall and gets repainted every 7 years — it takes 60 tons of paint.", auraReward: 8 },
-          { id: 'fr_l2', icon: 'culture', label: 'Painting', x: 75, y: 15, interactive: true, learnTitle: 'French Art', learnContent: 'France is home to the Louvre, the world\'s largest museum. It would take 200 days to spend 30 seconds looking at each piece of art!', auraReward: 8 },
+          { id: 'fr_l1', icon: 'landmark', label: 'Eiffel Tower Model', x: 20, y: 20, interactive: true, learnTitle: 'Eiffel Tower', learnContent: "The Eiffel Tower was built in 1889 and was supposed to be temporary! It's 330 meters tall and gets repainted every 7 years — it takes 60 tons of paint.", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800' },
+          { id: 'fr_l2', icon: 'culture', label: 'Painting', x: 75, y: 15, interactive: true, learnTitle: 'French Art', learnContent: 'France is home to the Louvre, the world\'s largest museum. It would take 200 days to spend 30 seconds looking at each piece of art!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=800' },
           { id: 'fr_l3', icon: 'star', label: 'Chandelier', x: 50, y: 10 },
           { id: 'fr_l4', icon: 'book', label: 'Bookshelf', x: 85, y: 45 },
           { id: 'fr_l5', icon: 'nature', label: 'Roses', x: 15, y: 55 },
@@ -89,7 +96,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         id: 'fr_kitchen', name: 'La Cuisine', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#D4C0A0',
         objects: [
-          { id: 'fr_k1', icon: 'food', label: 'Croissants', x: 30, y: 40, interactive: true, learnTitle: 'Croissants', learnContent: 'A perfect croissant has 27 flaky layers! French bakers wake up at 3am to make them fresh. The word "croissant" means "crescent" because of its moon shape.', auraReward: 8 },
+          { id: 'fr_k1', icon: 'food', label: 'Croissants', x: 30, y: 40, interactive: true, learnTitle: 'Croissants', learnContent: 'A perfect croissant has 27 flaky layers! French bakers wake up at 3am to make them fresh. The word "croissant" means "crescent" because of its moon shape.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800' },
           { id: 'fr_k2', icon: 'food', label: 'Cheese Board', x: 65, y: 45, interactive: true, learnTitle: 'French Cheese', learnContent: 'France makes over 1,600 types of cheese! Charles de Gaulle once said "How can you govern a country that has 246 varieties of cheese?" — and that was an undercount!', auraReward: 8 },
           { id: 'fr_k3', icon: 'food', label: 'Baguettes', x: 15, y: 30, interactive: true, learnTitle: 'Baguettes', learnContent: 'French law says a traditional baguette can only contain flour, water, salt, and yeast. France sells 10 billion baguettes per year — that\'s 320 per second!', auraReward: 8 },
           { id: 'fr_k4', icon: 'cafe', label: 'Grape Juice', x: 80, y: 30 },
@@ -103,7 +110,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
           { id: 'fr_g1', icon: 'nature', label: 'Sunflowers', x: 20, y: 25, interactive: true, learnTitle: 'Provence', learnContent: 'The south of France (Provence) is famous for lavender and sunflower fields. Van Gogh painted his famous Sunflowers while living there!', auraReward: 8 },
           { id: 'fr_g2', icon: 'monument', label: 'Fountain', x: 50, y: 50 },
           { id: 'fr_g3', icon: 'nature', label: 'Butterflies', x: 75, y: 30 },
-          { id: 'fr_g4', icon: 'nature', label: 'Lavender', x: 35, y: 70, interactive: true, learnTitle: 'Lavender Fields', learnContent: 'Lavender fields in Provence turn the landscape purple every June-August. The scent is used in perfumes — France is the perfume capital of the world!', auraReward: 8 },
+          { id: 'fr_g4', icon: 'nature', label: 'Lavender', x: 35, y: 70, interactive: true, learnTitle: 'Lavender Fields', learnContent: 'Lavender fields in Provence turn the landscape purple every June-August. The scent is used in perfumes — France is the perfume capital of the world!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1499002238440-d264edd596ec?w=800' },
           { id: 'fr_g5', icon: 'nature', label: 'Le Coq', x: 85, y: 60, interactive: true, learnTitle: 'The French Rooster', learnContent: 'The rooster (le coq) is France\'s national animal! It became the symbol because the Latin word for rooster (gallus) sounds like Gaul, the ancient name for France.', auraReward: 8 },
         ],
       },
@@ -125,9 +132,10 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
       {
         id: 'mx_living', name: 'Sala', icon: 'home',
         wallColor: '#FFF5E8', floorColor: '#D4A870',
+        roomImageUrl: 'https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=800',
         objects: [
-          { id: 'mx_l1', icon: 'gift', label: 'Piñata', x: 50, y: 15, interactive: true, learnTitle: 'Piñatas', learnContent: 'Piñatas originated in Mexico for religious celebrations. The traditional star-shaped one has 7 points representing the seven deadly sins — breaking it represents overcoming them!', auraReward: 8 },
-          { id: 'mx_l2', icon: 'culture', label: 'Guitar', x: 15, y: 35, interactive: true, learnTitle: 'Mariachi Music', learnContent: 'Mariachi bands wear trajes de charro (fancy suits) and play trumpets, violins, and guitars. UNESCO declared mariachi music an important cultural treasure!', auraReward: 8 },
+          { id: 'mx_l1', icon: 'gift', label: 'Piñata', x: 50, y: 15, interactive: true, learnTitle: 'Piñatas', learnContent: 'Piñatas originated in Mexico for religious celebrations. The traditional star-shaped one has 7 points representing the seven deadly sins — breaking it represents overcoming them!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800' },
+          { id: 'mx_l2', icon: 'culture', label: 'Guitar', x: 15, y: 35, interactive: true, learnTitle: 'Mariachi Music', learnContent: 'Mariachi bands wear trajes de charro (fancy suits) and play trumpets, violins, and guitars. UNESCO declared mariachi music an important cultural treasure!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800' },
           { id: 'mx_l3', icon: 'culture', label: 'Alebrije', x: 75, y: 40, interactive: true, learnTitle: 'Alebrijes', learnContent: 'Alebrijes are brightly colored fantasy creatures made of paper-mâché or carved wood. They were invented by Pedro Linares in 1936 during a fever dream!', auraReward: 8 },
           { id: 'mx_l4', icon: 'nature', label: 'Cactus', x: 85, y: 60 },
           { id: 'mx_l5', icon: 'culture', label: 'Frida Painting', x: 30, y: 20 },
@@ -137,8 +145,8 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         id: 'mx_kitchen', name: 'Cocina', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#C8A870',
         objects: [
-          { id: 'mx_k1', icon: 'food', label: 'Tacos', x: 35, y: 45, interactive: true, learnTitle: 'Tacos', learnContent: 'Tacos have been eaten in Mexico for thousands of years! There are over 20 types: al pastor (pork), carnitas, barbacoa, and many more. Each region has its specialty.', auraReward: 8 },
-          { id: 'mx_k2', icon: 'food', label: 'Guacamole', x: 65, y: 40, interactive: true, learnTitle: 'Guacamole', learnContent: 'The word "guacamole" comes from the Aztec word "ahuacamolli" (avocado sauce). Mexico produces more avocados than any other country!', auraReward: 8 },
+          { id: 'mx_k1', icon: 'food', label: 'Tacos', x: 35, y: 45, interactive: true, learnTitle: 'Tacos', learnContent: 'Tacos have been eaten in Mexico for thousands of years! There are over 20 types: al pastor (pork), carnitas, barbacoa, and many more. Each region has its specialty.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c6a14769?w=800' },
+          { id: 'mx_k2', icon: 'food', label: 'Guacamole', x: 65, y: 40, interactive: true, learnTitle: 'Guacamole', learnContent: 'The word "guacamole" comes from the Aztec word "ahuacamolli" (avocado sauce). Mexico produces more avocados than any other country!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=800' },
           { id: 'mx_k3', icon: 'food', label: 'Chili Peppers', x: 20, y: 30 },
           { id: 'mx_k4', icon: 'food', label: 'Chocolate', x: 80, y: 50, interactive: true, learnTitle: 'Mexican Chocolate', learnContent: 'Mexico invented chocolate! The Aztecs made a bitter cacao drink called "xocolatl." Hot chocolate in Mexico is made with cinnamon and whipped until frothy.', auraReward: 8 },
           { id: 'mx_k5', icon: 'food', label: 'Tamales', x: 50, y: 65 },
@@ -173,9 +181,10 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
       {
         id: 'it_living', name: 'Soggiorno', icon: 'landmark',
         wallColor: '#FFFFF5', floorColor: '#D0C0A0',
+        roomImageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800',
         objects: [
-          { id: 'it_l1', icon: 'landmark', label: 'Colosseum Model', x: 20, y: 20, interactive: true, learnTitle: 'The Colosseum', learnContent: 'The Colosseum could hold 50,000 people! Romans watched gladiator battles, animal hunts, and even mock sea battles (they flooded the arena). It had a retractable roof made of sailcloth!', auraReward: 8 },
-          { id: 'it_l2', icon: 'culture', label: 'Venice Mask', x: 75, y: 25, interactive: true, learnTitle: 'Carnival of Venice', learnContent: 'Venice\'s Carnival has been celebrated since the 12th century. Everyone wears elaborate masks — historically, this let rich and poor celebrate together as equals!', auraReward: 8 },
+          { id: 'it_l1', icon: 'landmark', label: 'Colosseum Model', x: 20, y: 20, interactive: true, learnTitle: 'The Colosseum', learnContent: 'The Colosseum could hold 50,000 people! Romans watched gladiator battles, animal hunts, and even mock sea battles (they flooded the arena). It had a retractable roof made of sailcloth!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1552832238-c57a64f85ad4?w=800' },
+          { id: 'it_l2', icon: 'culture', label: 'Venice Mask', x: 75, y: 25, interactive: true, learnTitle: 'Carnival of Venice', learnContent: 'Venice\'s Carnival has been celebrated since the 12th century. Everyone wears elaborate masks — historically, this let rich and poor celebrate together as equals!', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800' },
           { id: 'it_l3', icon: 'home', label: 'Vintage Sofa', x: 50, y: 55 },
           { id: 'it_l4', icon: 'culture', label: 'Violin', x: 85, y: 40, interactive: true, learnTitle: 'Italian Music', learnContent: 'Italy invented opera, and Stradivarius made the most famous violins ever in Cremona. Musical terms like piano, forte, and tempo are all Italian words!', auraReward: 8 },
           { id: 'it_l5', icon: 'time', label: 'Clock', x: 15, y: 35 },
@@ -185,8 +194,8 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         id: 'it_kitchen', name: 'Cucina', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#C8B090',
         objects: [
-          { id: 'it_k1', icon: 'food', label: 'Pizza', x: 35, y: 40, interactive: true, learnTitle: 'Pizza', learnContent: "The original pizza Margherita was made in Naples in 1889 for Queen Margherita. The red tomato, white mozzarella, and green basil represent Italy's flag colors!", auraReward: 8 },
-          { id: 'it_k2', icon: 'food', label: 'Pasta', x: 65, y: 45, interactive: true, learnTitle: 'Italian Pasta', learnContent: 'Italy has over 350 shapes of pasta! Each shape is designed to hold sauce differently. Italians eat about 23 kg of pasta per person per year.', auraReward: 8 },
+          { id: 'it_k1', icon: 'food', label: 'Pizza', x: 35, y: 40, interactive: true, learnTitle: 'Pizza', learnContent: "The original pizza Margherita was made in Naples in 1889 for Queen Margherita. The red tomato, white mozzarella, and green basil represent Italy's flag colors!", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800' },
+          { id: 'it_k2', icon: 'food', label: 'Pasta', x: 65, y: 45, interactive: true, learnTitle: 'Italian Pasta', learnContent: 'Italy has over 350 shapes of pasta! Each shape is designed to hold sauce differently. Italians eat about 23 kg of pasta per person per year.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1f81111?w=800' },
           { id: 'it_k3', icon: 'food', label: 'Garlic', x: 20, y: 55 },
           { id: 'it_k4', icon: 'food', label: 'Olive Oil', x: 80, y: 35, interactive: true, learnTitle: 'Olive Oil', learnContent: 'Italy is the world\'s second-largest producer of olive oil. Some olive trees in Italy are over 1,000 years old and still producing olives!', auraReward: 8 },
           { id: 'it_k5', icon: 'food', label: 'Gelato', x: 50, y: 65 },
@@ -221,10 +230,11 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
       {
         id: 'gb_living', name: 'Drawing Room', icon: 'castle',
         wallColor: '#FFF8F5', floorColor: '#A89080',
+        roomImageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800',
         objects: [
-          { id: 'gb_l1', icon: 'crown', label: 'Crown', x: 50, y: 15, interactive: true, learnTitle: 'The British Crown', learnContent: "The Imperial State Crown has 2,868 diamonds, 273 pearls, 17 sapphires, 11 emeralds, and 5 rubies! It's kept in the Tower of London and worn for the State Opening of Parliament.", auraReward: 8 },
-          { id: 'gb_l2', icon: 'cafe', label: 'Tea Set', x: 25, y: 40, interactive: true, learnTitle: 'Afternoon Tea', learnContent: "Afternoon tea was invented by Duchess Anna of Bedford in the 1840s because she got hungry between lunch and dinner. Now it's a whole tradition with sandwiches, scones, and cakes!", auraReward: 8 },
-          { id: 'gb_l3', icon: 'landmark', label: 'Big Ben Model', x: 75, y: 25, interactive: true, learnTitle: 'Big Ben', learnContent: "Big Ben is actually the name of the bell, not the tower! The tower is called Elizabeth Tower. The bell weighs 13.5 tons and has been keeping time since 1859.", auraReward: 8 },
+          { id: 'gb_l1', icon: 'crown', label: 'Crown', x: 50, y: 15, interactive: true, learnTitle: 'The British Crown', learnContent: "The Imperial State Crown has 2,868 diamonds, 273 pearls, 17 sapphires, 11 emeralds, and 5 rubies! It's kept in the Tower of London and worn for the State Opening of Parliament.", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800' },
+          { id: 'gb_l2', icon: 'cafe', label: 'Tea Set', x: 25, y: 40, interactive: true, learnTitle: 'Afternoon Tea', learnContent: "Afternoon tea was invented by Duchess Anna of Bedford in the 1840s because she got hungry between lunch and dinner. Now it's a whole tradition with sandwiches, scones, and cakes!", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800' },
+          { id: 'gb_l3', icon: 'landmark', label: 'Big Ben Model', x: 75, y: 25, interactive: true, learnTitle: 'Big Ben', learnContent: "Big Ben is actually the name of the bell, not the tower! The tower is called Elizabeth Tower. The bell weighs 13.5 tons and has been keeping time since 1859.", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800' },
           { id: 'gb_l4', icon: 'star', label: 'Paddington Bear', x: 15, y: 55 },
           { id: 'gb_l5', icon: 'home', label: 'Fireplace', x: 85, y: 50 },
         ],
@@ -233,7 +243,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         id: 'gb_kitchen', name: 'Kitchen', icon: 'cafe',
         wallColor: '#FFFFF5', floorColor: '#B8A898',
         objects: [
-          { id: 'gb_k1', icon: 'food', label: 'Fish & Chips', x: 35, y: 40, interactive: true, learnTitle: 'Fish and Chips', learnContent: "Fish and chips became popular in the 1860s. British people eat 382 million portions per year! The traditional way is wrapped in paper with salt and vinegar.", auraReward: 8 },
+          { id: 'gb_k1', icon: 'food', label: 'Fish & Chips', x: 35, y: 40, interactive: true, learnTitle: 'Fish and Chips', learnContent: "Fish and chips became popular in the 1860s. British people eat 382 million portions per year! The traditional way is wrapped in paper with salt and vinegar.", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1579208575657-c595a05383b7?w=800' },
           { id: 'gb_k2', icon: 'cafe', label: 'Kettle', x: 65, y: 35 },
           { id: 'gb_k3', icon: 'food', label: 'Scones', x: 20, y: 50, interactive: true, learnTitle: 'Cream Tea', learnContent: "Devon and Cornwall have been arguing for centuries: do you put cream or jam on your scone first? In Devon it's cream first, in Cornwall it's jam. Very serious business!", auraReward: 8 },
           { id: 'gb_k4', icon: 'food', label: 'Biscuits', x: 80, y: 55 },

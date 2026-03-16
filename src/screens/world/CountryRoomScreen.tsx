@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -38,6 +38,7 @@ import { getCountryAtmosphere } from '../../config/countryAtmosphere';
 import { getCountryStampProgress } from '../../config/collectionGoals';
 import { getRoomEntryLine } from '../../config/visbyLines';
 import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
+import { NavBreadcrumb } from '../../components/ui/NavBreadcrumb';
 import type { FurnitureInteractionType } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -58,7 +59,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const { countryId, friendUserId } = route.params;
   const country = COUNTRIES.find((c) => c.id === countryId);
   const houseData = COUNTRY_HOUSES[countryId];
-  const { visby, user, friends, stamps, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, feedVisby, restVisby, playWithVisby, studyWithVisby, markFactRead, markQuizCompleted, getCountryProgress, chargeSocialBattery, getPlaceChatMessages, addPlaceChatMessage, storyBeatsShown, markStoryBeatShown } = useStore();
+  const { visby, user, friends, stamps, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, feedVisby, restVisby, playWithVisby, studyWithVisby, markFactRead, markQuizCompleted, getCountryProgress, chargeSocialBattery, getPlaceChatMessages, addPlaceChatMessage, storyBeatsShown, markStoryBeatShown, recordSeasonalCountryEntry, addDiscovery, recordRoomVisit, tryRoomMicroEvent, addSkillPoints } = useStore();
 
   const friend = friendUserId ? friends.find((f) => f.userId === friendUserId) : null;
   const isViewingFriendHouse = !!friendUserId && !!friend;
@@ -70,6 +71,21 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const [currentRoomIdx, setCurrentRoomIdx] = useState(0);
   const currentRoom: HouseRoom | undefined = rooms[currentRoomIdx];
   const [roomDialogueLine, setRoomDialogueLine] = useState<string | null>(null);
+
+  // Record seasonal quest progress when entering any country room
+  React.useEffect(() => {
+    if (!countryId || isViewingFriendHouse) return;
+    recordSeasonalCountryEntry();
+  }, [countryId, isViewingFriendHouse, recordSeasonalCountryEntry]);
+
+  // Room visit count and micro-event (3rd visit = "Visby found something!")
+  const [showMicroEvent, setShowMicroEvent] = React.useState(false);
+  const [discoveryToast, setDiscoveryToast] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!currentRoom?.id || !countryId || isViewingFriendHouse) return;
+    recordRoomVisit(countryId, currentRoom.id);
+    if (tryRoomMicroEvent(countryId, currentRoom.id)) setShowMicroEvent(true);
+  }, [countryId, currentRoom?.id, isViewingFriendHouse, recordRoomVisit, tryRoomMicroEvent]);
 
   // Reactive room dialogue (one-off when entering a room)
   React.useEffect(() => {
@@ -203,8 +219,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       setReadFacts((prev) => new Set(prev).add(fact.id));
       addAura(FACT_AURA_REWARD);
       markFactRead(countryId);
+      addDiscovery(fact.title, countryId, 'fact');
+      setDiscoveryToast(fact.title);
+      setTimeout(() => setDiscoveryToast(null), 2200);
     }
-  }, [readFacts, addAura, countryId, markFactRead]);
+  }, [readFacts, addAura, countryId, markFactRead, addDiscovery]);
 
   const closeFact = useCallback(() => setLearningFact(null), []);
 
@@ -218,8 +237,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       setReadFacts((prev) => new Set(prev).add(next.id));
       addAura(FACT_AURA_REWARD);
       markFactRead(countryId);
+      addDiscovery(next.title, countryId, 'fact');
+      setDiscoveryToast(next.title);
+      setTimeout(() => setDiscoveryToast(null), 2200);
     }
-  }, [country?.facts, factIndex, readFacts, addAura, countryId, markFactRead]);
+  }, [country?.facts, factIndex, readFacts, addAura, countryId, markFactRead, addDiscovery]);
 
   // Quiz
   const startQuiz = useCallback(() => {
@@ -244,13 +266,16 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
         const reward = finalScore * QUIZ_AURA_PER_CORRECT;
         if (reward > 0) addAura(reward);
         markQuizCompleted(countryId);
+        addDiscovery(`${country?.name ?? countryId} quiz`, countryId, 'quiz');
+        setDiscoveryToast('Country quiz');
+        setTimeout(() => setDiscoveryToast(null), 2200);
         setQuizFinished(true);
       } else {
         setQuizIndex((i) => i + 1);
         setQuizSelected(null);
       }
     }, 800);
-  }, [quizSelected, quizIndex, quizQuestions, quizScore, addAura, markQuizCompleted, countryId]);
+  }, [quizSelected, quizIndex, quizQuestions, quizScore, addAura, markQuizCompleted, countryId, country?.name, addDiscovery]);
 
   const handleVisitLocation = useCallback((location: CountryLocation) => {
     if (visitedLocations.has(location.id)) return;
@@ -325,6 +350,14 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               <Icon name="chevronLeft" size={24} color={colors.text.primary} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
+              {!isViewingFriendHouse && country && (
+                <NavBreadcrumb
+                  items={[
+                    { label: 'World', onPress: () => navigation.navigate('CountryWorld') },
+                    { label: country.name },
+                  ]}
+                />
+              )}
               <Text style={styles.flagTitle}>{country.flagEmoji} {roomTitle}</Text>
               {isOwner && <Caption style={styles.ownerTag}>Your House</Caption>}
               {isViewingFriendHouse && friend && (
@@ -393,13 +426,26 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </ScrollView>
           )}
 
+          {/* No rooms yet: welcome card and invite to explore facts & quiz */}
+          {!currentRoom && country && (
+            <View style={styles.noRoomsWrap}>
+              <View style={[styles.noRoomsCard, { borderLeftColor: country.accentColor }]}>
+                <Icon name="compass" size={32} color={country.accentColor} />
+                <Text variant="h3" style={styles.noRoomsTitle}>Welcome to {country.name}</Text>
+                <Text variant="body" color={colors.text.secondary} style={styles.noRoomsText}>
+                  Explore festivals and places from around the world! Read the facts and take the quiz below to earn Aura.
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Room View — VR-style immersive stage: you're inside with your Visby */}
           {currentRoom && (
             <View style={styles.roomStageWrap}>
               <View style={styles.roomStageFrame}>
                 {/* Window to the world (castle / cherry sky / etc.) */}
                 <LinearGradient
-                  colors={[...atmosphere.windowSky]}
+                  colors={[atmosphere.windowSky[0], atmosphere.windowSky[1], atmosphere.windowSky[2] ?? atmosphere.windowSky[1]]}
                   style={[styles.roomWindowStrip, { height: WINDOW_STRIP_HEIGHT }]}
                   locations={[0, 0.6, 1]}
                 >
@@ -443,6 +489,14 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   {roomDialogueLine && (
                     <View style={styles.roomDialogueBubble}>
                       <Text style={styles.roomDialogueText}>Visby: "{roomDialogueLine}"</Text>
+                    </View>
+                  )}
+
+                  {/* Co-op lite: who else is here (placeholder for presence) */}
+                  {!isViewingFriendHouse && (
+                    <View style={styles.othersHereBar}>
+                      <Icon name="people" size={14} color={colors.text.muted} />
+                      <Caption style={styles.othersHereText}>No friends in this room right now</Caption>
                     </View>
                   )}
 
@@ -949,6 +1003,29 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
         </Pressable>
       </Modal>
 
+      {/* Discovery toast */}
+      {discoveryToast && (
+        <View style={[styles.discoveryToast, { pointerEvents: 'none' }]}>
+          <View style={styles.discoveryToastInner}>
+            <Icon name="sparkles" size={20} color={colors.reward.gold} />
+            <Text variant="body" style={styles.discoveryToastText}>Discovery! {discoveryToast}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Micro-event: Visby found something (3rd visit to room) */}
+      <Modal visible={showMicroEvent} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowMicroEvent(false)}>
+          <Pressable style={styles.microEventCard} onPress={(e) => e.stopPropagation()}>
+            <LinearGradient colors={[colors.reward.peachLight, colors.primary.wisteriaFaded]} style={StyleSheet.absoluteFill} />
+            <Icon name="star" size={40} color={colors.reward.gold} />
+            <Heading level={3} style={styles.microEventTitle}>Visby found something!</Heading>
+            <Text variant="body" color={colors.text.secondary} style={styles.microEventSub}>+5 Aura</Text>
+            <Button title="Awesome!" onPress={() => setShowMicroEvent(false)} variant="primary" size="sm" />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Furniture Panel */}
       <Modal visible={showFurniturePanel} transparent animationType="slide">
         <Pressable style={styles.modalOverlay} onPress={() => { setShowFurniturePanel(false); setNotEnoughAuraFor(null); }}>
@@ -1359,6 +1436,19 @@ const styles = StyleSheet.create({
   roomCardLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, flex: 1 },
   roomCardLabelActive: { color: colors.primary.wisteriaDark, fontFamily: 'Nunito-Bold' },
 
+  noRoomsWrap: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  noRoomsCard: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderRadius: 20,
+    backgroundColor: colors.surface.card,
+    borderLeftWidth: 6,
+    gap: spacing.sm,
+  },
+  noRoomsTitle: { textAlign: 'center' },
+  noRoomsText: { textAlign: 'center', paddingHorizontal: spacing.sm },
+
   // Room stage (immersive)
   roomStageWrap: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   roomStageFrame: {
@@ -1591,6 +1681,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  othersHereBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: spacing.xs,
+    paddingVertical: 4,
+  },
+  othersHereText: {
+    color: colors.text.muted,
+    fontSize: 12,
+  },
   liveStrip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1788,6 +1890,48 @@ const styles = StyleSheet.create({
   auraEarnedText: { fontFamily: 'Baloo2-SemiBold', fontSize: 16, color: colors.status.streak },
   auraEarnedSubtext: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.reward.gold, marginTop: 2 },
   modalActions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
+
+  discoveryToast: {
+    position: 'absolute',
+    top: spacing.xl + 50,
+    left: spacing.lg,
+    right: spacing.lg,
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  discoveryToastInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.base.cream,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  discoveryToastText: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.primary.wisteriaDark,
+  },
+  microEventCard: {
+    padding: spacing.xl,
+    borderRadius: 24,
+    alignItems: 'center',
+    maxWidth: 280,
+    overflow: 'hidden',
+  },
+  microEventTitle: {
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  microEventSub: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
 
   // Quiz modal
   quizModal: {

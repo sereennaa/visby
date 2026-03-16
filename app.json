@@ -49,7 +49,8 @@
         {
           "photosPermission": "Visby needs access to your photos to add pictures to your collection."
         }
-      ]
+      ],
+      "expo-audio"
     ]
   }
 }

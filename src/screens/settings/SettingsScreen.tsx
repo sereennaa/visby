@@ -13,12 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { Text, Heading } from '../../components/ui/Text';
+import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { authService } from '../../services/auth';
+import { setupNotifications } from '../../services/notifications';
 import { RootStackParamList } from '../../types';
 
 type SettingsScreenProps = {
@@ -135,9 +136,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             Preferences
           </Text>
           <Card style={styles.sectionCard}>
-            {renderRow('notification', 'Notifications', () => updateSettings({ notifications: !settings.notifications }), {
+            {renderRow('notification', 'Notifications', async () => {
+              const next = !((settings as { notifications?: boolean }).notifications ?? true);
+              updateSettings({ notifications: next });
+              await setupNotifications(next, user?.currentStreak ?? 0);
+            }, {
               toggle: true,
-              toggleValue: settings.notifications,
+              toggleValue: (settings as { notifications?: boolean }).notifications ?? true,
             })}
             <View style={styles.separator} />
             {renderRow('location', 'Location Tracking', () => updateSettings({ locationTracking: !settings.locationTracking }), {
@@ -153,6 +158,62 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               toggle: true,
               toggleValue: (settings as { soundEffects?: boolean }).soundEffects ?? true,
             })}
+          </Card>
+
+          {/* Play time & focus */}
+          <Text variant="h3" color={colors.text.secondary} style={styles.sectionLabel}>
+            Play time & focus
+          </Text>
+          <Card style={styles.sectionCard}>
+            <View style={styles.sessionTimerRow}>
+              <View style={styles.rowIconContainer}>
+                <Icon name="time" size={20} color={colors.primary.wisteriaDark} />
+              </View>
+              <Text variant="body" style={styles.rowLabel}>Session timer</Text>
+              <View style={styles.sessionTimerOptions}>
+                {([0, 10, 15, 20] as const).map((mins) => (
+                  <TouchableOpacity
+                    key={mins}
+                    style={[
+                      styles.sessionTimerBtn,
+                      (settings as { sessionTimerMinutes?: number }).sessionTimerMinutes === mins && styles.sessionTimerBtnActive,
+                    ]}
+                    onPress={() => updateSettings({ sessionTimerMinutes: mins })}
+                  >
+                    <Text variant="bodySmall" style={(settings as { sessionTimerMinutes?: number }).sessionTimerMinutes === mins ? styles.sessionTimerBtnTextActive : styles.sessionTimerBtnText}>
+                      {mins === 0 ? 'Off' : `${mins}m`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.separator} />
+            {renderRow('compass', 'Focus mode', () => updateSettings({ focusMode: !((settings as { focusMode?: boolean }).focusMode ?? false) }), {
+              toggle: true,
+              toggleValue: (settings as { focusMode?: boolean }).focusMode ?? false,
+            })}
+            <Caption style={styles.settingHint}>Show only today&apos;s adventure on Home</Caption>
+            <View style={styles.separator} />
+            {renderRow('sparkles', 'Quieter mode', () => updateSettings({ quieterMode: !((settings as { quieterMode?: boolean }).quieterMode ?? false) }), {
+              toggle: true,
+              toggleValue: (settings as { quieterMode?: boolean }).quieterMode ?? false,
+            })}
+            <Caption style={styles.settingHint}>Fewer effects, calmer experience</Caption>
+            <View style={styles.separator} />
+            {renderRow('volumeHigh', 'Ambient sound', () => updateSettings({ ambientSound: !((settings as { ambientSound?: boolean }).ambientSound ?? false) }), {
+              toggle: true,
+              toggleValue: (settings as { ambientSound?: boolean }).ambientSound ?? false,
+            })}
+            <Caption style={styles.settingHint}>Calm background in home and country rooms</Caption>
+          </Card>
+
+          {/* Parent */}
+          <Text variant="h3" color={colors.text.secondary} style={styles.sectionLabel}>
+            Family
+          </Text>
+          <Card style={styles.sectionCard}>
+            {renderRow('lock', 'Parent dashboard', () => navigation.navigate('ParentDashboard'))}
+            <Caption style={[styles.settingHint, { marginLeft: spacing.lg + 36 + spacing.md }]}>Read-only: today&apos;s activity, streak, level. No chat.</Caption>
           </Card>
 
           {/* About */}
@@ -379,6 +440,38 @@ const styles = StyleSheet.create({
   },
   modalActionButton: {
     flex: 1,
+  },
+  sessionTimerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  sessionTimerOptions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sessionTimerBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: colors.base.parchment,
+  },
+  sessionTimerBtnActive: {
+    backgroundColor: colors.primary.wisteriaDark,
+  },
+  sessionTimerBtnText: {
+    color: colors.text.secondary,
+  },
+  sessionTimerBtnTextActive: {
+    color: colors.base.cream,
+  },
+  settingHint: {
+    marginTop: -spacing.xs,
+    marginBottom: spacing.xs,
+    marginLeft: spacing.lg + 36 + spacing.md,
+    color: colors.text.muted,
   },
 });
 

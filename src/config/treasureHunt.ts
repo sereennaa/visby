@@ -16,6 +16,8 @@ export interface RoomHuntItem {
   learnTitle?: string;
   learnContent?: string;
   auraReward?: number;
+  /** Optional image URL for reveal (real photo of the object) */
+  imageUrl?: string;
 }
 
 /** Derive a short clue from learnContent (first sentence) or fallback to "Find the [label]" */
@@ -39,6 +41,7 @@ export function getRoomHuntItems(room: HouseRoom): RoomHuntItem[] {
     learnTitle: obj.learnTitle,
     learnContent: obj.learnContent,
     auraReward: obj.auraReward,
+    imageUrl: obj.imageUrl,
   }));
 }
 

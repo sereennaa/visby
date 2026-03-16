@@ -18,6 +18,8 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { StampCard, StampMini } from '../../components/collectibles/StampCard';
 import { Button } from '../../components/ui/Button';
 import { SkeletonCard } from '../../components/ui/SkeletonCard';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { copy } from '../../config/copy';
 import { useStore } from '../../store/useStore';
 import { STAMP_TYPES_INFO, COUNTRIES } from '../../config/constants';
 import { getStampProgressByCountry } from '../../config/collectionGoals';
@@ -234,43 +236,16 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
             columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
           />
         ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconWrap}>
-              <Icon name="stamp" size={64} color={colors.primary.wisteria} />
-            </View>
-            <Text
-              variant="h3"
-              align="center"
-              color={colors.text.primary}
-              style={styles.emptyTitle}
-            >
-              No stamps yet!
-            </Text>
-            <Text
-              variant="body"
-              align="center"
-              color={colors.text.muted}
-              style={styles.emptyText}
-            >
-              Add your first stamp from a place you've been — or explore the map to discover spots.
-            </Text>
-            <Button
-              title="Add your first stamp"
-              onPress={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
-              variant="primary"
-              size="md"
-              style={styles.emptyPrimaryBtn}
-            />
-            <TouchableOpacity
-              style={styles.exploreButton}
-              onPress={() => navigation.navigate('Map')}
-            >
-              <Icon name="map" size={20} color={colors.primary.wisteriaDark} />
-              <Text variant="body" color={colors.primary.wisteriaDark}>
-                Explore nearby
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="stamp"
+            title={copy.empty.noStamps.title}
+            subtitle={copy.empty.noStamps.subtitle}
+            actionLabel={copy.actions.addFirstStamp}
+            onAction={() => navigation.navigate('CollectStamp', { locationId: 'quick' })}
+            secondaryLabel={copy.actions.exploreNearby}
+            onSecondary={() => navigation.navigate('Map')}
+            style={styles.emptyState}
+          />
         )}
       </SafeAreaView>
     </LinearGradient>
