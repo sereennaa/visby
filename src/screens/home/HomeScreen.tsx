@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  InteractionManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -162,6 +163,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [showWeeklyRecap, setShowWeeklyRecap] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
   const [greetingSurpriseAura, setGreetingSurpriseAura] = useState(0);
+  const [showMobileNeedsPanel, setShowMobileNeedsPanel] = useState(false);
 
   const dailyMission = useMemo(
     () => getDailyMission(),
@@ -178,45 +180,87 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const visbyFloat = useSharedValue(0);
 
   useEffect(() => {
-    const prevAura = user?.aura || 0;
-    dailyCheckIn();
-    updateVisbyNeeds();
-    const newAura = useStore.getState().user?.aura || 0;
-    if (newAura > prevAura) {
-      setDailyRewardAmount(newAura - prevAura);
-      setShowDailyReward(true);
-    }
+    let isCancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
 
-    // Daily greeting overlay (once per day)
-    const todayKey = new Date().toISOString().slice(0, 10);
-    if (lastGreetingDateKey !== todayKey) {
-      const surprise = trySurprise();
-      if (surprise.granted && surprise.aura) {
-        setGreetingSurpriseAura(surprise.aura);
-      }
-      setShowGreeting(true);
-    } else {
-      if (shouldShowVisbyCheckIn()) {
-        timers.push(setTimeout(() => setShowVisbyCheckIn(true), 700));
-      }
-      const surprise = trySurprise();
-      if (surprise.granted && surprise.aura) {
-        setSurpriseAura(surprise.aura);
-        setShowSurpriseBonus(true);
-      }
-    }
+    InteractionManager.runAfterInteractions(() => {
+      if (isCancelled) return;
 
-    if (showFirstCountryBeat) setShowStoryBeat(true);
-    awardAdventureIfCompleted();
-    if (new Date().getDay() === 0) {
-      const weekKey = getCurrentWeekKey();
-      if (lastWeeklyRecapShown !== weekKey) {
-        timers.push(setTimeout(() => setShowWeeklyRecap(true), 500));
+      const state = useStore.getState();
+      const {
+        user: latestUser,
+        storyBeatsShown: latestStoryBeatsShown,
+        lastWeeklyRecapShown: latestLastWeeklyRecapShown,
+        lastGreetingDateKey: latestLastGreetingDateKey,
+        dailyCheckIn: latestDailyCheckIn,
+        updateVisbyNeeds: latestUpdateVisbyNeeds,
+        shouldShowVisbyCheckIn: latestShouldShowVisbyCheckIn,
+        trySurprise: latestTrySurprise,
+        getCurrentWeekKey: latestGetCurrentWeekKey,
+        awardAdventureIfCompleted: latestAwardAdventureIfCompleted,
+      } = state as any;
+
+      const prevAura = latestUser?.aura || 0;
+      latestDailyCheckIn?.();
+      latestUpdateVisbyNeeds?.();
+      const newAura = useStore.getState().user?.aura || 0;
+      if (newAura > prevAura) {
+        setDailyRewardAmount(newAura - prevAura);
+        setShowDailyReward(true);
       }
+
+      // Daily greeting overlay (once per day)
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const shouldShowGreeting = latestLastGreetingDateKey !== todayKey;
+      if (shouldShowGreeting) {
+        const surprise = latestTrySurprise?.();
+        if (surprise?.granted && surprise.aura) {
+          setGreetingSurpriseAura(surprise.aura);
+        }
+        setShowGreeting(true);
+      } else {
+        if (latestShouldShowVisbyCheckIn?.()) {
+          timers.push(setTimeout(() => setShowVisbyCheckIn(true), 700));
+        }
+        const surprise = latestTrySurprise?.();
+        if (surprise?.granted && surprise.aura) {
+          setSurpriseAura(surprise.aura);
+          setShowSurpriseBonus(true);
+        }
+      }
+
+      const shouldShowFirstCountryBeat =
+        (latestUser?.countriesVisited ?? 0) >= 1 &&
+        !latestStoryBeatsShown?.includes('first_country');
+      if (shouldShowFirstCountryBeat) setShowStoryBeat(true);
+
+      latestAwardAdventureIfCompleted?.();
+
+      if (new Date().getDay() === 0) {
+        const weekKey = latestGetCurrentWeekKey?.();
+        if (latestLastWeeklyRecapShown !== weekKey) {
+          timers.push(setTimeout(() => setShowWeeklyRecap(true), 500));
+        }
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isDesktop) {
+      InteractionManager.runAfterInteractions(() => {
+        if (!cancelled) setShowMobileNeedsPanel(true);
+      });
     }
-    return () => timers.forEach(clearTimeout);
-  }, [showFirstCountryBeat, awardAdventureIfCompleted, getCurrentWeekKey, lastWeeklyRecapShown]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isDesktop]);
 
   useEffect(() => {
     visbyFloat.value = withDelay(
@@ -362,7 +406,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const adventure = useMemo(() => getAdventureOfTheDay(), [getAdventureOfTheDay, lessonProgress, stamps, userHouses]);
 
   const todaysPlanTasks = useMemo<PlanTask[]>(() => {
-    const adv = getAdventureOfTheDay();
+    const adv = adventure;
     const tasks: PlanTask[] = [
       {
         id: 'adv1',
@@ -836,9 +880,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             >
               {scrollContent}
             </ScrollView>
-            <View style={styles.mobileNeedsWrap}>
-              <NeedsFloatingPanel onNavigateAway={handleNeedsPanelNavigate} />
-            </View>
+            {showMobileNeedsPanel && (
+              <View style={styles.mobileNeedsWrap}>
+                <NeedsFloatingPanel onNavigateAway={handleNeedsPanelNavigate} />
+              </View>
+            )}
             <ChatFAB onPress={handleShowVisbyCheckIn} />
           </>
         )}
@@ -865,7 +911,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </Pressable>
       </Modal>
 
-      {!isDesktop && (
+      {!isDesktop && showVisbyCheckIn && (
         <VisbyCheckInModal visible={showVisbyCheckIn} onClose={handleCloseVisbyCheckIn} />
       )}
 
@@ -941,7 +987,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </Pressable>
       </Modal>
 
-      <WeeklyRecapModal visible={showWeeklyRecap} onClose={handleCloseWeeklyRecap} />
+      {showWeeklyRecap && (
+        <WeeklyRecapModal visible={showWeeklyRecap} onClose={handleCloseWeeklyRecap} />
+      )}
 
       {/* Daily greeting overlay */}
       {showGreeting && (

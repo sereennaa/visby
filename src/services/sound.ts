@@ -3,6 +3,7 @@
  * Respects settings.soundEffects; no-op when muted or when expo-audio fails to load.
  */
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Platform } from 'react-native';
 import { useStore } from '../store/useStore';
 
 const SOUNDS = {
@@ -26,6 +27,7 @@ const SOUNDS = {
 } as const;
 
 let audioModeSet = false;
+let webAudioFailed = false;
 
 async function ensureAudioMode() {
   if (audioModeSet) return;
@@ -39,7 +41,21 @@ async function ensureAudioMode() {
   }
 }
 
+function playUrlWeb(uri: string): void {
+  try {
+    const audio = new Audio(uri);
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
+  } catch {
+    // Web audio not available
+  }
+}
+
 async function playUrl(uri: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    if (!webAudioFailed) playUrlWeb(uri);
+    return;
+  }
   try {
     await ensureAudioMode();
     const player = createAudioPlayer(uri);
@@ -51,13 +67,8 @@ async function playUrl(uri: string): Promise<void> {
     setTimeout(() => {
       try { player.release(); } catch { /* noop */ }
     }, 2000);
-  } catch (err) {
-    if (__DEV__) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('NotSupportedError') && !msg.includes('no supported source')) {
-        console.log('[sound] playUrl failed:', msg);
-      }
-    }
+  } catch {
+    // silently ignore audio failures
   }
 }
 

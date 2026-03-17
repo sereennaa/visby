@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -308,11 +308,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  perfectTitle: {
-    textShadowColor: 'rgba(255, 215, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
+  perfectTitle: Platform.select({
+    web: { textShadow: '0 0 20px rgba(255, 215, 0, 0.5)' },
+    default: {
+      textShadowColor: 'rgba(255, 215, 0, 0.5)',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 20,
+    },
+  }) as any,
   scoreCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: spacing.radius.lg,

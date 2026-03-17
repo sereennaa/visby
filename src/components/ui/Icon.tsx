@@ -172,6 +172,12 @@ export const iconMap = {
   passport: { family: 'MaterialCommunityIcons', name: 'passport' },
   all: { family: 'MaterialCommunityIcons', name: 'view-grid' },
 
+  // Elements
+  water: { family: 'MaterialCommunityIcons', name: 'water' },
+  leaf: { family: 'MaterialCommunityIcons', name: 'leaf' },
+  art: { family: 'MaterialCommunityIcons', name: 'palette' },
+  fire: { family: 'MaterialCommunityIcons', name: 'fire' },
+
   // Nature & Animals
   flower: { family: 'MaterialCommunityIcons', name: 'flower' },
   snowflake: { family: 'MaterialCommunityIcons', name: 'snowflake' },

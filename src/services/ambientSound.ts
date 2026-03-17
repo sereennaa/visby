@@ -4,6 +4,7 @@
  * Respects settings.ambientSound and settings.soundEffects.
  */
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
+import { Platform } from 'react-native';
 import { useStore } from '../store/useStore';
 
 const AMBIENT_URLS: Record<string, Record<string, string>> = {
@@ -86,32 +87,62 @@ export const ambientSoundService = {
     currentKey = key;
 
     try {
-      await setAudioModeAsync({ playsInSilentMode: true });
       const url = getUrl(countryId, roomId);
-      const player = createAudioPlayer(url);
-      if (!player) return;
 
-      player.volume = 0;
-      player.loop = true;
-      currentPlayer = player;
+      if (Platform.OS === 'web') {
+        const audio = new Audio(url);
+        audio.loop = true;
+        audio.volume = 0;
+        const webPlayer = {
+          _audio: audio,
+          get volume() { return audio.volume; },
+          set volume(v: number) { audio.volume = v; },
+          loop: true,
+          play() { audio.play().catch(() => {}); },
+          pause() { audio.pause(); },
+          release() { audio.pause(); audio.src = ''; },
+        } as unknown as AudioPlayer;
+        currentPlayer = webPlayer;
+        audio.play().catch(() => {});
 
-      try {
-        player.play();
-      } catch {}
+        let vol = 0;
+        const steps = 10;
+        const stepDur = 1000 / steps;
+        const fadeIn = setInterval(() => {
+          vol += 1 / steps;
+          if (vol >= 0.4) {
+            clearInterval(fadeIn);
+            try { if (currentPlayer === webPlayer) audio.volume = 0.4; } catch {}
+            return;
+          }
+          try { if (currentPlayer === webPlayer) audio.volume = vol; } catch {}
+        }, stepDur);
+      } else {
+        await setAudioModeAsync({ playsInSilentMode: true });
+        const player = createAudioPlayer(url);
+        if (!player) return;
 
+        player.volume = 0;
+        player.loop = true;
+        currentPlayer = player;
 
-      let vol = 0;
-      const steps = 10;
-      const stepDur = 1000 / steps;
-      const fadeIn = setInterval(() => {
-        vol += 1 / steps;
-        if (vol >= 0.4) {
-          clearInterval(fadeIn);
-          try { if (currentPlayer === player) player.volume = 0.4; } catch {}
-          return;
-        }
-        try { if (currentPlayer === player) player.volume = vol; } catch {}
-      }, stepDur);
+        try {
+          player.play();
+        } catch {}
+
+        let vol = 0;
+        const steps = 10;
+        const stepDur = 1000 / steps;
+        const fadeIn = setInterval(() => {
+          vol += 1 / steps;
+          if (vol >= 0.4) {
+            clearInterval(fadeIn);
+            try { if (currentPlayer === player) player.volume = 0.4; } catch {}
+            return;
+          }
+          try { if (currentPlayer === player) player.volume = vol; } catch {}
+        }, stepDur);
+      }
     } catch (err) {
       if (__DEV__) console.log('[ambient] enterRoom failed:', err);
     }

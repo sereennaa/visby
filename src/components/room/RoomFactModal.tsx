@@ -60,6 +60,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
   const [savedToJournal, setSavedToJournal] = useState(false);
   const [showTeachBack, setShowTeachBack] = useState(false);
   const [teachBackAnswer, setTeachBackAnswer] = useState<number | null>(null);
+  const [teachBackOptions, setTeachBackOptions] = useState<string[]>([]);
   const { addDiscovery, addAura } = useStore();
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const justOpenedRef = useRef(false);
@@ -79,6 +80,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
       setSavedToJournal(false);
       setShowTeachBack(false);
       setTeachBackAnswer(null);
+      setTeachBackOptions([]);
     }
   }, [visible]);
 
@@ -95,12 +97,18 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
     return options;
   };
 
+  const startTeachBack = () => {
+    const options = generateTeachBackOptions(fact?.content || '');
+    setTeachBackOptions(options);
+    setShowTeachBack(true);
+  };
+
   const handleTeachBackAnswer = (index: number) => {
     if (teachBackAnswer !== null) return;
     setTeachBackAnswer(index);
     const factContent = fact?.content || '';
     const keywords = factContent.split(' ').slice(0, 8).join(' ');
-    const isCorrect = generateTeachBackOptions(factContent)[index]?.startsWith(keywords);
+    const isCorrect = teachBackOptions[index]?.startsWith(keywords);
     if (isCorrect) {
       addAura(10);
     }
@@ -193,7 +201,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
               <View style={styles.teachBackWrap}>
                 <Text style={styles.teachBackTitle}>Can you explain what you just learned?</Text>
                 <Text style={styles.teachBackSubtitle}>Pick the best summary:</Text>
-                {(fact ? generateTeachBackOptions(fact.content) : []).map((opt, i) => {
+                {teachBackOptions.map((opt, i) => {
                   const factContent = fact?.content || '';
                   const keywords = factContent.split(' ').slice(0, 8).join(' ');
                   const isCorrect = opt.startsWith(keywords);
@@ -220,7 +228,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
                       {(() => {
                         const factContent = fact?.content || '';
                         const keywords = factContent.split(' ').slice(0, 8).join(' ');
-                        const isCorrect = generateTeachBackOptions(factContent)[teachBackAnswer]?.startsWith(keywords);
+                        const isCorrect = teachBackOptions[teachBackAnswer]?.startsWith(keywords);
                         return isCorrect ? 'Great teacher! +10 Aura' : 'Not quite, but you\'re learning!';
                       })()}
                     </Text>
@@ -239,7 +247,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
                   title="Got it!"
                   onPress={() => {
                     onMarkRead?.();
-                    setShowTeachBack(true);
+                    startTeachBack();
                   }}
                 />
               </View>

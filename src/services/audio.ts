@@ -4,6 +4,7 @@
  */
 
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
 import type { Voice } from 'expo-speech';
 import { VoiceQuality } from 'expo-speech';
@@ -39,11 +40,19 @@ export const audioService = {
     await this.stopMusic();
 
     try {
-      await ensureAudioMode();
-      currentMusicPlayer = createAudioPlayer(BACKGROUND_MUSIC_URL);
-      currentMusicPlayer.loop = true;
-      currentMusicPlayer.volume = 0.15;
-      currentMusicPlayer.play();
+      if (Platform.OS === 'web') {
+        const audio = new Audio(BACKGROUND_MUSIC_URL);
+        audio.loop = true;
+        audio.volume = 0.15;
+        audio.play().catch(() => {});
+        currentMusicPlayer = { release: () => { audio.pause(); audio.src = ''; } };
+      } else {
+        await ensureAudioMode();
+        currentMusicPlayer = createAudioPlayer(BACKGROUND_MUSIC_URL);
+        currentMusicPlayer.loop = true;
+        currentMusicPlayer.volume = 0.15;
+        currentMusicPlayer.play();
+      }
     } catch {
       // ignore
     }
