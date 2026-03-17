@@ -126,11 +126,12 @@ function createSignatureComposition(countryId: string, tokens: Token[], level: S
   const seed = hashCountry(countryId);
   const maxPieces = level === 1 ? 2 : 3;
   const selected = tokens.slice(0, maxPieces);
+  const minScale = 0.92;
   return selected.map((token, i) => {
     const n = (seed + i * 47) % 100;
     const tx = (n % 3 === 0 ? -1 : 1) * (6 + (n % 7));
     const ty = -2 - ((n + i * 7) % 8);
-    const scale = clamp(0.85 + ((seed + i * 13) % 35) / 100, 0.82, 1.2);
+    const scale = clamp(0.85 + ((seed + i * 13) % 35) / 100, minScale, 1.2);
     const rotate = ((seed + i * 23) % 11) - 5;
     return { token, tx, ty, scale, rotate };
   });
@@ -396,6 +397,154 @@ export function renderCountryBackdrop(
   const profile = getCountryStyleProfile(countryId);
   const gy = baseY + wallH;
   const soft = `${accent}33`;
+
+  // ─── COUNTRY-SPECIFIC BACKDROPS ───
+
+  switch (countryId) {
+    // France: lavender hillside
+    case 'fr':
+      return <G><Polygon points={`${w * 0.01},${gy} ${w * 0.14},${gy - 16} ${w * 0.27},${gy}`} fill="#E8D5F0" opacity={0.35} /><Polygon points={`${w * 0.73},${gy} ${w * 0.86},${gy - 14} ${w * 0.99},${gy}`} fill="#E8D5F0" opacity={0.35} />{[0.03, 0.08, 0.13, 0.87, 0.93].map((p, i) => <Line key={`lav-bg-${i}`} x1={w * p} y1={gy} x2={w * p} y2={gy - 6 - (i % 2) * 3} stroke="#C39BD3" strokeWidth={1} opacity={0.35} />)}</G>;
+    // Japan: bamboo grove
+    case 'jp':
+      return <G>{[w * 0.02, w * 0.08].map((x, i) => <G key={`bam-bg-${i}`}><Line x1={x} y1={gy} x2={x} y2={gy - 18} stroke="#81C784" strokeWidth={1.5} opacity={0.3} /><Ellipse cx={x + 3} cy={gy - 16} rx={4} ry={2} fill="#A5D6A7" opacity={0.25} /></G>)}{[w * 0.92, w * 0.97].map((x, i) => <G key={`bam-bg2-${i}`}><Line x1={x} y1={gy} x2={x} y2={gy - 14} stroke="#81C784" strokeWidth={1.5} opacity={0.3} /><Ellipse cx={x - 2} cy={gy - 12} rx={3} ry={1.8} fill="#A5D6A7" opacity={0.25} /></G>)}</G>;
+    // Italy: cypress + Tuscan hill
+    case 'it':
+      return <G><Ellipse cx={w * 0.06} cy={gy - 8} rx={3.5} ry={14} fill="#2E7D32" opacity={0.2} /><Ellipse cx={w * 0.94} cy={gy - 6} rx={3} ry={12} fill="#2E7D32" opacity={0.2} /><Polygon points={`${w * 0.7},${gy} ${w * 0.82},${gy - 10} ${w * 0.94},${gy}`} fill="#8D6E63" opacity={0.12} /></G>;
+    // Mexico: desert cactus
+    case 'mx':
+      return <G><Rect x={w * 0.04} y={gy - 14} width={3} height={14} fill="#2E7D32" rx={1.5} opacity={0.3} /><Path d={`M ${w * 0.04} ${gy - 8} Q ${w * 0.0} ${gy - 8} ${w * 0.0} ${gy - 12}`} stroke="#2E7D32" strokeWidth={2.5} fill="none" opacity={0.3} strokeLinecap="round" /><Rect x={w * 0.93} y={gy - 12} width={3} height={12} fill="#2E7D32" rx={1.5} opacity={0.3} /><Path d={`M ${w * 0.95} ${gy - 6} Q ${w * 0.99} ${gy - 6} ${w * 0.99} ${gy - 10}`} stroke="#2E7D32" strokeWidth={2.5} fill="none" opacity={0.3} strokeLinecap="round" /></G>;
+    // Brazil: palm + tropical wave
+    case 'br':
+      return <G><Line x1={w * 0.9} y1={gy} x2={w * 0.92} y2={gy - 20} stroke="#8D6E63" strokeWidth={2} opacity={0.25} /><Path d={`M ${w * 0.92} ${gy - 20} Q ${w * 1.02} ${gy - 24} ${w * 1.06} ${gy - 16}`} stroke="#4CAF50" strokeWidth={1.8} fill="none" opacity={0.2} /><Path d={`M ${w * 0.92} ${gy - 20} Q ${w * 0.82} ${gy - 26} ${w * 0.78} ${gy - 18}`} stroke="#4CAF50" strokeWidth={1.8} fill="none" opacity={0.2} /><Path d={`M ${w * 0.04} ${gy - 10} Q ${w * 0.24} ${gy - 16} ${w * 0.42} ${gy - 11}`} fill="none" stroke={soft} strokeWidth={2} /></G>;
+    // Greece: Aegean blue sea horizon
+    case 'gr':
+      return <G><Path d={`M 0 ${gy + 2} Q ${w * 0.25} ${gy - 4} ${w * 0.5} ${gy + 2} Q ${w * 0.75} ${gy - 4} ${w} ${gy + 2}`} stroke="#64B5F6" strokeWidth={1.8} fill="none" opacity={0.3} /><Path d={`M 0 ${gy + 5} Q ${w * 0.3} ${gy - 1} ${w * 0.6} ${gy + 5} Q ${w * 0.8} ${gy} ${w} ${gy + 5}`} stroke="#90CAF9" strokeWidth={1.2} fill="none" opacity={0.2} /></G>;
+    // Spain: warm terracotta hills
+    case 'es':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.18},${gy - 12} ${w * 0.35},${gy}`} fill="#FFCC80" opacity={0.2} /><Polygon points={`${w * 0.65},${gy} ${w * 0.82},${gy - 10} ${w * 0.99},${gy}`} fill="#FFCC80" opacity={0.2} /></G>;
+    // Portugal: coastal waves + azulejo hint
+    case 'pt':
+      return <G><Path d={`M 0 ${gy + 3} Q ${w * 0.25} ${gy - 3} ${w * 0.5} ${gy + 3} Q ${w * 0.75} ${gy - 3} ${w} ${gy + 3}`} stroke="#1E88E5" strokeWidth={1.5} fill="none" opacity={0.25} /><Rect x={w * 0.03} y={gy - 6} width={w * 0.08} height={4} fill="#1E88E5" opacity={0.15} rx={1} /></G>;
+    // UK: rolling green hills
+    case 'gb':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.15} ${gy - 12} ${w * 0.3} ${gy - 4} Q ${w * 0.45} ${gy - 10} ${w * 0.6} ${gy - 2}`} fill="#81C784" opacity={0.15} /><Path d={`M ${w * 0.5} ${gy} Q ${w * 0.7} ${gy - 10} ${w * 0.85} ${gy - 3} Q ${w * 0.95} ${gy - 8} ${w} ${gy}`} fill="#A5D6A7" opacity={0.12} /></G>;
+    // Netherlands: flat horizon with canal
+    case 'nl':
+      return <G><Line x1={0} y1={gy - 2} x2={w} y2={gy - 2} stroke="#90CAF9" strokeWidth={1.5} opacity={0.2} /><Line x1={0} y1={gy + 2} x2={w} y2={gy + 2} stroke="#64B5F6" strokeWidth={1} opacity={0.15} /></G>;
+    // Germany: Bavarian hills
+    case 'de':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.16},${gy - 14} ${w * 0.32},${gy}`} fill="#A5D6A7" opacity={0.18} /><Polygon points={`${w * 0.68},${gy} ${w * 0.84},${gy - 12} ${w * 1.0},${gy}`} fill="#81C784" opacity={0.15} /></G>;
+    // Turkey: minaret silhouette
+    case 'tr':
+      return <G><Rect x={w * 0.88} y={gy - 18} width={2} height={18} fill={soft} /><Circle cx={w * 0.89} cy={gy - 20} r={2.5} fill={soft} /></G>;
+    // Korea: temple ridge hills
+    case 'kr':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.12} ${gy - 10} ${w * 0.24} ${gy - 4} Q ${w * 0.36} ${gy - 12} ${w * 0.48} ${gy}`} fill="#81C784" opacity={0.12} /><Path d={`M ${w * 0.52} ${gy} Q ${w * 0.7} ${gy - 8} ${w * 0.88} ${gy - 2} L ${w} ${gy}`} fill="#A5D6A7" opacity={0.1} /></G>;
+    // China: pagoda silhouette
+    case 'cn':
+      return <G><Rect x={w * 0.04} y={gy - 16} width={w * 0.06} height={16} fill={soft} /><Polygon points={`${w * 0.02},${gy - 16} ${w * 0.07},${gy - 20} ${w * 0.12},${gy - 16}`} fill={soft} /></G>;
+    // Taiwan: night market lights
+    case 'tw':
+      return <G>{[0.06, 0.14, 0.86, 0.94].map((p, i) => <Circle key={`tw-${i}`} cx={w * p} cy={gy - 8 - (i % 2) * 3} r={2} fill={i % 2 ? '#FFD54F' : '#FF8A65'} opacity={0.2} />)}</G>;
+    // Vietnam: conical hat + rice field
+    case 'vn':
+      return <G><Path d={`M 0 ${gy + 2} L ${w * 0.3} ${gy - 4} L ${w * 0.6} ${gy + 2} L ${w} ${gy - 2}`} fill="none" stroke="#81C784" strokeWidth={1.2} opacity={0.2} /></G>;
+    // Norway: fjord blue
+    case 'no':
+      return <G><Path d={`M 0 ${gy} L ${w * 0.15} ${gy - 14} L ${w * 0.3} ${gy} L ${w * 0.5} ${gy - 10} L ${w * 0.7} ${gy} L ${w * 0.85} ${gy - 12} L ${w} ${gy}`} fill="#37474F" opacity={0.1} /><Line x1={0} y1={gy + 3} x2={w} y2={gy + 3} stroke="#1565C0" strokeWidth={1.5} opacity={0.15} /></G>;
+    // Sweden: Dalarna red rolling hills
+    case 'se':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.2} ${gy - 10} ${w * 0.4} ${gy - 3} Q ${w * 0.6} ${gy - 12} ${w * 0.8} ${gy - 4} L ${w} ${gy}`} fill="#C62828" opacity={0.08} /></G>;
+    // Finland: lake + forest horizon
+    case 'fi':
+      return <G><Line x1={0} y1={gy + 3} x2={w} y2={gy + 3} stroke="#546E7A" strokeWidth={1.2} opacity={0.15} />{[0.05, 0.12, 0.88, 0.95].map((p, i) => <Polygon key={`fi-${i}`} points={`${w * p},${gy} ${w * (p + 0.03)},${gy - 8} ${w * (p + 0.06)},${gy}`} fill="#2E7D32" opacity={0.12} />)}</G>;
+    // Iceland: green grass roof hills + volcanic
+    case 'is':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.2},${gy - 10} ${w * 0.4},${gy}`} fill="#558B2F" opacity={0.12} /><Polygon points={`${w * 0.6},${gy} ${w * 0.8},${gy - 8} ${w * 1.0},${gy}`} fill="#689F38" opacity={0.1} /></G>;
+    // Switzerland: Alpine peaks
+    case 'ch':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.15},${gy - 18} ${w * 0.3},${gy}`} fill="#78909C" opacity={0.15} /><Polygon points={`${w * 0.7},${gy} ${w * 0.85},${gy - 16} ${w * 1.0},${gy}`} fill="#90A4AE" opacity={0.12} /><Polygon points={`${w * 0.12},${gy - 12} ${w * 0.15},${gy - 18} ${w * 0.18},${gy - 12}`} fill="#FFFFFF" opacity={0.3} /></G>;
+    // Austria: similar Alpine
+    case 'at':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.18},${gy - 16} ${w * 0.36},${gy}`} fill="#8D6E63" opacity={0.12} /><Polygon points={`${w * 0.64},${gy} ${w * 0.82},${gy - 14} ${w * 1.0},${gy}`} fill="#795548" opacity={0.1} /></G>;
+    // Egypt: desert dunes + pyramid
+    case 'eg':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.25} ${gy - 8} ${w * 0.5} ${gy - 2} Q ${w * 0.75} ${gy - 6} ${w} ${gy}`} fill="#D7B98E" opacity={0.2} /><Polygon points={`${w * 0.78},${gy} ${w * 0.88},${gy - 14} ${w * 0.98},${gy}`} fill="#C8A97E" opacity={0.18} /></G>;
+    // Kenya: savanna with distant acacia
+    case 'ke':
+      return <G><Path d={`M 0 ${gy + 2} Q ${w * 0.3} ${gy - 4} ${w * 0.6} ${gy + 1} Q ${w * 0.8} ${gy - 2} ${w} ${gy + 2}`} fill="#C8B060" opacity={0.12} /><Line x1={w * 0.04} y1={gy} x2={w * 0.04} y2={gy - 10} stroke="#6D4C41" strokeWidth={1} opacity={0.2} /><Ellipse cx={w * 0.04} cy={gy - 11} rx={6} ry={2} fill="#558B2F" opacity={0.15} /></G>;
+    // Tanzania: Kilimanjaro silhouette
+    case 'tz':
+      return <G><Polygon points={`${w * 0.6},${gy} ${w * 0.8},${gy - 16} ${w * 1.0},${gy}`} fill="#78909C" opacity={0.12} /><Polygon points={`${w * 0.75},${gy - 12} ${w * 0.8},${gy - 16} ${w * 0.85},${gy - 12}`} fill="#FFFFFF" opacity={0.2} /></G>;
+    // South Africa: Table Mountain
+    case 'za':
+      return <G><Rect x={w * 0.7} y={gy - 10} width={w * 0.28} height={4} fill="#546E7A" opacity={0.15} rx={1} /><Polygon points={`${w * 0.68},${gy} ${w * 0.7},${gy - 10} ${w * 0.98},${gy - 10} ${w * 1.0},${gy}`} fill="#607D8B" opacity={0.1} /></G>;
+    // Madagascar: baobab
+    case 'mg':
+      return <G><Line x1={w * 0.06} y1={gy} x2={w * 0.06} y2={gy - 12} stroke="#795548" strokeWidth={2.5} opacity={0.2} /><Ellipse cx={w * 0.06} cy={gy - 14} rx={8} ry={3} fill="#558B2F" opacity={0.15} /></G>;
+    // India: dome silhouette
+    case 'in':
+      return <G><Ellipse cx={w * 0.88} cy={gy - 8} rx={w * 0.08} ry={8} fill={soft} /><Circle cx={w * 0.88} cy={gy - 17} r={1.5} fill={soft} /></G>;
+    // Morocco: medina arch
+    case 'ma':
+      return <G><Path d={`M ${w * 0.02} ${gy} L ${w * 0.02} ${gy - 10} A ${w * 0.06} ${6} 0 0 1 ${w * 0.14} ${gy - 10} L ${w * 0.14} ${gy}`} fill="#D4956A" opacity={0.15} /></G>;
+    // UAE: tower silhouette
+    case 'ae':
+      return <G><Rect x={w * 0.04} y={gy - 20} width={3} height={20} fill="#B8784E" opacity={0.15} /><Rect x={w * 0.03} y={gy - 22} width={5} height={3} fill="#B8784E" opacity={0.12} /></G>;
+    // Tunisia: white + blue Sidi Bou Said
+    case 'tn':
+      return <G><Rect x={w * 0.88} y={gy - 12} width={w * 0.08} height={12} fill="#FFFFFF" opacity={0.15} rx={1} /><Rect x={w * 0.89} y={gy - 14} width={w * 0.06} height={3} fill="#1E88E5" opacity={0.2} rx={1} /></G>;
+    // Lebanon: cedar mountain
+    case 'lb':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.2},${gy - 12} ${w * 0.4},${gy}`} fill="#A1887F" opacity={0.12} /></G>;
+    // Thailand: temple spire
+    case 'th':
+      return <G><Polygon points={`${w * 0.04},${gy} ${w * 0.07},${gy - 20} ${w * 0.1},${gy}`} fill="#B8860B" opacity={0.15} /><Circle cx={w * 0.07} cy={gy - 21} r={1.5} fill="#FFD700" opacity={0.2} /></G>;
+    // Indonesia: temple terraces
+    case 'id':
+      return <G>{[0, 4, 8].map((off, i) => <Rect key={`id-${i}`} x={w * 0.02 + off} y={gy - 6 + i * 2} width={w * 0.1 - i * 2} height={2} fill="#795548" opacity={0.12} />)}</G>;
+    // Cuba: Havana rooftops
+    case 'cu':
+      return <G>{[0.04, 0.12, 0.84, 0.92].map((p, i) => <Rect key={`cu-${i}`} x={w * p} y={gy - 10 - (i % 2) * 4} width={w * 0.06} height={8 + (i % 2) * 4} fill={soft} />)}</G>;
+    // Colombia: mountain silhouette
+    case 'co':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.18},${gy - 14} ${w * 0.36},${gy}`} fill="#2E7D32" opacity={0.12} /><Polygon points={`${w * 0.64},${gy} ${w * 0.82},${gy - 10} ${w * 1.0},${gy}`} fill="#388E3C" opacity={0.1} /></G>;
+    // Peru: Andean peaks
+    case 'pe':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.16},${gy - 16} ${w * 0.32},${gy}`} fill="#8D6E63" opacity={0.15} /><Polygon points={`${w * 0.68},${gy} ${w * 0.84},${gy - 14} ${w * 1.0},${gy}`} fill="#795548" opacity={0.12} /><Polygon points={`${w * 0.13},${gy - 12} ${w * 0.16},${gy - 16} ${w * 0.19},${gy - 12}`} fill="#ECEFF1" opacity={0.25} /></G>;
+    // Argentina: pampas horizon
+    case 'ar':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.3} ${gy - 6} ${w * 0.6} ${gy - 2} Q ${w * 0.8} ${gy - 5} ${w} ${gy}`} fill="#A5D6A7" opacity={0.1} /></G>;
+    // US: suburban oaks
+    case 'us':
+      return <G><Ellipse cx={w * 0.08} cy={gy - 8} rx={10} ry={8} fill="#66BB6A" opacity={0.12} /><Ellipse cx={w * 0.92} cy={gy - 6} rx={8} ry={7} fill="#81C784" opacity={0.1} /></G>;
+    // Canada: wilderness pines
+    case 'ca':
+      return <G>{[0.03, 0.1, 0.88, 0.95].map((p, i) => <Polygon key={`ca-${i}`} points={`${w * p},${gy} ${w * (p + 0.03)},${gy - 12 - (i % 2) * 4} ${w * (p + 0.06)},${gy}`} fill="#2E7D32" opacity={0.12} />)}</G>;
+    // Australia: outback red earth
+    case 'au':
+      return <G><Path d={`M 0 ${gy + 2} Q ${w * 0.3} ${gy - 4} ${w * 0.6} ${gy + 1} Q ${w * 0.85} ${gy - 3} ${w} ${gy + 2}`} fill="#D7B98E" opacity={0.15} /></G>;
+    // New Zealand: rolling green hills
+    case 'nz':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.2} ${gy - 10} ${w * 0.4} ${gy - 3} Q ${w * 0.6} ${gy - 12} ${w * 0.8} ${gy - 4} L ${w} ${gy}`} fill="#66BB6A" opacity={0.12} /></G>;
+    // Poland: sunflower field hint
+    case 'pl':
+      return <G><Path d={`M 0 ${gy} Q ${w * 0.25} ${gy - 8} ${w * 0.5} ${gy - 2} Q ${w * 0.75} ${gy - 6} ${w} ${gy}`} fill="#FFF59D" opacity={0.12} /></G>;
+    // Czech Republic: red rooftop skyline
+    case 'cz':
+      return <G>{[0.04, 0.12, 0.84, 0.92].map((p, i) => <Polygon key={`cz-${i}`} points={`${w * p},${gy} ${w * (p + 0.03)},${gy - 8 - (i % 2) * 4} ${w * (p + 0.06)},${gy}`} fill="#C0392B" opacity={0.1} />)}</G>;
+    // Croatia / Montenegro: Adriatic coast
+    case 'hr':
+    case 'me':
+      return <G><Polygon points={`${w * 0.0},${gy} ${w * 0.15},${gy - 10} ${w * 0.3},${gy}`} fill="#90A4AE" opacity={0.12} /><Path d={`M 0 ${gy + 3} Q ${w * 0.3} ${gy - 1} ${w * 0.6} ${gy + 3} Q ${w * 0.8} ${gy} ${w} ${gy + 3}`} stroke="#42A5F5" strokeWidth={1.2} fill="none" opacity={0.15} /></G>;
+    // Vatican: dome silhouette
+    case 'va':
+      return <G><Ellipse cx={w * 0.5} cy={gy - 10} rx={w * 0.15} ry={10} fill="#D4AF37" opacity={0.08} /><Circle cx={w * 0.5} cy={gy - 21} r={1.5} fill="#D4AF37" opacity={0.12} /></G>;
+    default:
+      break;
+  }
+
+  // ─── REGIONAL FALLBACKS ───
 
   if (profile.region === 'oceania' || profile.region === 'caribbean_latin') {
     return (

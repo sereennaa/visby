@@ -163,9 +163,9 @@ function renderRoof(style: RoofStyle, w: number, roofH: number, baseY: number, r
   switch (style) {
     case 'pagoda': {
       const mid = w * 0.5;
-      const tipY = roofH * 0.08;
+      const tipY = roofH * 0.04;
       const eaveY = baseY + 2;
-      const curlW = w * 0.06;
+      const curlW = w * 0.08;
       return (
         <G>
           <Defs>
@@ -175,19 +175,25 @@ function renderRoof(style: RoofStyle, w: number, roofH: number, baseY: number, r
             </SvgLinearGradient>
           </Defs>
           <Path
-            d={`M ${w * 0.04} ${eaveY} Q ${w * 0.15} ${eaveY - roofH * 0.15} ${mid} ${tipY} Q ${w * 0.85} ${eaveY - roofH * 0.15} ${w * 0.96} ${eaveY}`}
+            d={`M ${w * -0.02} ${eaveY + 3} Q ${w * 0.12} ${eaveY - roofH * 0.18} ${mid} ${tipY} Q ${w * 0.88} ${eaveY - roofH * 0.18} ${w * 1.02} ${eaveY + 3}`}
             fill="url(#roofGrad)"
           />
-          {/* Upturned edges */}
-          <Path d={`M ${w * 0.02} ${eaveY + 1} Q ${w * 0.01} ${eaveY - 6} ${w * 0.04 - curlW} ${eaveY - 8}`} stroke={rcd} strokeWidth={2} fill="none" />
-          <Path d={`M ${w * 0.98} ${eaveY + 1} Q ${w * 0.99} ${eaveY - 6} ${w * 0.96 + curlW} ${eaveY - 8}`} stroke={rcd} strokeWidth={2} fill="none" />
-          <Line x1={w * 0.06} y1={eaveY + 1} x2={w * 0.94} y2={eaveY + 1} stroke={rcd} strokeWidth={1.5} />
+          {/* Upturned eave tips */}
+          <Path d={`M ${w * -0.04} ${eaveY + 4} Q ${w * -0.03} ${eaveY - 8} ${w * -0.02 - curlW} ${eaveY - 12}`} stroke={rcd} strokeWidth={2.5} fill="none" />
+          <Path d={`M ${w * 1.04} ${eaveY + 4} Q ${w * 1.03} ${eaveY - 8} ${w * 1.02 + curlW} ${eaveY - 12}`} stroke={rcd} strokeWidth={2.5} fill="none" />
+          <Line x1={w * -0.02} y1={eaveY + 3} x2={w * 1.02} y2={eaveY + 3} stroke={rcd} strokeWidth={2} />
+          {/* Ridge ornament */}
+          <Circle cx={mid} cy={tipY - 1} r={2} fill={rcd} />
         </G>
       );
     }
     case 'mansard': {
       const eaveY = baseY + 2;
-      const topY = roofH * 0.2;
+      const topY = roofH * 0.18;
+      const dormW = w * 0.14;
+      const dormH = roofH * 0.28;
+      const dormX = w * 0.43;
+      const dormY = topY - 2;
       return (
         <G>
           <Defs>
@@ -196,14 +202,21 @@ function renderRoof(style: RoofStyle, w: number, roofH: number, baseY: number, r
               <Stop offset="100%" stopColor={rcd} />
             </SvgLinearGradient>
           </Defs>
+          {/* Steep mansard body */}
           <Path
-            d={`M ${w * 0.08} ${eaveY} L ${w * 0.08} ${eaveY - roofH * 0.35} L ${w * 0.2} ${topY} L ${w * 0.8} ${topY} L ${w * 0.92} ${eaveY - roofH * 0.35} L ${w * 0.92} ${eaveY} Z`}
+            d={`M ${w * 0.06} ${eaveY} L ${w * 0.06} ${eaveY - roofH * 0.38} L ${w * 0.18} ${topY} L ${w * 0.82} ${topY} L ${w * 0.94} ${eaveY - roofH * 0.38} L ${w * 0.94} ${eaveY} Z`}
             fill="url(#roofGrad)"
           />
-          {/* Dormer window */}
-          <Rect x={w * 0.42} y={topY + 2} width={w * 0.16} height={roofH * 0.25} fill={rc} rx={1} />
-          <Rect x={w * 0.44} y={topY + 3} width={w * 0.12} height={roofH * 0.18} fill="#B3E5FC" rx={1} />
-          <Line x1={w * 0.5} y1={topY + 3} x2={w * 0.5} y2={topY + 3 + roofH * 0.18} stroke="white" strokeWidth={0.8} />
+          {/* Zinc ridge cap */}
+          <Rect x={w * 0.16} y={topY - 1} width={w * 0.68} height={2} fill={rcd} rx={0.5} />
+          {/* Dormer with peaked mini-roof */}
+          <Rect x={dormX} y={dormY + dormH * 0.32} width={dormW} height={dormH * 0.68} fill={rc} rx={1} />
+          <Polygon points={`${dormX - 2},${dormY + dormH * 0.32} ${dormX + dormW / 2},${dormY} ${dormX + dormW + 2},${dormY + dormH * 0.32}`} fill={rcd} />
+          <Rect x={dormX + 2} y={dormY + dormH * 0.36} width={dormW - 4} height={dormH * 0.55} fill="#B3E5FC" rx={1} />
+          <Line x1={dormX + dormW / 2} y1={dormY + dormH * 0.36} x2={dormX + dormW / 2} y2={dormY + dormH * 0.91} stroke="white" strokeWidth={0.8} />
+          <Line x1={dormX + 2} y1={dormY + dormH * 0.63} x2={dormX + dormW - 2} y2={dormY + dormH * 0.63} stroke="white" strokeWidth={0.8} />
+          {/* Eave trim */}
+          <Line x1={w * 0.04} y1={eaveY + 1} x2={w * 0.96} y2={eaveY + 1} stroke={rcd} strokeWidth={2} />
         </G>
       );
     }
@@ -392,7 +405,7 @@ function renderRoof(style: RoofStyle, w: number, roofH: number, baseY: number, r
   }
 }
 
-function renderWalls(style: WallStyle, w: number, wallH: number, baseY: number, wc: string, wcd: string, trim: string) {
+function renderWalls(style: WallStyle, w: number, wallH: number, baseY: number, wc: string, wcd: string, trim: string, countryId?: string) {
   const wallX = w * 0.12;
   const wallW = w * 0.76;
 
@@ -436,6 +449,16 @@ function renderWalls(style: WallStyle, w: number, wallH: number, baseY: number, 
         </G>
       );
     case 'colorStripe':
+      if (countryId === 'br') {
+        return (
+          <G>
+            <Rect x={wallX} y={baseY} width={wallW} height={wallH * 0.5} fill={wc} rx={2} />
+            <Rect x={wallX} y={baseY + wallH * 0.5} width={wallW} height={wallH * 0.5 + 1} fill={wcd} />
+            <Line x1={wallX + 2} y1={baseY + wallH * 0.5} x2={wallX + wallW - 2} y2={baseY + wallH * 0.5} stroke="#FFFFFF" strokeWidth={1.5} opacity={0.5} />
+            <Rect x={wallX} y={baseY} width={wallW} height={wallH} fill="none" stroke={trim} strokeWidth={1} rx={2} opacity={0.35} />
+          </G>
+        );
+      }
       return (
         <G>
           <Rect x={wallX} y={baseY} width={wallW} height={wallH} fill={wc} rx={2} />
@@ -498,6 +521,38 @@ function renderWalls(style: WallStyle, w: number, wallH: number, baseY: number, 
           <Path d={`M ${wallX + wallW * 0.75} ${baseY + 2} L ${wallX + wallW * 0.75} ${baseY + wallH - 2}`} stroke="#FBC02D" strokeWidth={2} />
         </G>
       );
+    case 'oaxaca': {
+      const bandH = wallH / 4;
+      const bandColors = ['#F48FB1', '#FFB74D', '#42A5F5', '#FFF176'];
+      return (
+        <G>
+          {bandColors.map((color, i) => (
+            <Rect
+              key={`oax-${i}`}
+              x={wallX}
+              y={baseY + bandH * i}
+              width={wallW}
+              height={bandH + 1}
+              fill={color}
+              rx={i === 0 ? 2 : 0}
+            />
+          ))}
+          <Rect x={wallX} y={baseY} width={wallW} height={wallH} fill="none" stroke="#FFFFFF" strokeWidth={1.5} rx={2} opacity={0.4} />
+          {[0.25, 0.5, 0.75].map((pct, i) => (
+            <Line
+              key={`oax-div-${i}`}
+              x1={wallX + 3}
+              y1={baseY + wallH * pct}
+              x2={wallX + wallW - 3}
+              y2={baseY + wallH * pct}
+              stroke="#FFFFFF"
+              strokeWidth={1.2}
+              opacity={0.6}
+            />
+          ))}
+        </G>
+      );
+    }
     default:
       return (
         <G>
@@ -542,6 +597,7 @@ function renderRoofTexture(style: RoofStyle, w: number, roofH: number, baseY: nu
 function renderWallTexture(style: WallStyle, w: number, wallH: number, baseY: number, wcd: string) {
   const wallX = w * 0.12;
   const wallW = w * 0.76;
+  if (style === 'oaxaca') return null;
   if (style === 'round') {
     return (
       <G>
@@ -1021,11 +1077,11 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
 
         {/* Landscape decorations (behind house) */}
         {decorations.slice(0, Math.max(1, Math.ceil(decorations.length / 2))).map((d) => (
-          <G key={d}>{renderDecoration(d, w, wallH, baseY)}</G>
+          <G key={d} transform={w < 140 ? `scale(1.15) translate(${w * -0.075} ${wallH * -0.06})` : undefined}>{renderDecoration(d, w, wallH, baseY)}</G>
         ))}
 
         {/* Walls */}
-        {renderWalls(wallStyle, w, wallH, baseY, wallColor, wallDarkColor, trim)}
+        {renderWalls(wallStyle, w, wallH, baseY, wallColor, wallDarkColor, trim, countryId)}
         {renderWallTexture(wallStyle, w, wallH, baseY, wallDarkColor)}
         <Rect x={w * 0.12} y={baseY + 2} width={w * 0.76} height={wallH * 0.16} fill="#FFFFFF" opacity={0.06 + detailTier * 0.01} rx={2} />
 
@@ -1061,7 +1117,7 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
 
         {/* Front foliage/details layer */}
         {decorations.slice(Math.max(1, Math.ceil(decorations.length / 2))).map((d, i) => (
-          <G key={`${d}-front-${i}`} opacity={0.92}>{renderDecoration(d, w, wallH, baseY)}</G>
+          <G key={`${d}-front-${i}`} opacity={0.92} transform={w < 140 ? `scale(1.15) translate(${w * -0.075} ${wallH * -0.06})` : undefined}>{renderDecoration(d, w, wallH, baseY)}</G>
         ))}
 
         {/* Regional material cue */}

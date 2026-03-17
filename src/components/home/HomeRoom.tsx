@@ -13,6 +13,7 @@ import { Text, Caption } from '../ui/Text';
 import { Icon, IconName } from '../ui/Icon';
 import { VisbyCharacter } from '../avatar/VisbyCharacter';
 import { FurnitureVisual } from '../furniture/FurnitureVisual';
+import { getObjectIllustration } from '../room/illustrations';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { DynamicWindow, RoomTintOverlay, ParallaxLayer, useRoomParallax, getTimePhase } from '../room/RoomAtmosphere';
@@ -53,6 +54,25 @@ export interface HomeRoomProps {
 }
 
 const FURNITURE_MAP = new Map(FURNITURE_CATALOG.map(f => [f.id, f]));
+
+const ROOM_SCENE_H = WALL_H + 12 + FLOOR_H; // wall + baseboard + floor
+const WALL_RATIO = WALL_H / ROOM_SCENE_H;
+const FLOOR_THRESHOLD = 40;
+
+/**
+ * Remap y from a wall-only 0-100 coordinate to the full room scene.
+ * Objects with y <= FLOOR_THRESHOLD stay proportionally on the wall.
+ * Objects with y > FLOOR_THRESHOLD are placed on the floor area.
+ */
+function remapY(y: number): number {
+  if (y <= FLOOR_THRESHOLD) {
+    return (y / 100) * WALL_RATIO * 100;
+  }
+  const floorProgress = (y - FLOOR_THRESHOLD) / (100 - FLOOR_THRESHOLD);
+  const floorStart = WALL_RATIO * 100 + 4;
+  const floorEnd = 88;
+  return floorStart + floorProgress * (floorEnd - floorStart);
+}
 
 function darkenHex(hex: string, amount: number): string {
   const match = hex.replace('#', '').match(/.{2}/g);
@@ -168,101 +188,82 @@ export function HomeRoom({
           />
         </View>
 
-        {/* WALL with wainscoting and wallpaper texture */}
-        <View style={[styles.wallWrap, { height: WALL_H }]}>
-          <LinearGradient
-            colors={[lightenHex(effectiveWallColor, 0.03), effectiveWallColor]}
-            style={[StyleSheet.absoluteFill, { bottom: WALL_H * WAINSCOT_RATIO }]}
-          />
-
-          {/* Wallpaper texture: subtle dot motif */}
-          <View style={[styles.wallpaperTexture, { pointerEvents: 'none' }]}>
-            {TEXTURE_DOTS.map((dot, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.textureDot,
-                  { left: dot.left as any, top: dot.top as any, width: dot.size, height: dot.size, borderRadius: dot.size / 2 },
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Corner shadow vignettes */}
-          <View style={[styles.cornerShadowLeft, { pointerEvents: 'none' }]}>
+        {/* Room scene: wall + baseboard + floor wrapped for object overlay */}
+        <View style={styles.roomScene}>
+          {/* WALL with wainscoting and wallpaper texture */}
+          <View style={[styles.wallWrap, { height: WALL_H }]}>
             <LinearGradient
-              colors={[colors.room.cornerShadow, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
+              colors={[lightenHex(effectiveWallColor, 0.03), effectiveWallColor]}
+              style={[StyleSheet.absoluteFill, { bottom: WALL_H * WAINSCOT_RATIO }]}
             />
-          </View>
-          <View style={[styles.cornerShadowRight, { pointerEvents: 'none' }]}>
-            <LinearGradient
-              colors={[colors.room.cornerShadow, 'transparent']}
-              start={{ x: 1, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </View>
 
-          {/* Wainscoting */}
-          <View style={[styles.wainscoting, { height: WALL_H * WAINSCOT_RATIO, backgroundColor: wainscotColor }]}>
-            <View style={styles.wainscotPanels}>
-              {[0, 1, 2, 3, 4].map(i => (
-                <View key={i} style={styles.wainscotPanel}>
-                  <View style={styles.wainscotPanelInner} />
-                </View>
+            {/* Wallpaper texture: subtle dot motif */}
+            <View style={[styles.wallpaperTexture, { pointerEvents: 'none' }]}>
+              {TEXTURE_DOTS.map((dot, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.textureDot,
+                    { left: dot.left as any, top: dot.top as any, width: dot.size, height: dot.size, borderRadius: dot.size / 2 },
+                  ]}
+                />
               ))}
             </View>
-            <View style={[styles.chairRail, { backgroundColor: darkenHex(wainscotColor, 0.08) }]} />
+
+            {/* Corner shadow vignettes */}
+            <View style={[styles.cornerShadowLeft, { pointerEvents: 'none' }]}>
+              <LinearGradient
+                colors={[colors.room.cornerShadow, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </View>
+            <View style={[styles.cornerShadowRight, { pointerEvents: 'none' }]}>
+              <LinearGradient
+                colors={[colors.room.cornerShadow, 'transparent']}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </View>
+
+            {/* Wainscoting */}
+            <View style={[styles.wainscoting, { height: WALL_H * WAINSCOT_RATIO, backgroundColor: wainscotColor }]}>
+              <View style={styles.wainscotPanels}>
+                {[0, 1, 2, 3, 4].map(i => (
+                  <View key={i} style={styles.wainscotPanel}>
+                    <View style={styles.wainscotPanelInner} />
+                  </View>
+                ))}
+              </View>
+              <View style={[styles.chairRail, { backgroundColor: darkenHex(wainscotColor, 0.08) }]} />
+            </View>
+
+            <Caption style={styles.roomLabel}>{roomLabel}</Caption>
+
+            {/* Picture frames with parallax */}
+            <ParallaxLayer depth={-0.5} sway={sway}>
+              <View style={styles.pictureGroup}>
+                <View style={styles.pictureFrame}>
+                  <LinearGradient colors={['#B8D4E3', '#8FB8D0', '#A0C4D8']} style={styles.painting} />
+                </View>
+                <View style={[styles.pictureFrameSmall, { marginLeft: 12 }]}>
+                  <LinearGradient colors={['#E8C8A0', '#D4B088', '#C8A070']} style={styles.paintingSmall} />
+                </View>
+              </View>
+            </ParallaxLayer>
           </View>
 
-          <Caption style={styles.roomLabel}>{roomLabel}</Caption>
+          {/* BASEBOARD MOLDING */}
+          <View style={styles.moldingWrap}>
+            <View style={[styles.moldingTop, { backgroundColor: moldingColor }]} />
+            <View style={[styles.moldingBottom, { backgroundColor: darkenHex(moldingColor, 0.06) }]} />
+            <View style={styles.moldingShadow} />
+          </View>
 
-          {/* Picture frames with parallax */}
-          <ParallaxLayer depth={-0.5} sway={sway}>
-            <View style={styles.pictureGroup}>
-              <View style={styles.pictureFrame}>
-                <LinearGradient colors={['#B8D4E3', '#8FB8D0', '#A0C4D8']} style={styles.painting} />
-              </View>
-              <View style={[styles.pictureFrameSmall, { marginLeft: 12 }]}>
-                <LinearGradient colors={['#E8C8A0', '#D4B088', '#C8A070']} style={styles.paintingSmall} />
-              </View>
-            </View>
-          </ParallaxLayer>
-
-          {/* Default room objects */}
-          {(homeRoom.objects ?? []).map((obj: any) => (
-            <View key={obj.id} style={[styles.objPos, { left: `${obj.x}%` as any, top: `${obj.y}%` as any, pointerEvents: 'none' }]}>
-              <RoomObjectVisual icon={obj.icon as IconName} />
-            </View>
-          ))}
-          {/* Placed furniture */}
-          {placedItems.map((placed) => {
-            const catalogItem = FURNITURE_MAP.get(placed.furnitureId);
-            if (!catalogItem) return null;
-            return (
-              <View key={placed.id} style={[styles.placedPos, { left: `${placed.x}%` as any, top: `${placed.y}%` as any, pointerEvents: 'none' }]}>
-                {catalogItem.interactionType ? (
-                  <FurnitureVisual interactionType={catalogItem.interactionType} icon={catalogItem.icon as IconName} size="small" />
-                ) : (
-                  <RoomObjectVisual icon={catalogItem.icon as IconName} />
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        {/* BASEBOARD MOLDING */}
-        <View style={styles.moldingWrap}>
-          <View style={[styles.moldingTop, { backgroundColor: moldingColor }]} />
-          <View style={[styles.moldingBottom, { backgroundColor: darkenHex(moldingColor, 0.06) }]} />
-          <View style={styles.moldingShadow} />
-        </View>
-
-        {/* FLOOR with staggered planks, knot marks, and decorative rug */}
-        <View style={[styles.floorWrap, { height: FLOOR_H }]}>
+          {/* FLOOR with staggered planks, knot marks, and decorative rug */}
+          <View style={[styles.floorWrap, { height: FLOOR_H }]}>
           {plankColors.map((color, i) => {
             const isStaggered = i % 2 === 1;
             const hasKnot = KNOT_POSITIONS.find(k => k.plank === i);
@@ -348,6 +349,42 @@ export function HomeRoom({
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
+        </View>
+
+          {/* Objects overlay spanning full room scene (wall + baseboard + floor) */}
+          <View style={styles.objectsOverlay} pointerEvents="none">
+            {(homeRoom.objects ?? []).map((obj: any) => {
+              const Illustration = getObjectIllustration(obj.id);
+              const mappedY = remapY(obj.y);
+              const isOnFloor = obj.y > FLOOR_THRESHOLD;
+              return (
+                <View key={obj.id} style={[styles.objPos, { left: `${obj.x}%` as any, top: `${mappedY}%` as any }]}>
+                  {isOnFloor && <View style={styles.objectShadow} />}
+                  {Illustration ? (
+                    <Illustration size={48} />
+                  ) : (
+                    <RoomObjectVisual icon={obj.icon as IconName} />
+                  )}
+                </View>
+              );
+            })}
+            {placedItems.map((placed) => {
+              const catalogItem = FURNITURE_MAP.get(placed.furnitureId);
+              if (!catalogItem) return null;
+              const mappedY = remapY(placed.y);
+              const isOnFloor = placed.y > FLOOR_THRESHOLD;
+              return (
+                <View key={placed.id} style={[styles.placedPos, { left: `${placed.x}%` as any, top: `${mappedY}%` as any }]}>
+                  {isOnFloor && <View style={styles.objectShadow} />}
+                  {catalogItem.interactionType ? (
+                    <FurnitureVisual interactionType={catalogItem.interactionType} icon={catalogItem.icon as IconName} size="small" />
+                  ) : (
+                    <RoomObjectVisual icon={catalogItem.icon as IconName} />
+                  )}
+                </View>
+              );
+            })}
+          </View>
         </View>
       </View>
       <TouchableOpacity style={styles.subtitle} onPress={onTapSubtitle} activeOpacity={0.8}>
@@ -451,6 +488,9 @@ const styles = StyleSheet.create({
     borderRadius: 20, opacity: 0.7,
   },
 
+  // Room scene (wall + baseboard + floor container for object overlay)
+  roomScene: { width: '100%', position: 'relative' },
+
   // Wall
   wallWrap: { width: '100%', position: 'relative' },
   wallpaperTexture: {
@@ -509,13 +549,22 @@ const styles = StyleSheet.create({
       : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 }),
   },
   paintingSmall: { width: '100%', height: '100%', borderRadius: 2 },
+  // Object overlay spans the full room scene
+  objectsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
   objPos: {
     position: 'absolute', alignItems: 'center', justifyContent: 'center',
-    transform: [{ translateX: -24 }, { translateY: -20 }],
+    transform: [{ translateX: -24 }, { translateY: -24 }],
   },
   placedPos: {
     position: 'absolute', alignItems: 'center', justifyContent: 'center',
     transform: [{ translateX: -28 }, { translateY: -24 }],
+  },
+  objectShadow: {
+    position: 'absolute', bottom: -4, width: 32, height: 8,
+    borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.08)',
   },
 
   // Baseboard molding

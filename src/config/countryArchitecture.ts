@@ -4,7 +4,7 @@
  */
 
 export type RoofStyle = 'pagoda' | 'mansard' | 'flat' | 'flatDome' | 'chalet' | 'thatched' | 'tiered' | 'stave' | 'gabled' | 'colonial' | 'stepped' | 'hipped';
-export type WallStyle = 'plain' | 'timber' | 'stone' | 'whitewash' | 'colorStripe' | 'brick' | 'log' | 'adobe' | 'round' | 'ndebele';
+export type WallStyle = 'plain' | 'timber' | 'stone' | 'whitewash' | 'colorStripe' | 'brick' | 'log' | 'adobe' | 'round' | 'ndebele' | 'oaxaca';
 export type DoorStyle = 'rounded' | 'arched' | 'sliding' | 'wooden' | 'horseshoe' | 'dutch' | 'ornate';
 export type WindowStyle = 'square' | 'shuttered' | 'arched' | 'lattice' | 'tall' | 'round' | 'porthole';
 export type DecoElement = 'cherry_blossom' | 'bamboo' | 'lantern' | 'lavender' | 'cactus' | 'olive' | 'palm' | 'tulips' | 'acacia' | 'pine' | 'maple' | 'cedar' | 'sunflower' | 'bougainvillea' | 'vine' | 'hedge' | 'fern' | 'lotus' | 'potted_orange' | 'cypress' | 'rose' | 'protea' | 'papyrus';
@@ -53,7 +53,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
   // ─── EAST ASIAN ───
   jp: {
     roof: 'pagoda', roofColor: '#5C4033', roofDark: '#3B2716',
-    wall: 'plain', wallColor: '#F5F0E1', wallDark: '#E8DFC8',
+    wall: 'plain', wallColor: '#FAF5E8', wallDark: '#EDE5D0',
     door: 'sliding', doorColor: '#8B6F4E',
     accent: '#C0392B', trim: '#D4B896',
     decorations: ['cherry_blossom', 'lantern'],
@@ -72,7 +72,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FAE8D0', wallDark: '#E8D4B8',
     door: 'ornate', doorColor: '#8B0000',
     accent: '#FFD700', trim: '#D4A020',
-    decorations: ['lantern', 'bamboo'],
+    decorations: ['lantern', 'bamboo', 'lotus'],
     windowStyle: 'lattice', pathStyle: 'stone',
   },
   tw: {
@@ -80,7 +80,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF0DB', wallDark: '#EDDCC4',
     door: 'ornate', doorColor: '#8B4513',
     accent: '#C0392B', trim: '#C4A87C',
-    decorations: ['lantern'],
+    decorations: ['lantern', 'bamboo'],
     windowStyle: 'lattice', pathStyle: 'stone',
   },
   vn: {
@@ -94,11 +94,11 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
 
   // ─── FRENCH / BELGIAN ───
   fr: {
-    roof: 'mansard', roofColor: '#708090', roofDark: '#546A7B',
-    wall: 'plain', wallColor: '#FFF8EF', wallDark: '#F0E6D0',
+    roof: 'mansard', roofColor: '#6B7B8D', roofDark: '#4E5E6F',
+    wall: 'plain', wallColor: '#FFFBF5', wallDark: '#F2E9D8',
     door: 'ornate', doorColor: '#1E3A5F',
     accent: '#5D6D7E', trim: '#D6CFC0',
-    decorations: ['lavender'],
+    decorations: ['lavender', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   be: {
@@ -106,7 +106,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'brick', wallColor: '#C87D55', wallDark: '#A86840',
     door: 'wooden', doorColor: '#4A3728',
     accent: '#FDDA0D', trim: '#D4B896',
-    decorations: ['tulips'],
+    decorations: ['tulips', 'hedge'],
     windowStyle: 'tall', pathStyle: 'cobble',
   },
   mc: {
@@ -114,7 +114,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FDECD0', wallDark: '#F0D8B0',
     door: 'ornate', doorColor: '#2C3E50',
     accent: '#CE1126', trim: '#E8D4B8',
-    decorations: ['bougainvillea'],
+    decorations: ['bougainvillea', 'palm'],
     windowStyle: 'tall', pathStyle: 'tile',
   },
 
@@ -124,15 +124,15 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'whitewash', wallColor: '#FFFFFF', wallDark: '#ECF0F1',
     door: 'arched', doorColor: '#1E6FBA',
     accent: '#2E86C1', trim: '#D5D8DC',
-    decorations: ['bougainvillea'],
+    decorations: ['bougainvillea', 'olive'],
     windowStyle: 'round', pathStyle: 'stone',
   },
   it: {
-    roof: 'hipped', roofColor: '#C0724A', roofDark: '#9A5B38',
-    wall: 'stone', wallColor: '#FAE8C8', wallDark: '#E8D4AE',
+    roof: 'hipped', roofColor: '#B8633D', roofDark: '#8E4A2A',
+    wall: 'stone', wallColor: '#FBE8C0', wallDark: '#E6CFA0',
     door: 'arched', doorColor: '#5D4037',
     accent: '#8B6914', trim: '#D4B896',
-    decorations: ['olive', 'vine'],
+    decorations: ['olive', 'vine', 'cypress'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   hr: {
@@ -140,7 +140,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#F0EAD6', wallDark: '#DDD4BD',
     door: 'arched', doorColor: '#1565C0',
     accent: '#FF0000', trim: '#C9BFA4',
-    decorations: ['cypress'],
+    decorations: ['cypress', 'olive'],
     windowStyle: 'shuttered', pathStyle: 'stone',
   },
   me: {
@@ -148,7 +148,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#F2EBD9', wallDark: '#DDD4BD',
     door: 'arched', doorColor: '#5D4037',
     accent: '#C41E3A', trim: '#C9BFA4',
-    decorations: ['olive'],
+    decorations: ['olive', 'cypress'],
     windowStyle: 'arched', pathStyle: 'stone',
   },
   es: {
@@ -156,7 +156,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF5E1', wallDark: '#F0E0C0',
     door: 'arched', doorColor: '#5D4037',
     accent: '#F1BF00', trim: '#E8D4B8',
-    decorations: ['bougainvillea'],
+    decorations: ['bougainvillea', 'olive'],
     windowStyle: 'shuttered', pathStyle: 'tile',
   },
   pt: {
@@ -164,7 +164,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#E8F0FA', wallDark: '#D0DFF0',
     door: 'arched', doorColor: '#1A5276',
     accent: '#006600', trim: '#B0C8E0',
-    decorations: ['vine'],
+    decorations: ['vine', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'tile',
   },
   tr: {
@@ -172,7 +172,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF0DB', wallDark: '#F0E0C0',
     door: 'arched', doorColor: '#5D4037',
     accent: '#E30A17', trim: '#D4B896',
-    decorations: ['tulips'],
+    decorations: ['tulips', 'bougainvillea'],
     windowStyle: 'arched', pathStyle: 'tile',
   },
 
@@ -182,7 +182,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'timber', wallColor: '#FAF0E6', wallDark: '#E8DECE',
     door: 'rounded', doorColor: '#2C3E50',
     accent: '#1E6FBA', trim: '#C4A87C',
-    decorations: ['hedge'],
+    decorations: ['hedge', 'rose'],
     windowStyle: 'tall', pathStyle: 'brick',
   },
   nl: {
@@ -190,7 +190,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'brick', wallColor: '#C06030', wallDark: '#A04820',
     door: 'dutch', doorColor: '#1B5E20',
     accent: '#FF6600', trim: '#D4B896',
-    decorations: ['tulips'],
+    decorations: ['tulips', 'hedge'],
     windowStyle: 'tall', pathStyle: 'brick',
   },
   de: {
@@ -198,17 +198,17 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'timber', wallColor: '#FFF5E1', wallDark: '#F0E0C0',
     door: 'wooden', doorColor: '#4E342E',
     accent: '#000000', trim: '#8D6E63',
-    decorations: ['hedge'],
+    decorations: ['hedge', 'sunflower'],
     windowStyle: 'tall', pathStyle: 'cobble',
   },
 
   // ─── CARIBBEAN / COLONIAL ───
   cu: {
     roof: 'colonial', roofColor: '#B8602A', roofDark: '#8E4820',
-    wall: 'colorStripe', wallColor: '#FFD54F', wallDark: '#FFC107',
+    wall: 'colorStripe', wallColor: '#FFECB3', wallDark: '#FFD54F',
     door: 'arched', doorColor: '#4E342E',
     accent: '#002A8F', trim: '#E8D4B8',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   jm: {
@@ -216,7 +216,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'colorStripe', wallColor: '#4CAF50', wallDark: '#388E3C',
     door: 'wooden', doorColor: '#4E342E',
     accent: '#FFD700', trim: '#A5D6A7',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'sand',
   },
   bb: {
@@ -224,7 +224,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#F8BBD0', wallDark: '#F48FB1',
     door: 'wooden', doorColor: '#4E342E',
     accent: '#00267F', trim: '#F0E6D3',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'sand',
   },
   'do': {
@@ -232,7 +232,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#B3E5FC', wallDark: '#81D4FA',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#002D62', trim: '#E0E0E0',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'sand',
   },
   cw: {
@@ -240,7 +240,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'colorStripe', wallColor: '#64B5F6', wallDark: '#42A5F5',
     door: 'arched', doorColor: '#4E342E',
     accent: '#FFD700', trim: '#E0E0E0',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'tile',
   },
   lc: {
@@ -248,14 +248,14 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'colorStripe', wallColor: '#81C784', wallDark: '#66BB6A',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#6CF0A5', trim: '#C8E6C9',
-    decorations: ['palm'],
+    decorations: ['palm', 'fern'],
     windowStyle: 'shuttered', pathStyle: 'sand',
   },
 
   // ─── LATIN AMERICAN ───
   mx: {
     roof: 'flat', roofColor: '#C0724A', roofDark: '#9A5B38',
-    wall: 'adobe', wallColor: '#FFE0B2', wallDark: '#FFCC80',
+    wall: 'oaxaca', wallColor: '#F48FB1', wallDark: '#FFB74D',
     door: 'arched', doorColor: '#1565C0',
     accent: '#D32F2F', trim: '#FFCC80',
     decorations: ['cactus'],
@@ -263,10 +263,10 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
   },
   br: {
     roof: 'colonial', roofColor: '#B8602A', roofDark: '#8E4820',
-    wall: 'colorStripe', wallColor: '#FFF176', wallDark: '#FFEE58',
+    wall: 'colorStripe', wallColor: '#FFD54F', wallDark: '#2E7D32',
     door: 'arched', doorColor: '#1B5E20',
     accent: '#2E7D32', trim: '#FFE082',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'tile',
   },
   pe: {
@@ -274,7 +274,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'adobe', wallColor: '#EFCFA0', wallDark: '#D4AD70',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#D32F2F', trim: '#BCAAA4',
-    decorations: ['cactus'],
+    decorations: ['cactus', 'fern'],
     windowStyle: 'square', pathStyle: 'stone',
   },
   ec: {
@@ -282,7 +282,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF9C4', wallDark: '#FFF59D',
     door: 'arched', doorColor: '#5D4037',
     accent: '#FFD100', trim: '#FFE082',
-    decorations: ['fern'],
+    decorations: ['fern', 'palm'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   ar: {
@@ -290,7 +290,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#E8EAF6', wallDark: '#C5CAE9',
     door: 'arched', doorColor: '#37474F',
     accent: '#75AADB', trim: '#D5D8DC',
-    decorations: ['vine'],
+    decorations: ['vine', 'hedge'],
     windowStyle: 'shuttered', pathStyle: 'tile',
   },
   cl: {
@@ -298,7 +298,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'colorStripe', wallColor: '#EF9A9A', wallDark: '#E57373',
     door: 'wooden', doorColor: '#4E342E',
     accent: '#0039A6', trim: '#E0E0E0',
-    decorations: ['vine'],
+    decorations: ['vine', 'fern'],
     windowStyle: 'square', pathStyle: 'cobble',
   },
   uy: {
@@ -306,7 +306,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#E3F2FD', wallDark: '#BBDEFB',
     door: 'arched', doorColor: '#37474F',
     accent: '#0038A8', trim: '#D5D8DC',
-    decorations: ['palm'],
+    decorations: ['palm', 'vine'],
     windowStyle: 'shuttered', pathStyle: 'tile',
   },
   co: {
@@ -314,17 +314,17 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'colorStripe', wallColor: '#FFF176', wallDark: '#FFD54F',
     door: 'arched', doorColor: '#1565C0',
     accent: '#FCD116', trim: '#FFE082',
-    decorations: ['palm'],
+    decorations: ['palm', 'bougainvillea'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
 
   // ─── MIDDLE EASTERN / NORTH AFRICAN ───
   ma: {
-    roof: 'flat', roofColor: '#D4956A', roofDark: '#B8784E',
-    wall: 'adobe', wallColor: '#FDDCB5', wallDark: '#F0C89A',
+    roof: 'flat', roofColor: '#C07850', roofDark: '#A06038',
+    wall: 'adobe', wallColor: '#F0C8A0', wallDark: '#DDB080',
     door: 'horseshoe', doorColor: '#1565C0',
     accent: '#1E88E5', trim: '#E8D4B8',
-    decorations: ['potted_orange'],
+    decorations: ['potted_orange', 'bougainvillea'],
     windowStyle: 'arched', pathStyle: 'tile',
   },
   lb: {
@@ -332,7 +332,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#FFF5E1', wallDark: '#F0E0C0',
     door: 'arched', doorColor: '#5D4037',
     accent: '#C41E3A', trim: '#D4B896',
-    decorations: ['cedar'],
+    decorations: ['cedar', 'olive'],
     windowStyle: 'arched', pathStyle: 'stone',
   },
   ae: {
@@ -340,7 +340,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'adobe', wallColor: '#FFF0DB', wallDark: '#F0DCC0',
     door: 'arched', doorColor: '#5D4037',
     accent: '#00732F', trim: '#E8D4B8',
-    decorations: ['palm'],
+    decorations: ['palm', 'potted_orange'],
     windowStyle: 'arched', pathStyle: 'sand',
   },
   tn: {
@@ -348,15 +348,15 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'whitewash', wallColor: '#FFFFFF', wallDark: '#F0F0F0',
     door: 'horseshoe', doorColor: '#1E88E5',
     accent: '#E70013', trim: '#D5D8DC',
-    decorations: ['potted_orange'],
+    decorations: ['potted_orange', 'bougainvillea'],
     windowStyle: 'arched', pathStyle: 'tile',
   },
   in: {
     roof: 'flatDome', roofColor: '#FF9933', roofDark: '#E07A20',
-    wall: 'plain', wallColor: '#FFF5E1', wallDark: '#F5E6C8',
-    door: 'arched', doorColor: '#8B4513',
+    wall: 'plain', wallColor: '#FFF8E8', wallDark: '#F5E6C8',
+    door: 'ornate', doorColor: '#8B4513',
     accent: '#FF9933', trim: '#E8D4B8',
-    decorations: ['lotus'],
+    decorations: ['lotus', 'bougainvillea'],
     windowStyle: 'arched', pathStyle: 'tile',
   },
 
@@ -366,7 +366,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'round', wallColor: '#D4956A', wallDark: '#B87A50',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#D32F2F', trim: '#C4A87C',
-    decorations: ['acacia'],
+    decorations: ['acacia', 'fern'],
     windowStyle: 'square', pathStyle: 'sand',
   },
   tz: {
@@ -374,7 +374,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'round', wallColor: '#D49A6A', wallDark: '#B88050',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#00A3DD', trim: '#C4A87C',
-    decorations: ['acacia'],
+    decorations: ['acacia', 'fern'],
     windowStyle: 'square', pathStyle: 'sand',
   },
   mg: {
@@ -382,7 +382,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#E8D4B8', wallDark: '#D4BEA0',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#FC3F32', trim: '#C4A87C',
-    decorations: ['palm'],
+    decorations: ['palm', 'fern'],
     windowStyle: 'square', pathStyle: 'sand',
   },
   eg: {
@@ -410,7 +410,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'log', wallColor: '#6D4C3D', wallDark: '#5A3D30',
     door: 'wooden', doorColor: '#3E2723',
     accent: '#1565C0', trim: '#8D6E63',
-    decorations: ['pine'],
+    decorations: ['pine', 'fern'],
     windowStyle: 'square', pathStyle: 'wood',
   },
   se: {
@@ -418,7 +418,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#C62828', wallDark: '#B71C1C',
     door: 'wooden', doorColor: '#FAFAFA',
     accent: '#FFEB3B', trim: '#FAFAFA',
-    decorations: ['pine'],
+    decorations: ['pine', 'hedge'],
     windowStyle: 'square', pathStyle: 'wood',
   },
   fi: {
@@ -426,7 +426,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'log', wallColor: '#8D6E63', wallDark: '#6D4C41',
     door: 'wooden', doorColor: '#3E2723',
     accent: '#003580', trim: '#BCAAA4',
-    decorations: ['pine'],
+    decorations: ['pine', 'fern'],
     windowStyle: 'square', pathStyle: 'wood',
   },
   is: {
@@ -434,7 +434,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#E0E0E0', wallDark: '#BDBDBD',
     door: 'wooden', doorColor: '#3E2723',
     accent: '#02529C', trim: '#9E9E9E',
-    decorations: ['fern'],
+    decorations: ['fern', 'pine'],
     windowStyle: 'square', pathStyle: 'stone',
   },
 
@@ -444,7 +444,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FAFAFA', wallDark: '#E0E0E0',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#FF0000', trim: '#8D6E63',
-    decorations: ['pine'],
+    decorations: ['pine', 'hedge'],
     windowStyle: 'shuttered', pathStyle: 'stone',
   },
   at: {
@@ -452,7 +452,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF8E1', wallDark: '#FFF0C0',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#ED2939', trim: '#8D6E63',
-    decorations: ['pine'],
+    decorations: ['pine', 'hedge'],
     windowStyle: 'shuttered', pathStyle: 'stone',
   },
   sk: {
@@ -460,7 +460,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'log', wallColor: '#A1887F', wallDark: '#8D6E63',
     door: 'wooden', doorColor: '#4E342E',
     accent: '#0B4EA2', trim: '#8D6E63',
-    decorations: ['pine'],
+    decorations: ['pine', 'fern'],
     windowStyle: 'square', pathStyle: 'stone',
   },
   si: {
@@ -468,7 +468,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#F5F5F5', wallDark: '#E0E0E0',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#005DA4', trim: '#8D6E63',
-    decorations: ['fern'],
+    decorations: ['fern', 'pine'],
     windowStyle: 'square', pathStyle: 'stone',
   },
 
@@ -478,7 +478,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'brick', wallColor: '#D7A868', wallDark: '#C29050',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#DC143C', trim: '#D4B896',
-    decorations: ['sunflower'],
+    decorations: ['sunflower', 'hedge'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   hu: {
@@ -486,7 +486,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'whitewash', wallColor: '#FAFAFA', wallDark: '#EEEEEE',
     door: 'wooden', doorColor: '#1B5E20',
     accent: '#477050', trim: '#BCAAA4',
-    decorations: ['sunflower'],
+    decorations: ['sunflower', 'vine'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   bg: {
@@ -494,7 +494,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'whitewash', wallColor: '#FAFAFA', wallDark: '#EEEEEE',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#00966E', trim: '#A1887F',
-    decorations: ['rose'],
+    decorations: ['rose', 'vine'],
     windowStyle: 'shuttered', pathStyle: 'cobble',
   },
   ro: {
@@ -502,7 +502,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'log', wallColor: '#8D6E63', wallDark: '#6D4C41',
     door: 'wooden', doorColor: '#3E2723',
     accent: '#002B7F', trim: '#A1887F',
-    decorations: ['pine'],
+    decorations: ['pine', 'fern'],
     windowStyle: 'square', pathStyle: 'wood',
   },
   ba: {
@@ -510,7 +510,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#F5F0E1', wallDark: '#E8DFC8',
     door: 'arched', doorColor: '#5D4037',
     accent: '#002395', trim: '#C4A87C',
-    decorations: ['vine'],
+    decorations: ['vine', 'olive'],
     windowStyle: 'arched', pathStyle: 'stone',
   },
   cz: {
@@ -518,7 +518,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF8E1', wallDark: '#FFF0C0',
     door: 'ornate', doorColor: '#4E342E',
     accent: '#D7141A', trim: '#D4B896',
-    decorations: ['hedge'],
+    decorations: ['hedge', 'rose'],
     windowStyle: 'tall', pathStyle: 'cobble',
   },
   al: {
@@ -526,7 +526,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#F5F5F5', wallDark: '#E0E0E0',
     door: 'arched', doorColor: '#5D4037',
     accent: '#E41E20', trim: '#BDBDBD',
-    decorations: ['olive'],
+    decorations: ['olive', 'cypress'],
     windowStyle: 'arched', pathStyle: 'stone',
   },
 
@@ -536,7 +536,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF8E1', wallDark: '#FFF0C0',
     door: 'ornate', doorColor: '#5D4037',
     accent: '#FFD700', trim: '#D4A020',
-    decorations: ['lotus'],
+    decorations: ['lotus', 'bamboo'],
     windowStyle: 'lattice', pathStyle: 'stone',
   },
   id: {
@@ -554,7 +554,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FAFAFA', wallDark: '#EEEEEE',
     door: 'rounded', doorColor: '#C62828',
     accent: '#3C3B6E', trim: '#E0E0E0',
-    decorations: ['hedge'],
+    decorations: ['hedge', 'maple'],
     windowStyle: 'shuttered', pathStyle: 'brick',
   },
   ca: {
@@ -562,7 +562,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'log', wallColor: '#8D6E63', wallDark: '#6D4C41',
     door: 'wooden', doorColor: '#3E2723',
     accent: '#E63946', trim: '#BCAAA4',
-    decorations: ['maple'],
+    decorations: ['maple', 'pine'],
     windowStyle: 'square', pathStyle: 'wood',
   },
 
@@ -572,7 +572,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#FFF8E1', wallDark: '#FFF0C0',
     door: 'wooden', doorColor: '#5D4037',
     accent: '#00008B', trim: '#E0E0E0',
-    decorations: ['fern'],
+    decorations: ['fern', 'palm'],
     windowStyle: 'square', pathStyle: 'sand',
   },
   nz: {
@@ -580,7 +580,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'plain', wallColor: '#EFEBE9', wallDark: '#D7CCC8',
     door: 'wooden', doorColor: '#4E342E',
     accent: '#00247D', trim: '#BCAAA4',
-    decorations: ['fern'],
+    decorations: ['fern', 'hedge'],
     windowStyle: 'square', pathStyle: 'stone',
   },
 
@@ -590,7 +590,7 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     wall: 'stone', wallColor: '#FFF8EF', wallDark: '#F0E6D0',
     door: 'ornate', doorColor: '#5D4037',
     accent: '#FFE000', trim: '#D4B896',
-    decorations: ['hedge'],
+    decorations: ['hedge', 'cypress'],
     windowStyle: 'arched', pathStyle: 'tile',
   },
 };
@@ -677,13 +677,13 @@ export const REGION_STYLE_PROFILES: Record<CountryRegion, RegionStyleProfile> = 
 
 const REGION_SIGNATURE_LEVEL: Record<CountryRegion, SignatureLevel> = {
   east_asia: 3,
-  europe: 2,
+  europe: 3,
   mediterranean: 3,
   caribbean_latin: 3,
   mena: 3,
-  africa: 2,
-  north_america: 2,
-  oceania: 2,
+  africa: 3,
+  north_america: 3,
+  oceania: 3,
   special: 3,
 };
 

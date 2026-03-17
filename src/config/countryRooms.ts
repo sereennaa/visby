@@ -15,6 +15,8 @@ export interface RoomObject {
 export interface HouseRoom {
   id: string;
   name: string;
+  /** English name shown on the home screen when the local name isn't English */
+  englishName?: string;
   icon: string;
   wallColor: string;
   floorColor: string;
@@ -81,7 +83,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
   fr: {
     rooms: [
       {
-        id: 'fr_living', name: 'Le Salon', icon: 'home',
+        id: 'fr_living', name: 'Le Salon', englishName: 'Living Room', icon: 'home',
         wallColor: '#FFF8F0', floorColor: '#C8A882',
         roomImageUrl: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800',
         objects: [
@@ -93,7 +95,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'fr_kitchen', name: 'La Cuisine', icon: 'food',
+        id: 'fr_kitchen', name: 'La Cuisine', englishName: 'Kitchen', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#D4C0A0',
         objects: [
           { id: 'fr_k1', icon: 'food', label: 'Croissants', x: 30, y: 40, interactive: true, learnTitle: 'Croissants', learnContent: 'A perfect croissant has 27 flaky layers! French bakers wake up at 3am to make them fresh. The word "croissant" means "crescent" because of its moon shape.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800' },
@@ -104,7 +106,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'fr_garden', name: 'Le Jardin', icon: 'nature',
+        id: 'fr_garden', name: 'Le Jardin', englishName: 'Garden', icon: 'nature',
         wallColor: '#F0FFF8', floorColor: '#90C890',
         objects: [
           { id: 'fr_g1', icon: 'nature', label: 'Sunflowers', x: 20, y: 25, interactive: true, learnTitle: 'Provence', learnContent: 'The south of France (Provence) is famous for lavender and sunflower fields. Van Gogh painted his famous Sunflowers while living there!', auraReward: 8 },
@@ -115,7 +117,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'fr_study', name: "La Bibliothèque", icon: 'book',
+        id: 'fr_study', name: "La Bibliothèque", englishName: 'Library', icon: 'book',
         wallColor: '#F5F0FF', floorColor: '#B8A888',
         objects: [
           { id: 'fr_s1', icon: 'history', label: 'Declaration', x: 25, y: 20, interactive: true, learnTitle: 'French Revolution', learnContent: 'The French Revolution in 1789 changed the world! The motto "Liberté, Égalité, Fraternité" (Freedom, Equality, Brotherhood) became France\'s guiding principle.', auraReward: 8 },
@@ -130,7 +132,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
   mx: {
     rooms: [
       {
-        id: 'mx_living', name: 'Sala', icon: 'home',
+        id: 'mx_living', name: 'Sala', englishName: 'Living Room', icon: 'home',
         wallColor: '#FFF5E8', floorColor: '#D4A870',
         roomImageUrl: 'https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=800',
         objects: [
@@ -142,7 +144,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'mx_kitchen', name: 'Cocina', icon: 'food',
+        id: 'mx_kitchen', name: 'Cocina', englishName: 'Kitchen', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#C8A870',
         objects: [
           { id: 'mx_k1', icon: 'food', label: 'Tacos', x: 35, y: 45, interactive: true, learnTitle: 'Tacos', learnContent: 'Tacos have been eaten in Mexico for thousands of years! There are over 20 types: al pastor (pork), carnitas, barbacoa, and many more. Each region has its specialty.', auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c6a14769?w=800' },
@@ -153,7 +155,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'mx_courtyard', name: 'Patio', icon: 'nature',
+        id: 'mx_courtyard', name: 'Patio', englishName: 'Courtyard', icon: 'nature',
         wallColor: '#FFF0F0', floorColor: '#D4A068',
         objects: [
           { id: 'mx_c1', icon: 'nature', label: 'Bougainvillea', x: 15, y: 20 },
@@ -164,7 +166,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'mx_study', name: 'Estudio', icon: 'book',
+        id: 'mx_study', name: 'Estudio', englishName: 'Study', icon: 'book',
         wallColor: '#F8F0FF', floorColor: '#C0A080',
         objects: [
           { id: 'mx_s1', icon: 'landmark', label: 'Pyramid Model', x: 25, y: 25, interactive: true, learnTitle: 'Ancient Pyramids', learnContent: 'Chichén Itzá\'s pyramid has 365 steps — one for each day of the year! During the spring equinox, shadows create a serpent slithering down the stairs.', auraReward: 8 },
@@ -179,7 +181,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
   it: {
     rooms: [
       {
-        id: 'it_living', name: 'Soggiorno', icon: 'landmark',
+        id: 'it_living', name: 'Soggiorno', englishName: 'Living Room', icon: 'landmark',
         wallColor: '#FFFFF5', floorColor: '#D0C0A0',
         roomImageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800',
         objects: [
@@ -191,7 +193,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'it_kitchen', name: 'Cucina', icon: 'food',
+        id: 'it_kitchen', name: 'Cucina', englishName: 'Kitchen', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#C8B090',
         objects: [
           { id: 'it_k1', icon: 'food', label: 'Pizza', x: 35, y: 40, interactive: true, learnTitle: 'Pizza', learnContent: "The original pizza Margherita was made in Naples in 1889 for Queen Margherita. The red tomato, white mozzarella, and green basil represent Italy's flag colors!", auraReward: 8, imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800' },
@@ -202,7 +204,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'it_terrace', name: 'Terrazza', icon: 'beach',
+        id: 'it_terrace', name: 'Terrazza', englishName: 'Terrace', icon: 'beach',
         wallColor: '#F0F8FF', floorColor: '#C8B8A8',
         objects: [
           { id: 'it_t1', icon: 'beach', label: 'Sunset View', x: 50, y: 15 },
@@ -213,7 +215,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'it_study', name: 'Studio', icon: 'culture',
+        id: 'it_study', name: 'Studio', englishName: 'Study', icon: 'culture',
         wallColor: '#FFF5F0', floorColor: '#B8A890',
         objects: [
           { id: 'it_s1', icon: 'culture', label: 'Da Vinci Notebook', x: 25, y: 25, interactive: true, learnTitle: 'Leonardo da Vinci', learnContent: 'Da Vinci was a painter, inventor, scientist, and musician. He wrote backwards (mirror writing) in his notebooks — you need a mirror to read them!', auraReward: 8 },
@@ -277,7 +279,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
   br: {
     rooms: [
       {
-        id: 'br_living', name: 'Sala de Estar', icon: 'home',
+        id: 'br_living', name: 'Sala de Estar', englishName: 'Living Room', icon: 'home',
         wallColor: '#FFFFF5', floorColor: '#C8B090',
         objects: [
           { id: 'br_l1', icon: 'star', label: 'Football', x: 20, y: 30, interactive: true, learnTitle: 'Brazilian Football', learnContent: "Brazil has won the World Cup 5 times — more than any other country! Pelé scored over 1,000 goals in his career. Football is practically a religion in Brazil.", auraReward: 8 },
@@ -288,7 +290,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'br_kitchen', name: 'Cozinha', icon: 'food',
+        id: 'br_kitchen', name: 'Cozinha', englishName: 'Kitchen', icon: 'food',
         wallColor: '#FFFFF0', floorColor: '#C0A880',
         objects: [
           { id: 'br_k1', icon: 'food', label: 'Açaí Bowl', x: 35, y: 40, interactive: true, learnTitle: 'Açaí', learnContent: "Açaí berries grow on palm trees in the Amazon. Brazilians have eaten them for centuries! They're packed with antioxidants and served frozen in bowls with granola and banana.", auraReward: 8 },
@@ -299,7 +301,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'br_outdoor', name: 'Quintal', icon: 'nature',
+        id: 'br_outdoor', name: 'Quintal', englishName: 'Backyard', icon: 'nature',
         wallColor: '#F0FFF0', floorColor: '#88B878',
         objects: [
           { id: 'br_o1', icon: 'nature', label: 'Palm Tree', x: 15, y: 20 },
@@ -310,7 +312,7 @@ export const COUNTRY_HOUSES: Record<string, CountryHouseData> = {
         ],
       },
       {
-        id: 'br_study', name: 'Escritório', icon: 'book',
+        id: 'br_study', name: 'Escritório', englishName: 'Study', icon: 'book',
         wallColor: '#F5F0FF', floorColor: '#B0A090',
         objects: [
           { id: 'br_s1', icon: 'nature', label: 'Amazon Map', x: 25, y: 25, interactive: true, learnTitle: 'Amazon Rainforest', learnContent: "The Amazon is so big it would be the 9th largest country in the world! It produces 20% of Earth's oxygen. The Amazon River carries more water than the next 7 largest rivers combined.", auraReward: 8 },

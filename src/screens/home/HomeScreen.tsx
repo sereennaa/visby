@@ -490,7 +490,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         homeRoom={homeRoom}
         roomCustomization={roomCustomization ?? null}
         homeCountryId={homeCountryId}
-        roomLabel={homeCountry ? `${homeRoom.name} · ${homeCountry.name}` : homeRoom.name}
+        roomLabel={homeCountry ? `${homeRoom.englishName || homeRoom.name} · ${homeCountry.name}` : homeRoom.name}
         windowSky={atmosphere.windowSky}
         effectiveWallColor={roomCustomization?.wallColor || homeRoom.wallColor}
         effectiveFloorColor={roomCustomization?.floorColor || homeRoom.floorColor}
