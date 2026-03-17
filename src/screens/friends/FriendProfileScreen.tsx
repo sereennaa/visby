@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,10 +11,12 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { LevelBadge, AuraBadge } from '../../components/ui/Badge';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
+import type { VisbyAppearance } from '../../types';
 import { useStore } from '../../store/useStore';
 import { COUNTRIES } from '../../config/constants';
 import { RootStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { fetchFriendVisbyAppearance } from '../../services/socialSync';
 
 type FriendProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'FriendProfile'>;
@@ -23,8 +25,25 @@ type FriendProfileScreenProps = {
 
 export const FriendProfileScreen: React.FC<FriendProfileScreenProps> = ({ navigation, route }) => {
   const { friendUserId } = route.params;
-  const { friends, removeFriend } = useStore();
+  const friends = useStore(s => s.friends);
+  const removeFriend = useStore(s => s.removeFriend);
   const friend = friends.find((f) => f.userId === friendUserId);
+
+  const [friendVisby, setFriendVisby] = useState<{ appearance: VisbyAppearance | null; equipped: any } | null>(null);
+
+  useEffect(() => {
+    fetchFriendVisbyAppearance(friendUserId).then(data => {
+      if (data) setFriendVisby(data);
+    }).catch(() => {});
+  }, [friendUserId]);
+
+  const friendAppearance: VisbyAppearance = friendVisby?.appearance ?? {
+    skinTone: colors.visby.skin.light,
+    hairColor: colors.visby.hair.brown,
+    hairStyle: 'default',
+    eyeColor: '#4A90D9',
+    eyeShape: 'round',
+  };
 
   if (!friend) {
     return (
@@ -69,14 +88,8 @@ export const FriendProfileScreen: React.FC<FriendProfileScreenProps> = ({ naviga
           <Card variant="gradient" gradientColors={[colors.primary.wisteriaFaded, colors.base.cream]} style={styles.profileCard}>
             <View style={styles.avatarWrap}>
               <VisbyCharacter
-                appearance={{
-                  skinTone: colors.visby.skin.light,
-                  hairColor: colors.visby.hair.brown,
-                  hairStyle: 'default',
-                  eyeColor: '#4A90D9',
-                  eyeShape: 'round',
-                }}
-                equipped={{}}
+                appearance={friendAppearance}
+                equipped={friendVisby?.equipped ?? {}}
                 mood="happy"
                 size={100}
                 animated

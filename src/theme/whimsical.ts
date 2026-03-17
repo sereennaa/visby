@@ -18,7 +18,7 @@ export const whimsicalCopy = {
   comingSoon: "We're brewing something special here.",
   noActivityYet: "Your adventure is just beginning. Go explore!",
   noStamps: "No stamps yet — visit a place and collect your first.",
-  noBites: "No bites yet — log something yummy.",
+  noBites: "Your Taste Atlas is empty — discover a dish to begin.",
 };
 
 /** Use for hero titles and magical moments - ensures Baloo2 ExtraBold */

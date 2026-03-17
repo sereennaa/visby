@@ -26,7 +26,9 @@ type AddFriendScreenProps = {
 export const AddFriendScreen: React.FC<AddFriendScreenProps> = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const { user, friends, sendFriendRequest } = useStore();
+  const user = useStore(s => s.user);
+  const friends = useStore(s => s.friends);
+  const sendFriendRequest = useStore(s => s.sendFriendRequest);
 
   const handleSend = () => {
     setMessage(null);

@@ -8,12 +8,14 @@ import { useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore, getGrowthStage } from '../store/useStore';
 import { buildWidgetPayload, writeWidgetData } from '../services/widgetData';
+import { getDueCount } from '../services/spacedRepetition';
 
 export function useWidgetSync(): void {
   const slice = useStore(
     useShallow((s) => ({
     visby: s.visby,
     user: s.user,
+    flashcardSRData: s.flashcardSRData,
     dailyMission: s.dailyMission,
     dailyMissionDateKey: s.dailyMissionDateKey,
     dailyMissionCompletedAt: s.dailyMissionCompletedAt,
@@ -54,6 +56,8 @@ export function useWidgetSync(): void {
         completed: adventure.completed,
         rewardAura: adventure.rewardAura,
       },
+      streakDays: slice.user?.currentStreak ?? 0,
+      dueFlashcardsCount: getDueCount(slice.flashcardSRData ?? []),
     });
 
     const json = JSON.stringify(payload);
@@ -66,6 +70,8 @@ export function useWidgetSync(): void {
     slice.visby?.currentMood,
     slice.visby?.needs,
     slice.user?.totalCarePoints,
+    slice.user?.currentStreak,
+    slice.flashcardSRData,
     slice.dailyMission?.label,
     slice.dailyMission?.target,
     slice.dailyMissionDateKey,

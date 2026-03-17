@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -21,7 +22,7 @@ interface StampCardProps {
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-export const StampCard: React.FC<StampCardProps> = ({
+export const StampCard: React.FC<StampCardProps> = React.memo(({
   stamp,
   onPress,
   size = 'md',
@@ -64,6 +65,8 @@ export const StampCard: React.FC<StampCardProps> = ({
       onPressOut={handlePressOut}
       activeOpacity={0.9}
       style={[animatedStyle]}
+      accessibilityRole="button"
+      accessibilityLabel={stamp.locationName || `${stamp.city}, ${stamp.country}`}
     >
       <View style={[styles.card, { width: currentSize.width, height: currentSize.height }]}>
         {/* Stamp border design */}
@@ -76,7 +79,13 @@ export const StampCard: React.FC<StampCardProps> = ({
           >
             {/* Photo or icon display */}
             {stamp.photoUrl ? (
-              <Image source={{ uri: stamp.photoUrl }} style={styles.photo} />
+              <Image
+                source={{ uri: stamp.photoUrl }}
+                style={styles.photo}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+              />
             ) : (
               <View style={[styles.iconContainer, { backgroundColor: typeInfo.color + '30' }]}>
                 <Icon 
@@ -97,15 +106,23 @@ export const StampCard: React.FC<StampCardProps> = ({
                 {stamp.locationName}
               </Text>
               <Caption numberOfLines={1} style={styles.cityCountry}>
-                {stamp.city}, {stamp.country}
+                {stamp.source === 'learning' ? stamp.country : `${stamp.city}, ${stamp.country}`}
               </Caption>
               <Caption style={styles.date}>{formatDate(stamp.collectedAt)}</Caption>
             </View>
 
-            {/* Fast travel indicator */}
-            {stamp.isFastTravel && (
+            {/* Source indicator */}
+            {stamp.source === 'learning' ? (
+              <View style={styles.sourceBadge}>
+                <Icon name="book" size={12} color={colors.primary.wisteria} />
+              </View>
+            ) : stamp.isFastTravel ? (
               <View style={styles.fastTravelBadge}>
                 <Icon name="airplane" size={12} color={colors.calm.ocean} />
+              </View>
+            ) : (
+              <View style={styles.sourceBadge}>
+                <Icon name="location" size={12} color={colors.calm.ocean} />
               </View>
             )}
           </LinearGradient>
@@ -125,10 +142,10 @@ export const StampCard: React.FC<StampCardProps> = ({
       </View>
     </AnimatedTouchable>
   );
-};
+}) as React.FC<StampCardProps>;
 
 // Mini stamp for lists
-export const StampMini: React.FC<{ type: StampType; count: number; onPress?: () => void }> = ({
+export const StampMini: React.FC<{ type: StampType; count: number; onPress?: () => void }> = React.memo(({
   type,
   count,
   onPress,
@@ -144,7 +161,7 @@ export const StampMini: React.FC<{ type: StampType; count: number; onPress?: () 
       <Text variant="caption" color={colors.text.muted}>{count}</Text>
     </TouchableOpacity>
   );
-};
+}) as React.FC<{ type: StampType; count: number; onPress?: () => void }>;
 
 const styles = StyleSheet.create({
   card: {
@@ -169,7 +186,6 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '55%',
-    resizeMode: 'cover',
   },
   iconContainer: {
     width: '100%',
@@ -194,6 +210,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   fastTravelBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: colors.base.cream,
+    borderRadius: spacing.radius.round,
+    padding: 4,
+  },
+  sourceBadge: {
     position: 'absolute',
     top: 8,
     right: 8,

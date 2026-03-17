@@ -41,4 +41,17 @@ export interface WidgetPayload {
   alertLine: string | null;
   /** ISO timestamp when this payload was written */
   updatedAt: string;
+
+  /** Visby's current expression for widget face: happy, sad, sleepy, hungry, excited, sick, lonely */
+  visbyExpression: string;
+  /** Current streak days */
+  streakDays: number;
+  /** True if streak > 0 (show flame icon) */
+  streakFlame: boolean;
+  /** Daily rotating cultural fact for kids */
+  dailyFact: string;
+  /** One-tap action: label and deep link */
+  quickAction: { label: string; deepLink: string };
+  /** Alert when a need is critically low, e.g. "Visby hasn't eaten in 2 days" */
+  needsAlert: string | null;
 }

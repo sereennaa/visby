@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { hapticService } from '../services/haptics';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -25,6 +26,10 @@ export const useToastStore = create<ToastState>((set, get) => ({
     const id = `toast-${++idCounter}-${Date.now()}`;
     const item: ToastItem = { id, message, type, createdAt: Date.now() };
     set((s) => ({ toasts: [...s.toasts, item] }));
+
+    if (type === 'success') hapticService.success();
+    else if (type === 'error') hapticService.error();
+    else hapticService.tap();
 
     setTimeout(() => {
       get().dismissToast(id);

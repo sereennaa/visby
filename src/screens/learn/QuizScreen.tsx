@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming, FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,26 +17,94 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
-import { RootStackParamList, SkillProgress } from '../../types';
-import { getQuizByCategory, getRandomQuiz, QuizQuestion } from '../../config/learningContent';
+import { RootStackParamList, SkillProgress, Stamp } from '../../types';
+import { getAdaptiveQuiz, getAdaptiveMixedQuiz, getRandomQuiz, getDiscoveryQuizQuestions, QuizQuestion } from '../../config/learningContent';
+import { getNodeById } from '../../config/learningPaths';
+import { COUNTRIES } from '../../config/constants';
 
 type QuizScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Quiz'>;
   route: RouteProp<RootStackParamList, 'Quiz'>;
 };
 
+const ComboBadge: React.FC<{ comboStreak: number }> = ({ comboStreak }) => {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.08, { duration: 400 }),
+        withTiming(1, { duration: 400 })
+      ),
+      -1,
+      true
+    );
+  }, [comboStreak]);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const label = comboStreak >= 6 ? 'FIRE! x2.5 Combo!' : comboStreak >= 4 ? 'x2 Combo!' : 'x1.5 Combo!';
+  return (
+    <Animated.View style={[styles.comboBadge, animatedStyle]}>
+      <Text variant="caption" style={styles.comboBadgeText}>{label}</Text>
+    </Animated.View>
+  );
+};
+
 export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => {
   const category = route.params?.category;
-  const { addAura, checkAndAwardBadges, studyWithVisby, addSkillPoints } = useStore();
+  const pathNodeId = route.params?.pathNodeId;
+  const addAura = useStore(s => s.addAura);
+  const checkAndAwardBadges = useStore(s => s.checkAndAwardBadges);
+  const studyWithVisby = useStore(s => s.studyWithVisby);
+  const addSkillPoints = useStore(s => s.addSkillPoints);
+  const completePathNode = useStore(s => s.completePathNode);
+  const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
+  const recordCategoryAnswer = useStore(s => s.recordCategoryAnswer);
+  const checkQuests = useStore(s => s.checkQuests);
+  const autoAwardStamp = useStore(s => s.autoAwardStamp);
+  const getCategoryAccuracy = useStore(s => s.getCategoryAccuracy);
+  const categoryAccuracy = useStore(s => s.categoryAccuracy);
+  const bites = useStore(s => s.bites);
   const [refreshKey, setRefreshKey] = useState(0);
-  const questions = useMemo<QuizQuestion[]>(
-    () => category ? getQuizByCategory(category, 10) : getRandomQuiz(10),
-    [category, refreshKey],
-  );
+  const questions = useMemo<QuizQuestion[]>(() => {
+    const count = 10;
+    const discoveredIds = bites.filter(b => b.worldDishId).map(b => b.worldDishId!);
+    const discoveryQs = discoveredIds.length > 0 ? getDiscoveryQuizQuestions(discoveredIds) : [];
+
+    let baseQuestions: QuizQuestion[];
+    if (category) {
+      const accuracy = getCategoryAccuracy(category);
+      baseQuestions = getAdaptiveQuiz(category, count, accuracy);
+      if (category === 'food' && discoveryQs.length > 0) {
+        const slots = Math.min(3, discoveryQs.length);
+        const shuffled = [...discoveryQs].sort(() => Math.random() - 0.5);
+        baseQuestions = [...baseQuestions.slice(0, count - slots), ...shuffled.slice(0, slots)];
+      }
+    } else {
+      const accs: Record<string, number> = {};
+      Object.keys(categoryAccuracy).forEach(cat => {
+        accs[cat] = getCategoryAccuracy(cat);
+      });
+      if (Object.keys(accs).length > 0) {
+        baseQuestions = getAdaptiveMixedQuiz(count, accs);
+      } else {
+        baseQuestions = getRandomQuiz(count);
+      }
+      if (discoveryQs.length > 0) {
+        const slots = Math.min(2, discoveryQs.length);
+        const shuffled = [...discoveryQs].sort(() => Math.random() - 0.5);
+        baseQuestions = [...baseQuestions.slice(0, count - slots), ...shuffled.slice(0, slots)];
+      }
+    }
+    return baseQuestions.sort(() => Math.random() - 0.5);
+  }, [category, refreshKey, bites]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [comboStreak, setComboStreak] = useState(0);
+  const [totalAuraEarned, setTotalAuraEarned] = useState(0);
+  const [comboBroken, setComboBroken] = useState(false);
+  const [lastCorrectAura, setLastCorrectAura] = useState<number | null>(null);
+  const [earnedStamp, setEarnedStamp] = useState<Stamp | null>(null);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -72,15 +141,29 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
 
     setSelectedOption(index);
     const isCorrect = index === question.correct;
+
+    const answerCategory = category ?? question.category;
+    if (answerCategory) recordCategoryAnswer(answerCategory, isCorrect);
+
     if (isCorrect) {
       setScore(prev => prev + 1);
+      const nextCombo = comboStreak + 1;
+      setComboStreak(nextCombo);
+      const mult = nextCombo >= 6 ? 2.5 : nextCombo >= 4 ? 2.0 : nextCombo >= 2 ? 1.5 : 1.0;
+      const boostedAura = Math.round(20 * mult);
+      setTotalAuraEarned(prev => prev + boostedAura);
+      addAura(boostedAura);
+      setLastCorrectAura(boostedAura);
+      setTimeout(() => setLastCorrectAura(null), 800);
+    } else {
+      setComboStreak(0);
+      setComboBroken(true);
+      setTimeout(() => setComboBroken(false), 1200);
     }
 
     advanceTimerRef.current = setTimeout(() => {
       if (isLastQuestion) {
         const finalScore = isCorrect ? score + 1 : score;
-        const auraEarned = finalScore * 20;
-        addAura(auraEarned);
         checkAndAwardBadges({ quizPerfect: finalScore === questions.length });
         studyWithVisby();
         const categorySkillMap: Record<string, keyof SkillProgress> = {
@@ -90,9 +173,24 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
           history: 'history',
           etiquette: 'culture',
           food: 'cooking',
+          sustainability: 'sustainability',
         };
         const skill = categorySkillMap[category || 'geography'] || 'geography';
         addSkillPoints(skill, Math.round(finalScore * 2));
+        if (pathNodeId) completePathNode(pathNodeId);
+        checkDailyMissionCompletion('complete_lesson', 1);
+        if (category === 'sustainability') {
+          checkDailyMissionCompletion('complete_sustainability_lesson', 1);
+          checkQuests();
+        }
+        const pathNode = pathNodeId ? getNodeById(pathNodeId) : null;
+        if (pathNode?.countryId && pathNode?.skillCategory) {
+          const countryDef = COUNTRIES.find(c => c.id === pathNode.countryId);
+          if (countryDef) {
+            const stamp = autoAwardStamp(countryDef.name, countryDef.countryCode, pathNode.skillCategory);
+            if (stamp) setEarnedStamp(stamp);
+          }
+        }
         setIsFinished(true);
       } else {
         setCurrentQuestion(prev => prev + 1);
@@ -120,7 +218,6 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
   };
 
   if (isFinished) {
-    const auraEarned = score * 20;
     const percentage = Math.round((score / questions.length) * 100);
 
     return (
@@ -146,11 +243,20 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
                 <View style={styles.scoreDivider} />
                 <View style={styles.auraRow}>
                   <Icon name="sparkles" size={24} color={colors.reward.gold} />
-                  <Text variant="h2" color={colors.reward.amber}>+{auraEarned}</Text>
+                  <Text variant="h2" color={colors.reward.amber}>+{totalAuraEarned}</Text>
                   <Text variant="body" color={colors.text.secondary}>Aura earned</Text>
                 </View>
                 <ProgressBar progress={percentage} variant="aura" height={10} />
                 <Caption style={styles.percentageText}>{percentage}% correct</Caption>
+                {earnedStamp && (
+                  <View style={styles.stampEarnedRow}>
+                    <Icon name="stamp" size={22} color={colors.primary.wisteria} />
+                    <View style={{ marginLeft: 8 }}>
+                      <Text variant="body" color={colors.primary.wisteriaDark}>New stamp earned!</Text>
+                      <Caption color={colors.text.secondary}>{earnedStamp.locationName}</Caption>
+                    </View>
+                  </View>
+                )}
               </View>
             </Card>
             <Button
@@ -160,6 +266,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
                 setSelectedOption(null);
                 setScore(0);
                 setIsFinished(false);
+                setComboStreak(0);
+                setTotalAuraEarned(0);
+                setComboBroken(false);
+                setLastCorrectAura(null);
                 setRefreshKey(k => k + 1);
               }}
               variant="primary"
@@ -182,6 +292,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
   return (
     <LinearGradient colors={[colors.primary.wisteriaFaded, colors.base.cream]} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
@@ -193,10 +304,29 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
 
         {/* Progress */}
         <View style={styles.progressContainer}>
-          <ProgressBar progress={progress} variant="level" height={8} />
-          <Caption style={styles.progressLabel}>
-            Question {currentQuestion + 1} of {questions.length}
-          </Caption>
+          <View style={styles.progressRow}>
+            <View style={styles.progressBar}>
+              <ProgressBar progress={progress} variant="level" height={8} />
+            </View>
+            {comboStreak >= 2 && (
+              <ComboBadge comboStreak={comboStreak} />
+            )}
+          </View>
+          <View style={styles.progressLabels}>
+            <Caption style={styles.progressLabel}>
+              Question {currentQuestion + 1} of {questions.length}
+            </Caption>
+            {comboBroken && (
+              <Animated.Text entering={FadeIn} exiting={FadeOut} style={styles.comboBrokenText}>
+                Combo broken!
+              </Animated.Text>
+            )}
+            {lastCorrectAura !== null && (
+              <Animated.Text entering={FadeIn} exiting={FadeOut} style={styles.auraPopText}>
+                +{lastCorrectAura}
+              </Animated.Text>
+            )}
+          </View>
         </View>
 
         {/* Question */}
@@ -243,6 +373,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
             ))}
           </View>
         </View>
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -275,9 +406,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     marginBottom: spacing.lg,
   },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  progressBar: {
+    flex: 1,
+    minWidth: 0,
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    minHeight: 24,
+  },
   progressLabel: {
     textAlign: 'center',
-    marginTop: spacing.xs,
+  },
+  comboBadge: {
+    backgroundColor: colors.reward.amber,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.radius.md,
+  },
+  comboBadgeText: {
+    color: colors.text.inverse,
+    fontFamily: 'Nunito-Bold',
+    fontSize: 12,
+  },
+  comboBrokenText: {
+    color: colors.status.error,
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 13,
+  },
+  auraPopText: {
+    color: colors.reward.gold,
+    fontFamily: 'Nunito-Bold',
+    fontSize: 16,
   },
   questionContainer: {
     flex: 1,
@@ -361,6 +529,14 @@ const styles = StyleSheet.create({
   },
   percentageText: {
     marginTop: spacing.sm,
+  },
+  stampEarnedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(184, 165, 224, 0.2)',
   },
 });
 

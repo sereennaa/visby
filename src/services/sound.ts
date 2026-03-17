@@ -8,6 +8,11 @@ import { useStore } from '../store/useStore';
 const SOUNDS = {
   success: 'https://assets.mixkit.co/active_storage/sfx/2560-success.mp3',
   tap: 'https://assets.mixkit.co/active_storage/sfx/2570-hit.mp3',
+  celebration: 'https://assets.mixkit.co/active_storage/sfx/2020-game-bonus.mp3',
+  pop: 'https://assets.mixkit.co/active_storage/sfx/2357-pop.mp3',
+  chime: 'https://assets.mixkit.co/active_storage/sfx/2309-notification.mp3',
+  whoosh: 'https://assets.mixkit.co/active_storage/sfx/2514-whoosh.mp3',
+  streak: 'https://assets.mixkit.co/active_storage/sfx/2019-achievement.mp3',
 } as const;
 
 let audioModeSet = false;
@@ -28,22 +33,36 @@ async function playUrl(uri: string): Promise<void> {
   try {
     await ensureAudioMode();
     const player = createAudioPlayer(uri);
-    player.play();
+    if (!player) return;
+    const playPromise = player.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {});
+    }
     setTimeout(() => {
-      try {
-        player.release();
-      } catch {
-        // ignore
-      }
+      try { player.release(); } catch { /* noop */ }
     }, 2000);
-  } catch {
-    // ignore (network, unsupported, etc.)
+  } catch (err) {
+    if (__DEV__) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('NotSupportedError') && !msg.includes('no supported source')) {
+        console.log('[sound] playUrl failed:', msg);
+      }
+    }
   }
 }
 
 function isSoundEnabled(): boolean {
   const settings = useStore.getState().settings as { soundEffects?: boolean };
   return settings.soundEffects !== false;
+}
+
+function playStub(name: string, fallbackUrl?: string): void {
+  if (__DEV__) {
+    console.log(`[sound] ${name}`);
+  }
+  if (fallbackUrl && isSoundEnabled()) {
+    playUrl(fallbackUrl);
+  }
 }
 
 export const soundService = {
@@ -53,15 +72,47 @@ export const soundService = {
   },
   playStampCollected() {
     if (!isSoundEnabled()) return;
-    playUrl(SOUNDS.success);
+    playUrl(SOUNDS.pop);
   },
   playMissionComplete() {
     if (!isSoundEnabled()) return;
-    playUrl(SOUNDS.success);
+    playUrl(SOUNDS.celebration);
   },
   playLevelUp() {
     if (!isSoundEnabled()) return;
-    playUrl(SOUNDS.success);
+    playUrl(SOUNDS.celebration);
+  },
+  playBadgeEarned() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.pop);
+  },
+  playChapterUnlocked() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.chime);
+  },
+  playStreakMilestone() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.streak);
+  },
+  playChime() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.chime);
+  },
+  playWhoosh() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.whoosh);
+  },
+  playVisbyHappy() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.chime);
+  },
+  playVisbyHungry() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.tap);
+  },
+  playVisbySleepy() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.tap);
   },
   playTap() {
     if (!isSoundEnabled()) return;

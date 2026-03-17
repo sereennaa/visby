@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Share, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,7 +23,7 @@ type StampDetailScreenProps = {
 
 export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation, route }) => {
   const { stampId } = route.params;
-  const { stamps } = useStore();
+  const stamps = useStore(s => s.stamps);
   const stamp = stamps.find((s) => s.id === stampId);
 
   if (!stamp) {
@@ -62,14 +64,23 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
           showsVerticalScrollIndicator={false}
         >
           {/* Back Button */}
+          <Animated.View entering={FadeInDown.duration(400).delay(50)}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={28} color={colors.text.primary} />
           </TouchableOpacity>
+          </Animated.View>
 
           {/* Photo Area */}
+          <Animated.View entering={FadeInDown.duration(400).delay(100)}>
           <View style={styles.photoContainer}>
             {stamp.photoUrl ? (
-              <Image source={{ uri: stamp.photoUrl }} style={styles.photo} resizeMode="cover" />
+              <Image
+                source={{ uri: stamp.photoUrl }}
+                style={styles.photo}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+              />
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Icon name="camera" size={48} color={colors.text.muted} />
@@ -151,6 +162,7 @@ export const StampDetailScreen: React.FC<StampDetailScreenProps> = ({ navigation
             size="lg"
             icon={<Icon name="share" size={20} color={colors.primary.wisteriaDark} />}
           />
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -263,3 +275,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 });
+
+export default StampDetailScreen;

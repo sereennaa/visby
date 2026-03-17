@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -56,13 +57,14 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
-            <Icon name="chevronLeft" size={28} color={colors.text.primary} />
-          </TouchableOpacity>
+          <Animated.View entering={FadeInDown.duration(400).delay(50)}>
+            {/* Back Button */}
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
+              <Icon name="chevronLeft" size={28} color={colors.text.primary} />
+            </TouchableOpacity>
 
-          {/* Header Card */}
-          <Card style={styles.headerCard}>
+            {/* Header Card */}
+            <Card style={styles.headerCard}>
             <View style={[styles.iconCircle, { backgroundColor: typeInfo.color + '25', borderWidth: 2, borderColor: typeInfo.color + '40' }]}>
               <Icon name={typeInfo.icon} size={40} color={typeInfo.color} />
             </View>
@@ -76,7 +78,9 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
               <Text variant="label" color={typeInfo.color}>{typeInfo.label}</Text>
             </View>
           </Card>
+          </Animated.View>
 
+          <Animated.View entering={FadeInDown.duration(400).delay(100)}>
           {/* Description */}
           <Card style={styles.descriptionCard}>
             <View style={styles.sectionTitleRow}>
@@ -109,14 +113,15 @@ export const LocationDetailScreen: React.FC<LocationDetailScreenProps> = ({ navi
           {/* Spacer before CTA */}
           <View style={styles.ctaSpacer} />
 
-          {/* Add to passport CTA */}
+          {/* Log a visit CTA */}
           <Button
-            title="Add to passport"
+            title="Log your visit"
             onPress={() => navigation.navigate('CollectStamp', { locationId: location.id })}
             variant="primary"
             size="lg"
             icon={<Icon name="stamp" size={20} color={colors.text.inverse} />}
           />
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -219,3 +224,5 @@ const styles = StyleSheet.create({
     height: spacing.xl,
   },
 });
+
+export default LocationDetailScreen;

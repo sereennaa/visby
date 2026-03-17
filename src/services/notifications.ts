@@ -1,12 +1,12 @@
 /**
- * Local notifications: streak reminder and "Visby misses you".
- * Respects settings.notifications; schedules/cancels when settings or app state change.
- * On web we avoid loading expo-notifications so the push token listener is never registered.
+ * Context-aware local notifications.
+ * Schedules up to 2 per day: one at user's reminder time (context-aware copy), one at 10AM (soft "Visby misses you").
+ * Respects settings.notifications; on web we avoid loading expo-notifications.
  */
 import { Platform } from 'react-native';
 
-const STREAK_REMINDER_ID = 'visby-streak-reminder';
-const VISBY_MISSES_ID = 'visby-misses-you';
+const REMINDER_ID = 'visby-reminder';
+const MORNING_ID = 'visby-morning';
 
 const Notifications = Platform.OS === 'web' ? null : require('expo-notifications');
 
@@ -18,6 +18,52 @@ if (Notifications) {
       shouldSetBadge: false,
     }),
   });
+}
+
+export interface NotificationContext {
+  streakDays?: number;
+  visbyMood?: string;
+  dueFlashcards?: number;
+  nextChapterTitle?: string;
+  activeEventName?: string;
+  activeEventEndDate?: string;
+  /** User's chosen reminder time 'HH:mm', default '19:00' */
+  reminderTime?: string;
+  /** If false, cancels all notifications */
+  notificationsEnabled?: boolean;
+}
+
+const MOODS_NEEDING_ATTENTION = ['hungry', 'lonely', 'sick'];
+
+function getReminderMessage(ctx: NotificationContext): string {
+  if ((ctx.streakDays ?? 0) > 0) {
+    return `Your ${ctx.streakDays}-day streak is on the line! Quick check-in?`;
+  }
+  if (ctx.visbyMood && MOODS_NEEDING_ATTENTION.includes(ctx.visbyMood)) {
+    return `Visby is feeling ${ctx.visbyMood}... come say hi!`;
+  }
+  if ((ctx.dueFlashcards ?? 0) > 0) {
+    return `You have ${ctx.dueFlashcards} flashcards ready to review`;
+  }
+  if (ctx.nextChapterTitle) {
+    return `You're close to unlocking '${ctx.nextChapterTitle}'!`;
+  }
+  if (ctx.activeEventName) {
+    return `${ctx.activeEventName} is happening — bonus Aura!`;
+  }
+  return 'Visby misses you! Come explore the world together';
+}
+
+function getMorningMessage(): string {
+  return 'Visby misses you! Come explore the world together';
+}
+
+function parseReminderTime(reminderTime: string): { hour: number; minute: number } {
+  const match = reminderTime.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return { hour: 19, minute: 0 };
+  const hour = Math.min(23, Math.max(0, parseInt(match[1], 10)));
+  const minute = Math.min(59, Math.max(0, parseInt(match[2], 10)));
+  return { hour, minute };
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -33,61 +79,58 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
-export async function cancelAllScheduled(): Promise<void> {
+export async function cancelAllNotifications(): Promise<void> {
   if (Platform.OS === 'web' || !Notifications) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
-export async function scheduleStreakReminder(streakDays: number): Promise<void> {
-  if (Platform.OS === 'web' || !Notifications) return;
-  await Notifications.cancelScheduledNotificationAsync(STREAK_REMINDER_ID);
-  const body = streakDays > 0
-    ? `Don't lose your ${streakDays}-day streak! Check in with Visby today.`
-    : 'Check in with Visby today and start a streak!';
-  await Notifications.scheduleNotificationAsync({
-    identifier: STREAK_REMINDER_ID,
-    content: {
-      title: 'Visby',
-      body,
-      sound: true,
-    },
-    trigger: {
-      hour: 19,
-      minute: 0,
-      repeats: true,
-    },
-  });
-}
+/** @deprecated Use cancelAllNotifications */
+export const cancelAllScheduled = cancelAllNotifications;
 
-export async function scheduleVisbyMissesYou(): Promise<void> {
+export async function setupNotifications(context: NotificationContext): Promise<void> {
   if (Platform.OS === 'web' || !Notifications) return;
-  await Notifications.cancelScheduledNotificationAsync(VISBY_MISSES_ID);
-  await Notifications.scheduleNotificationAsync({
-    identifier: VISBY_MISSES_ID,
-    content: {
-      title: 'Visby misses you!',
-      body: 'Come play and explore the world together.',
-      sound: true,
-    },
-    trigger: {
-      hour: 10,
-      minute: 0,
-      repeats: true,
-    },
-  });
-}
-
-export async function setupNotifications(
-  enabled: boolean,
-  currentStreak: number
-): Promise<void> {
-  if (Platform.OS === 'web' || !Notifications) return;
-  if (!enabled) {
-    await cancelAllScheduled();
+  if (context.notificationsEnabled === false) {
+    await cancelAllNotifications();
     return;
   }
   const granted = await requestNotificationPermission();
   if (!granted) return;
-  await scheduleStreakReminder(currentStreak);
-  await scheduleVisbyMissesYou();
+
+  const reminderTime = context.reminderTime ?? '19:00';
+  const { hour: reminderHour, minute: reminderMinute } = parseReminderTime(reminderTime);
+  const isSameAsMorning = reminderHour === 10 && reminderMinute === 0;
+
+  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID);
+  await Notifications.cancelScheduledNotificationAsync(MORNING_ID);
+
+  const reminderBody = getReminderMessage(context);
+  await Notifications.scheduleNotificationAsync({
+    identifier: REMINDER_ID,
+    content: {
+      title: 'Visby',
+      body: reminderBody,
+      sound: true,
+    },
+    trigger: {
+      hour: reminderHour,
+      minute: reminderMinute,
+      repeats: true,
+    },
+  });
+
+  if (!isSameAsMorning) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: MORNING_ID,
+      content: {
+        title: 'Visby',
+        body: getMorningMessage(),
+        sound: true,
+      },
+      trigger: {
+        hour: 10,
+        minute: 0,
+        repeats: true,
+      },
+    });
+  }
 }

@@ -8,6 +8,7 @@ import {
   Pressable,
   Linking,
 } from 'react-native';
+import Animated, { ZoomIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +21,7 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { setupNotifications } from '../../services/notifications';
+import { getActiveEvent } from '../../config/seasonalEvents';
 import { RootStackParamList } from '../../types';
 
 type SettingsScreenProps = {
@@ -27,10 +29,35 @@ type SettingsScreenProps = {
 };
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
-  const { user, logout, settings, updateSettings } = useStore();
+  const { user, logout, settings, updateSettings, blockedUserIds, unblockUser } = useStore();
   const [infoModal, setInfoModal] = useState<{ title: string; message: string } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [comingSoonBanner, setComingSoonBanner] = useState(false);
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  const requirePin = (action: () => void) => {
+    if (!settings.parentPin) {
+      action();
+      return;
+    }
+    setPendingAction(() => action);
+    setPinInput('');
+    setPinError('');
+    setShowPinPrompt(true);
+  };
+
+  const verifyPin = () => {
+    if (pinInput === settings.parentPin) {
+      setShowPinPrompt(false);
+      pendingAction?.();
+      setPendingAction(null);
+    } else {
+      setPinError('Incorrect PIN');
+    }
+  };
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -53,7 +80,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
     onPress: () => void,
     options?: { danger?: boolean; toggle?: boolean; toggleValue?: boolean },
   ) => (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
+    <TouchableOpacity
+      style={styles.row}
+      onPress={onPress}
+      activeOpacity={0.6}
+      accessibilityRole={options?.toggle ? 'switch' : 'button'}
+      accessibilityLabel={options?.toggle ? `Toggle ${label.toLowerCase()}` : label}
+      accessibilityState={options?.toggle ? { checked: options.toggleValue } : undefined}
+    >
       <View style={[styles.rowIconContainer, options?.danger && styles.rowIconDanger]}>
         <Icon
           name={icon}
@@ -93,6 +127,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
@@ -101,7 +136,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <Heading level={1}>Settings</Heading>
           <View style={styles.headerSpacer} />
         </View>
+        </Animated.View>
 
+        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1 }}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -114,12 +151,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                 <Text variant="bodySmall" color={colors.primary.wisteriaDark} style={styles.bannerText}>
                   Password change will be available in a future update.
                 </Text>
-                <TouchableOpacity onPress={() => setComingSoonBanner(false)}>
+                <TouchableOpacity onPress={() => setComingSoonBanner(false)} accessibilityRole="button" accessibilityLabel="Close">
                   <Icon name="close" size={16} color={colors.text.secondary} />
                 </TouchableOpacity>
               </View>
             </Card>
           )}
+
+          {/* Our commitment */}
+          <Card style={styles.commitmentCard}>
+            <View style={styles.commitmentRow}>
+              <Icon name="nature" size={20} color={colors.calm.ocean} />
+              <Text variant="bodySmall" color={colors.text.secondary} style={styles.commitmentText}>
+                10% of all subscription and purchase revenue goes to sustainability (tree planting, ocean cleanup, and environmental partners).
+              </Text>
+            </View>
+          </Card>
 
           {/* Account */}
           <Text variant="h3" color={colors.text.secondary} style={styles.sectionLabel}>
@@ -139,7 +186,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             {renderRow('notification', 'Notifications', async () => {
               const next = !((settings as { notifications?: boolean }).notifications ?? true);
               updateSettings({ notifications: next });
-              await setupNotifications(next, user?.currentStreak ?? 0);
+              const activeEvent = getActiveEvent();
+              const nextChapter = useStore.getState().getNextChapterToShow?.();
+              const dueFlashcards = useStore.getState().getDueFlashcards?.() ?? [];
+              await setupNotifications({
+                notificationsEnabled: next,
+                reminderTime: (settings as { reminderTime?: string }).reminderTime ?? '19:00',
+                streakDays: user?.currentStreak ?? 0,
+                visbyMood: useStore.getState().getVisbyMood?.(),
+                dueFlashcards: dueFlashcards.length,
+                nextChapterTitle: nextChapter?.title,
+                activeEventName: activeEvent?.name,
+                activeEventEndDate: activeEvent?.endDate,
+              });
             }, {
               toggle: true,
               toggleValue: (settings as { notifications?: boolean }).notifications ?? true,
@@ -179,6 +238,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                       (settings as { sessionTimerMinutes?: number }).sessionTimerMinutes === mins && styles.sessionTimerBtnActive,
                     ]}
                     onPress={() => updateSettings({ sessionTimerMinutes: mins })}
+                    accessibilityRole="button"
+                    accessibilityLabel={mins === 0 ? 'Session timer off' : `Session timer ${mins} minutes`}
+                    accessibilityState={{ selected: (settings as { sessionTimerMinutes?: number }).sessionTimerMinutes === mins }}
                   >
                     <Text variant="bodySmall" style={(settings as { sessionTimerMinutes?: number }).sessionTimerMinutes === mins ? styles.sessionTimerBtnTextActive : styles.sessionTimerBtnText}>
                       {mins === 0 ? 'Off' : `${mins}m`}
@@ -205,6 +267,76 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               toggleValue: (settings as { ambientSound?: boolean }).ambientSound ?? false,
             })}
             <Caption style={styles.settingHint}>Calm background in home and country rooms</Caption>
+          </Card>
+
+          {/* Safety & Social */}
+          <Text variant="h3" color={colors.text.secondary} style={styles.sectionLabel}>
+            Safety & Social
+          </Text>
+          <Card style={styles.sectionCard}>
+            <View style={styles.chatModeRow}>
+              <View style={styles.rowIconContainer}>
+                <Icon name="chat" size={20} color={colors.primary.wisteriaDark} />
+              </View>
+              <Text variant="body" style={styles.rowLabel}>Chat mode</Text>
+              <View style={styles.chatModeOptions}>
+                {(['friends_only', 'safe_chat_only', 'off'] as const).map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[
+                      styles.sessionTimerBtn,
+                      (settings as any).chatMode === mode && styles.sessionTimerBtnActive,
+                    ]}
+                    onPress={() => requirePin(() => updateSettings({ chatMode: mode }))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Chat mode: ${mode.replace(/_/g, ' ')}`}
+                  >
+                    <Text variant="bodySmall" style={(settings as any).chatMode === mode ? styles.sessionTimerBtnTextActive : styles.sessionTimerBtnText}>
+                      {mode === 'friends_only' ? 'Friends' : mode === 'safe_chat_only' ? 'Phrases' : 'Off'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <Caption style={styles.settingHint}>
+              {(settings as any).chatMode === 'friends_only' && 'Only friends can chat with each other in rooms.'}
+              {(settings as any).chatMode === 'safe_chat_only' && 'Only pre-approved phrases. No free typing.'}
+              {(settings as any).chatMode === 'off' && 'All room chat is disabled.'}
+            </Caption>
+            <View style={styles.separator} />
+            {renderRow('lock', `Parent PIN ${settings.parentPin ? '(set)' : '(not set)'}`, () => {
+              if (settings.parentPin) {
+                requirePin(() => {
+                  setInfoModal({
+                    title: 'Reset Parent PIN',
+                    message: 'PIN verified. Tap OK to clear it, then set a new one.',
+                  });
+                  updateSettings({ parentPin: '' });
+                });
+              } else {
+                setPinInput('');
+                setPinError('');
+                setShowPinPrompt(true);
+                setPendingAction(() => () => {
+                  if (pinInput.length === 4 && /^\d{4}$/.test(pinInput)) {
+                    updateSettings({ parentPin: pinInput });
+                    setInfoModal({ title: 'PIN Set', message: 'Parent PIN has been set. Social settings now require this PIN to change.' });
+                  }
+                });
+              }
+            })}
+            <Caption style={styles.settingHint}>Protects social settings from being changed by kids.</Caption>
+            {blockedUserIds.length > 0 && (
+              <>
+                <View style={styles.separator} />
+                {renderRow('close', `Blocked users (${blockedUserIds.length})`, () => {
+                  setInfoModal({
+                    title: 'Blocked Users',
+                    message: `You have ${blockedUserIds.length} blocked user(s). Blocked users cannot chat with you or appear in your rooms.\n\nTo unblock, visit the Friends screen.`,
+                  });
+                })}
+              </>
+            )}
           </Card>
 
           {/* Parent */}
@@ -249,24 +381,83 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             {renderRow('logout', 'Log Out', handleLogout, { danger: true })}
           </Card>
         </ScrollView>
+        </Animated.View>
 
         {/* Info Modal */}
-        <Modal visible={!!infoModal} transparent animationType="fade">
+        <Modal visible={!!infoModal} transparent animationType="none">
           <Pressable style={styles.overlay} onPress={() => setInfoModal(null)}>
-            <Pressable style={styles.modalCard}>
+            <Animated.View entering={ZoomIn.duration(300).springify()}>
+              <Pressable style={styles.modalCard}>
               <Text variant="h2" style={styles.modalTitle}>{infoModal?.title}</Text>
               <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
                 {infoModal?.message}
               </Text>
               <Button title="OK" onPress={() => setInfoModal(null)} variant="primary" size="md" fullWidth />
             </Pressable>
+            </Animated.View>
+          </Pressable>
+        </Modal>
+
+        {/* Parent PIN Modal */}
+        <Modal visible={showPinPrompt} transparent animationType="none">
+          <Pressable style={styles.overlay} onPress={() => { setShowPinPrompt(false); setPendingAction(null); }}>
+            <Animated.View entering={ZoomIn.duration(300).springify()}>
+              <Pressable style={styles.modalCard}>
+                <Text variant="h2" style={styles.modalTitle}>
+                  {settings.parentPin ? 'Enter Parent PIN' : 'Set a 4-Digit PIN'}
+                </Text>
+                <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
+                  {settings.parentPin
+                    ? 'Enter your 4-digit parent PIN to change safety settings.'
+                    : 'Choose a 4-digit PIN that only you (the parent) know. This protects chat and social settings.'}
+                </Text>
+                <View style={styles.pinInputRow}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <View key={i} style={[styles.pinDot, pinInput.length > i && styles.pinDotFilled]} />
+                  ))}
+                </View>
+                <View style={styles.pinPad}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, 'del'].map((key, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[styles.pinKey, key === null && styles.pinKeyEmpty]}
+                      onPress={() => {
+                        if (key === null) return;
+                        if (key === 'del') { setPinInput(p => p.slice(0, -1)); setPinError(''); return; }
+                        if (pinInput.length < 4) {
+                          const next = pinInput + key;
+                          setPinInput(next);
+                          if (next.length === 4 && !settings.parentPin) {
+                            setTimeout(() => {
+                              updateSettings({ parentPin: next });
+                              setShowPinPrompt(false);
+                              setPendingAction(null);
+                              setInfoModal({ title: 'PIN Set', message: 'Parent PIN is now active. Social settings require this PIN to change.' });
+                            }, 200);
+                          }
+                        }
+                      }}
+                      disabled={key === null}
+                      activeOpacity={0.6}
+                    >
+                      <Text style={styles.pinKeyText}>{key === 'del' ? '⌫' : key !== null ? String(key) : ''}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {pinError ? <Text variant="bodySmall" color={colors.status.error} style={{ textAlign: 'center', marginTop: 8 }}>{pinError}</Text> : null}
+                {settings.parentPin && pinInput.length === 4 && (
+                  <Button title="Confirm" onPress={verifyPin} variant="primary" size="md" fullWidth style={{ marginTop: spacing.sm }} />
+                )}
+              </Pressable>
+            </Animated.View>
           </Pressable>
         </Modal>
 
         {/* Logout Confirmation Modal */}
-        <Modal visible={showLogoutConfirm} transparent animationType="fade">
+        <Modal visible={showLogoutConfirm} transparent animationType="none">
           <Pressable style={styles.overlay} onPress={() => setShowLogoutConfirm(false)}>
-            <Pressable style={styles.modalCard}>
+            <Animated.View entering={ZoomIn.duration(300).springify()}>
+              <Pressable style={styles.modalCard}>
               <Text variant="h2" style={styles.modalTitle}>Log Out</Text>
               <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
                 Are you sure you want to log out?
@@ -288,6 +479,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                 />
               </View>
             </Pressable>
+            </Animated.View>
           </Pressable>
         </Modal>
       </SafeAreaView>
@@ -300,6 +492,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeArea: {
+    flex: 1,
+  },
+  commitmentCard: {
+    marginBottom: spacing.lg,
+  },
+  commitmentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  commitmentText: {
     flex: 1,
   },
   header: {
@@ -472,6 +675,56 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     marginLeft: spacing.lg + 36 + spacing.md,
     color: colors.text.muted,
+  },
+  chatModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  chatModeOptions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pinInputRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: spacing.md,
+  },
+  pinDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.text.light,
+  },
+  pinDotFilled: {
+    backgroundColor: colors.primary.wisteria,
+    borderColor: colors.primary.wisteria,
+  },
+  pinPad: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  pinKey: {
+    width: 64,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.base.parchment,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinKeyEmpty: {
+    backgroundColor: 'transparent',
+  },
+  pinKeyText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.text.primary,
   },
 });
 

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +22,7 @@ import { authService } from '../../services/auth';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { LIMITS } from '../../config/constants';
+import { isUsernameAllowed } from '../../config/safetyFilters';
 
 type SignUpScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SignUp'>;
@@ -38,7 +40,8 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   }>({});
   const [formError, setFormError] = useState('');
 
-  const { setUser, setVisby } = useStore();
+  const setUser = useStore(s => s.setUser);
+  const setVisby = useStore(s => s.setVisby);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -46,6 +49,10 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     else if (username.length < 3) newErrors.username = 'Username must be at least 3 characters';
     else if (username.length > LIMITS.MAX_USERNAME_LENGTH) newErrors.username = `Username must be ${LIMITS.MAX_USERNAME_LENGTH} characters or less`;
     else if (!/^[a-zA-Z0-9_]+$/.test(username)) newErrors.username = 'Letters, numbers, and underscores only';
+    else {
+      const nameCheck = isUsernameAllowed(username);
+      if (!nameCheck.allowed) newErrors.username = nameCheck.reason!;
+    }
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Please enter a valid email';
     if (!password) newErrors.password = 'Password is required';
@@ -66,7 +73,12 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       if (visby) setVisby(visby);
       navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
     } catch (error: any) {
-      setFormError(error.message || 'Something went wrong. Please try again.');
+      const msg = error.message || '';
+      if (msg.toLowerCase().includes('rate limit') || error.status === 429) {
+        setFormError('Server is busy. Please wait a minute and try again.');
+      } else {
+        setFormError(msg || 'Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -93,14 +105,15 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
               <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
 
-            <View style={styles.header}>
+            <Animated.View entering={FadeInDown.duration(400).delay(50)} style={styles.header}>
               <View style={styles.iconCircle}>
                 <Icon name="rocket" size={30} color={colors.text.primary} />
               </View>
               <Text style={styles.title}>Join the adventure!</Text>
               <Text style={styles.subtitle}>Create your explorer profile</Text>
-            </View>
+            </Animated.View>
 
+            <Animated.View entering={FadeInDown.duration(400).delay(100)}>
             <View style={styles.formCard}>
               <Input
                 label="USERNAME"
@@ -177,6 +190,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 <Text style={styles.switchLink}>Log in</Text>
               </TouchableOpacity>
             </View>
+            </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

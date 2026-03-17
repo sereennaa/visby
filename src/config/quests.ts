@@ -11,7 +11,7 @@ export interface QuestDefinition {
   target: number;
   rewardAura: number;
   /** How we derive current value */
-  progressType: 'lessons_completed' | 'stamp_countries' | 'seasonal_visit' | 'first_country' | 'facts_read_total';
+  progressType: 'lessons_completed' | 'stamp_countries' | 'seasonal_visit' | 'first_country' | 'facts_read_total' | 'sustainability_lessons' | 'dish_discoveries' | 'dish_countries';
   /** If set, quest is only active and shown during this season key (e.g. "2025-spring"). */
   seasonal?: boolean;
   /** Optional chapter/story id for narrative grouping. */
@@ -66,6 +66,35 @@ export const QUEST_DEFINITIONS: QuestDefinition[] = [
     progressType: 'facts_read_total',
     chapterId: 'chapter_2',
     storyBlurb: "Every fact is a step toward being a world explorer!",
+  },
+  {
+    id: 'sustainability_learner',
+    label: 'Complete 2 sustainability lessons',
+    subtitle: 'Finish sustainable travel, food & planet, or oceans lessons to earn bonus Aura.',
+    target: 2,
+    rewardAura: 60,
+    progressType: 'sustainability_lessons',
+    storyBlurb: "You're helping the planet one lesson at a time!",
+  },
+  {
+    id: 'taste_of_the_world',
+    label: 'Discover 3 dishes',
+    subtitle: 'Learn about 3 foods from around the world in your Taste Atlas.',
+    target: 3,
+    rewardAura: 45,
+    progressType: 'dish_discoveries',
+    chapterId: 'chapter_2',
+    storyBlurb: 'Every dish you discover opens a new doorway into culture.',
+  },
+  {
+    id: 'three_flavors_three_countries',
+    label: 'Discover dishes from 3 countries',
+    subtitle: 'Collect foods from 3 different countries to grow your world menu.',
+    target: 3,
+    rewardAura: 65,
+    progressType: 'dish_countries',
+    chapterId: 'chapter_2',
+    storyBlurb: "You're tasting your way across the globe.",
   },
 ];
 

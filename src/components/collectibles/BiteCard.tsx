@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -12,6 +13,7 @@ import { Text, Caption } from '../ui/Text';
 import { Icon } from '../ui/Icon';
 import { Bite, BiteCategory } from '../../types';
 import { BITE_CATEGORIES_INFO } from '../../config/constants';
+import { getDishById } from '../../config/worldFoods';
 
 interface BiteCardProps {
   bite: Bite;
@@ -21,24 +23,39 @@ interface BiteCardProps {
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-export const BiteCard: React.FC<BiteCardProps> = ({
+export const BiteCard: React.FC<BiteCardProps> = React.memo(({
   bite,
   onPress,
   variant = 'default',
 }) => {
   const scale = useSharedValue(1);
-  const categoryInfo = BITE_CATEGORIES_INFO[bite.category] || { icon: 'food', label: 'Food' };
+  const rotate = useSharedValue(0);
+  const worldDish = bite.worldDishId ? getDishById(bite.worldDishId) : undefined;
+  const isDiscovery = Boolean(worldDish);
+  const categoryInfo = BITE_CATEGORIES_INFO[worldDish?.category || bite.category] || { icon: 'food', label: 'Food' };
+  const imageUrl = worldDish?.imageUrl || bite.photoUrl;
+  const title = worldDish?.name || bite.name;
+  const subtitle = worldDish?.countryName || bite.cuisine;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { scale: scale.value },
+      { rotate: `${rotate.value}deg` },
+    ],
   }));
 
   const handlePressIn = () => {
     scale.value = withSpring(0.96, { damping: 15 });
+    if (isDiscovery) {
+      rotate.value = withSpring(1.5, { damping: 15 });
+    }
   };
 
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 15 });
+    if (isDiscovery) {
+      rotate.value = withSpring(0, { damping: 15 });
+    }
   };
 
   // Render star rating
@@ -66,10 +83,18 @@ export const BiteCard: React.FC<BiteCardProps> = ({
         onPressOut={handlePressOut}
         activeOpacity={0.9}
         style={animatedStyle}
+        accessibilityRole="button"
+        accessibilityLabel={title}
       >
         <View style={styles.compactCard}>
-          {bite.photoUrl ? (
-            <Image source={{ uri: bite.photoUrl }} style={styles.compactPhoto} />
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.compactPhoto}
+              contentFit="cover"
+              transition={200}
+              placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+            />
           ) : (
             <View style={styles.compactIcon}>
               <Icon name={categoryInfo.icon} size={24} color={colors.reward.peachDark} />
@@ -77,9 +102,9 @@ export const BiteCard: React.FC<BiteCardProps> = ({
           )}
           <View style={styles.compactInfo}>
             <Text variant="bodySmall" numberOfLines={1} style={styles.compactName}>
-              {bite.name}
+              {title}
             </Text>
-            <Caption numberOfLines={1}>{bite.cuisine}</Caption>
+            <Caption numberOfLines={1}>{subtitle}</Caption>
           </View>
         </View>
       </AnimatedTouchable>
@@ -93,12 +118,19 @@ export const BiteCard: React.FC<BiteCardProps> = ({
       onPressOut={handlePressOut}
       activeOpacity={0.9}
       style={animatedStyle}
+      accessibilityRole="button"
+      accessibilityLabel={title}
     >
       <View style={styles.card}>
-        {/* Photo section */}
         <View style={styles.photoContainer}>
-          {bite.photoUrl ? (
-            <Image source={{ uri: bite.photoUrl }} style={styles.photo} />
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.photo}
+              contentFit="cover"
+              transition={200}
+              placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+            />
           ) : (
             <LinearGradient
               colors={[colors.reward.peachLight, colors.base.cream]}
@@ -113,77 +145,100 @@ export const BiteCard: React.FC<BiteCardProps> = ({
             <Icon name={categoryInfo.icon} size={20} color={colors.reward.peachDark} />
           </View>
 
-          {/* Home cooked badge */}
-          {bite.isMadeAtHome && (
+          {isDiscovery ? (
+            <View style={styles.discoveryBadge}>
+              <Icon name="check" size={12} color={colors.text.inverse} />
+              <Text style={styles.discoveryBadgeText}>Discovered</Text>
+            </View>
+          ) : bite.isMadeAtHome ? (
             <View style={styles.homeCooked}>
               <Icon name="homemade" size={12} color={colors.success.emerald} />
               <Text style={styles.homeCookedText}>Homemade</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
-        {/* Info section */}
         <View style={styles.info}>
           <Text variant="h3" numberOfLines={1} style={styles.name}>
-            {bite.name}
+            {title}
           </Text>
           
           <View style={styles.cuisineRow}>
             <Text variant="bodySmall" color={colors.text.secondary}>
-              {bite.cuisine}
+              {subtitle}
             </Text>
-            {bite.country && (
+            {!isDiscovery && bite.country && (
               <Caption> • {bite.country}</Caption>
             )}
           </View>
 
-          {renderRating(bite.rating)}
+          {isDiscovery ? (
+            <Text variant="caption" numberOfLines={2} style={styles.discoveryText}>
+              {worldDish?.culturalSignificance}
+            </Text>
+          ) : (
+            renderRating(bite.rating)
+          )}
 
-          {bite.notes && (
+          {!isDiscovery && bite.notes && (
             <Text variant="caption" numberOfLines={2} style={styles.notes}>
               "{bite.notes}"
             </Text>
           )}
 
-          {/* Recipe indicator */}
-          {bite.recipe && (
+          {(bite.recipe || worldDish?.recipe) && (
             <View style={styles.recipeIndicator}>
               <Icon name="recipe" size={12} color={colors.calm.ocean} />
-              <Text style={styles.recipeText}>Has Recipe</Text>
+              <Text style={styles.recipeText}>{isDiscovery ? 'Recipe unlocked' : 'Has Recipe'}</Text>
             </View>
           )}
         </View>
       </View>
     </AnimatedTouchable>
   );
-};
+}) as React.FC<BiteCardProps>;
 
 // Grid item for collection view
 export const BiteGridItem: React.FC<{
   bite: Bite;
   onPress?: () => void;
-}> = ({ bite, onPress }) => {
-  const categoryInfo = BITE_CATEGORIES_INFO[bite.category];
+}> = React.memo(({ bite, onPress }) => {
+  const worldDish = bite.worldDishId ? getDishById(bite.worldDishId) : undefined;
+  const categoryInfo = BITE_CATEGORIES_INFO[worldDish?.category || bite.category] || { icon: 'food', label: 'Food' };
+  const imageUrl = worldDish?.imageUrl || bite.photoUrl;
   
   return (
-    <TouchableOpacity onPress={onPress} style={styles.gridItem}>
-      {bite.photoUrl ? (
-        <Image source={{ uri: bite.photoUrl }} style={styles.gridPhoto} />
+    <TouchableOpacity onPress={onPress} style={styles.gridItem} accessibilityRole="button" accessibilityLabel={worldDish?.name || bite.name}>
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.gridPhoto}
+          contentFit="cover"
+          transition={200}
+          placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+        />
       ) : (
         <View style={styles.gridPlaceholder}>
           <Icon name={categoryInfo.icon} size={40} color={colors.reward.peachDark} />
         </View>
       )}
       <View style={styles.gridOverlay}>
-        <View style={styles.gridRating}>
-          {[...Array(Math.round(bite.rating))].map((_, i) => (
-            <Icon key={i} name="star" size={10} color={colors.reward.gold} />
-          ))}
-        </View>
+        {worldDish ? (
+          <Text style={styles.gridDiscoveryLabel}>{worldDish.name}</Text>
+        ) : (
+          <View style={styles.gridRating}>
+            {[...Array(Math.round(bite.rating))].map((_, i) => (
+              <Icon key={i} name="star" size={10} color={colors.reward.gold} />
+            ))}
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
-};
+}) as React.FC<{
+  bite: Bite;
+  onPress?: () => void;
+}>;
 
 const styles = StyleSheet.create({
   card: {
@@ -204,7 +259,6 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   placeholderPhoto: {
     width: '100%',
@@ -237,6 +291,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-Bold',
     color: colors.success.emerald,
   },
+  discoveryBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.reward.peachDark,
+    borderRadius: spacing.radius.round,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  discoveryBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.inverse,
+  },
   info: {
     padding: spacing.md,
   },
@@ -258,6 +329,10 @@ const styles = StyleSheet.create({
   },
   notes: {
     fontStyle: 'italic',
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+  },
+  discoveryText: {
     color: colors.text.secondary,
     marginBottom: spacing.sm,
   },
@@ -339,6 +414,12 @@ const styles = StyleSheet.create({
   gridRating: {
     flexDirection: 'row',
     justifyContent: 'center',
+  },
+  gridDiscoveryLabel: {
+    fontSize: 11,
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.inverse,
+    textAlign: 'center',
   },
 });
 

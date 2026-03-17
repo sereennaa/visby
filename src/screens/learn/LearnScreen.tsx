@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,6 +18,10 @@ import { useStore } from '../../store/useStore';
 import { SkeletonCard } from '../../components/ui/SkeletonCard';
 import { RootStackParamList } from '../../types';
 import { LESSON_CONTENT } from '../../config/learningContent';
+import { WORLD_DISHES } from '../../config/worldFoods';
+import { getDueCount, getMasteryPercent, getSRStats } from '../../services/spacedRepetition';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 
 const RECOMMENDED_LESSON_ORDER = ['lang1', 'lang2', 'lang3', 'lang4', 'slang1', 'slang2', 'slang3', 'cult1', 'cult2', 'cult3', 'hist1', 'hist2', 'etiq1', 'etiq2', 'geo1', 'geo2'];
 
@@ -114,28 +118,48 @@ const SAMPLE_LESSONS: Lesson[] = [
 ];
 
 export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
-  const { getLessonsCompletedToday, lessonProgress, isLoading } = useStore();
+  const bites = useStore(s => s.bites);
+  const getLessonsCompletedToday = useStore(s => s.getLessonsCompletedToday);
+  const lessonProgress = useStore(s => s.lessonProgress);
+  const isLoading = useStore(s => s.isLoading);
+  const flashcardSRData = useStore(s => s.flashcardSRData);
+
+  const discoveredCount = useMemo(() => bites.filter(b => b.worldDishId).length, [bites]);
+  const totalDishes = WORLD_DISHES.length;
+  const undiscoveredCount = totalDishes - discoveredCount;
 
   const dailyGoal = 3;
   const lessonsToday = getLessonsCompletedToday();
   const dailyProgress = (lessonsToday / dailyGoal) * 100;
 
-  const completedSet = new Set(lessonProgress.filter(p => p.completed).map(p => p.lessonId));
-  const nextLessonId = RECOMMENDED_LESSON_ORDER.find(id => !completedSet.has(id) && LESSON_CONTENT[id]);
-  const nextLesson = nextLessonId ? { id: nextLessonId, title: LESSON_CONTENT[nextLessonId].title } : null;
+  const completedSet = useMemo(
+    () => new Set(lessonProgress.filter(p => p.completed).map(p => p.lessonId)),
+    [lessonProgress]
+  );
 
-  const getCompletedForCategory = (categoryId: string): number =>
-    lessonProgress.filter(p => p.lessonId.startsWith(categoryId) && p.completed).length;
+  const nextLesson = useMemo(() => {
+    const nextId = RECOMMENDED_LESSON_ORDER.find(id => !completedSet.has(id) && LESSON_CONTENT[id]);
+    return nextId ? { id: nextId, title: LESSON_CONTENT[nextId].title } : null;
+  }, [completedSet]);
+
+  const completedByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    LESSON_CATEGORIES.forEach(cat => {
+      map[cat.id] = lessonProgress.filter(p => p.lessonId.startsWith(cat.id) && p.completed).length;
+    });
+    return map;
+  }, [lessonProgress]);
 
   const renderCategoryCard = (category: LessonCategory) => {
-    const completed = getCompletedForCategory(category.id);
+    const completed = completedByCategory[category.id] ?? 0;
     const progress = completed / category.lessonsCount * 100;
     
     return (
-      <TouchableOpacity
+      <AnimatedPressable
         key={category.id}
         style={styles.categoryCard}
         onPress={() => navigation.navigate('LessonCategory', { categoryId: category.id })}
+        scaleDown={0.97}
       >
         <LinearGradient
           colors={[category.color + '30', colors.base.cream]}
@@ -155,7 +179,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             <View style={[styles.progressDot, { backgroundColor: category.color }]} />
           </View>
         </LinearGradient>
-      </TouchableOpacity>
+      </AnimatedPressable>
     );
   };
 
@@ -202,6 +226,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
       colors={[colors.calm.skyLight, colors.base.cream]}
       style={styles.container}
     >
+      <FloatingParticles count={4} variant="dust" opacity={0.15} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
@@ -246,10 +271,10 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             <>
           {/* Next up — suggested next step */}
           {nextLesson && (
-            <TouchableOpacity
+            <AnimatedPressable
               style={styles.nextUpCard}
               onPress={() => navigation.navigate('Lesson', { lessonId: nextLesson.id })}
-              activeOpacity={0.85}
+              scaleDown={0.97}
             >
               <LinearGradient
                 colors={[colors.primary.wisteriaFaded, colors.calm.skyLight]}
@@ -268,8 +293,46 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
                 </View>
                 <Icon name="chevronRight" size={20} color={colors.primary.wisteriaDark} />
               </LinearGradient>
-            </TouchableOpacity>
+            </AnimatedPressable>
           )}
+
+          {/* Due for Review */}
+          {flashcardSRData.length > 0 && (() => {
+            const stats = getSRStats(flashcardSRData);
+            const mastery = getMasteryPercent(flashcardSRData);
+            if (stats.dueToday === 0 && mastery < 100) return null;
+            return (
+              <AnimatedPressable
+                style={styles.dueReviewCard}
+                onPress={() => navigation.navigate('Flashcards')}
+                scaleDown={0.97}
+              >
+                <LinearGradient
+                  colors={[colors.reward.peachLight, colors.base.cream]}
+                  style={styles.dueReviewGradient}
+                >
+                  <View style={styles.dueReviewLeft}>
+                    <View style={[styles.dueReviewIconWrap]}>
+                      <Icon name="cards" size={22} color={colors.reward.peachDark} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text variant="body" style={styles.dueReviewTitle}>
+                        {stats.dueToday > 0 ? `${stats.dueToday} card${stats.dueToday > 1 ? 's' : ''} ready to review` : 'Flashcard Mastery'}
+                      </Text>
+                      <View style={styles.dueReviewStats}>
+                        <Caption>{mastery}% mastered</Caption>
+                        <Caption> · </Caption>
+                        <Caption>{stats.learning} learning</Caption>
+                        <Caption> · </Caption>
+                        <Caption>{stats.mastered} mastered</Caption>
+                      </View>
+                    </View>
+                  </View>
+                  <Icon name="chevronRight" size={20} color={colors.reward.peachDark} />
+                </LinearGradient>
+              </AnimatedPressable>
+            );
+          })()}
 
           {/* Daily Goal */}
           <Card style={styles.dailyGoalCard}>
@@ -291,6 +354,29 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             </Caption>
           </Card>
 
+          {/* World Review - Interleaved Review */}
+          <AnimatedPressable
+            style={styles.worldReviewCard}
+            onPress={() => navigation.navigate('Quiz', { mode: 'world_review' })}
+            scaleDown={0.97}
+          >
+            <LinearGradient
+              colors={['#FFE082', '#FFF8E1', colors.base.cream]}
+              style={styles.worldReviewGradient}
+            >
+              <View style={styles.worldReviewLeft}>
+                <View style={[styles.worldReviewIcon, { backgroundColor: '#FFB300' + '30' }]}>
+                  <Icon name="globe" size={28} color="#FF8F00" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="body" style={styles.worldReviewTitle}>World Review</Text>
+                  <Caption>Mix questions from all visited countries</Caption>
+                </View>
+              </View>
+              <Icon name="chevronRight" size={22} color="#FF8F00" />
+            </LinearGradient>
+          </AnimatedPressable>
+
           {/* Geography: link to World Map */}
           <TouchableOpacity
             style={styles.worldMapCard}
@@ -311,6 +397,29 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
                 </View>
               </View>
               <Icon name="chevronRight" size={22} color={colors.primary.wisteriaDark} />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Food Discovery */}
+          <TouchableOpacity
+            style={styles.foodDiscoveryCard}
+            onPress={() => navigation.navigate('AddBite' as any)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.foodDiscoveryGradient}>
+              <View style={styles.foodDiscoveryLeft}>
+                <Text style={styles.foodDiscoveryEmoji}>🍽️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text variant="h3" style={{ color: colors.reward.peachDark }}>Discover a Dish</Text>
+                  <Caption>{discoveredCount} / {totalDishes} dishes discovered</Caption>
+                  {undiscoveredCount > 0 && (
+                    <Text variant="caption" style={{ color: colors.reward.peachDark, marginTop: 2 }}>
+                      {undiscoveredCount} new {undiscoveredCount === 1 ? 'dish' : 'dishes'} to discover!
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Icon name="chevronRight" size={20} color={colors.reward.peachDark} />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -342,6 +451,22 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          {/* Learning Path */}
+          <TouchableOpacity
+            style={styles.learningPathBanner}
+            onPress={() => (navigation as any).navigate('LearningPath')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient colors={[colors.primary.wisteriaFaded, colors.calm.skyLight]} style={styles.learningPathGradient}>
+              <Icon name="map" size={28} color={colors.primary.wisteriaDark} />
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <Text variant="h3" style={{ color: colors.primary.wisteriaDark }}>Learning Path</Text>
+                <Caption>Follow the skill tree to unlock new activities!</Caption>
+              </View>
+              <Icon name="chevronRight" size={20} color={colors.primary.wisteriaDark} />
+            </LinearGradient>
+          </TouchableOpacity>
+
           {/* Mini-Games */}
           <View style={styles.section}>
             <Heading level={2} style={styles.sectionTitle}>
@@ -353,6 +478,11 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
                 { key: 'MemoryCards', label: 'Memory', icon: 'flashcard' as IconName, color: colors.calm.ocean, bg: colors.calm.skyLight },
                 { key: 'CookingGame', label: 'Cooking', icon: 'food' as IconName, color: colors.reward.peachDark, bg: colors.reward.peachLight },
                 { key: 'TreasureHunt', label: 'Treasure Hunt', icon: 'compass' as IconName, color: colors.success.emerald, bg: colors.success.honeydew },
+                { key: 'FlagMatch', label: 'Flag Match', icon: 'flag' as IconName, color: '#4A90D9', bg: '#CFE9F7' },
+                { key: 'MapPin', label: 'Map Pin', icon: 'map' as IconName, color: '#6B8E23', bg: '#DFF5E1' },
+                { key: 'CultureDressUp', label: 'Dress Up', icon: 'shirt' as IconName, color: colors.accent.coral, bg: colors.accent.blush },
+                { key: 'SortCategorize', label: 'Sort & Match', icon: 'filter' as IconName, color: '#9B59B6', bg: '#F3E8FF' },
+                { key: 'StoryBuilder', label: 'Story Builder', icon: 'book' as IconName, color: '#E67E22', bg: '#FFF3E0' },
               ] as const).map((game) => (
                 <TouchableOpacity
                   key={game.key}
@@ -487,6 +617,40 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-Bold',
     color: colors.text.primary,
   },
+  dueReviewCard: {
+    marginBottom: spacing.md,
+    borderRadius: spacing.radius.xl,
+    overflow: 'hidden',
+  },
+  dueReviewGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  dueReviewLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dueReviewIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.reward.peachDark + '25',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  dueReviewTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+  },
+  dueReviewStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   dailyGoalCard: {
     marginBottom: spacing.lg,
   },
@@ -508,6 +672,34 @@ const styles = StyleSheet.create({
   goalCaption: {
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  worldReviewCard: {
+    marginBottom: spacing.lg,
+    borderRadius: spacing.radius.lg,
+    overflow: 'hidden',
+  },
+  worldReviewGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderRadius: spacing.radius.lg,
+  },
+  worldReviewLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  worldReviewIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  worldReviewTitle: {
+    fontFamily: 'Nunito-Bold',
   },
   worldMapCard: {
     marginBottom: spacing.lg,
@@ -542,6 +734,31 @@ const styles = StyleSheet.create({
   worldMapCardSub: {
     marginTop: 2,
     color: colors.text.secondary,
+  },
+  foodDiscoveryCard: {
+    borderRadius: spacing.radius.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  foodDiscoveryGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  foodDiscoveryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  foodDiscoveryEmoji: {
+    fontSize: 32,
   },
   quickActions: {
     flexDirection: 'row',
@@ -651,6 +868,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: spacing.radius.sm,
+  },
+  learningPathBanner: {
+    marginBottom: spacing.lg,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  learningPathGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 20,
   },
   gamesRow: {
     marginHorizontal: -spacing.md,

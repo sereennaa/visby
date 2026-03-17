@@ -1,4 +1,4 @@
-import { CosmeticType, CosmeticRarity } from '../types';
+import { CosmeticType, CosmeticRarity, CosmeticBundle, VisbyGift } from '../types';
 import { IconName } from '../components/ui/Icon';
 
 export interface ShopCosmetic {
@@ -11,6 +11,10 @@ export interface ShopCosmetic {
   country?: string;
   icon: IconName;
   membersOnly?: boolean;
+  isNew?: boolean;
+  isFeatured?: boolean;
+  seasonalEvent?: string;
+  availableUntil?: string;
 }
 
 // Cultural cosmetics from around the world
@@ -27,7 +31,7 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'turban', name: 'Turban', description: 'Colorful wrapped headwear from India', type: 'hat', rarity: 'uncommon', price: 160, country: 'India', icon: 'star' },
   { id: 'ushanka', name: 'Ushanka', description: 'Fuzzy ear-flap hat from Russia', type: 'hat', rarity: 'uncommon', price: 170, country: 'Russia', icon: 'star' },
   { id: 'feather_headdress', name: 'Feather Headdress', description: 'Colorful ceremonial feathers from Brazil', type: 'hat', rarity: 'epic', price: 500, country: 'Brazil', icon: 'nature' },
-  { id: 'pharaoh_crown', name: 'Pharaoh Crown', description: 'Ancient golden headdress of the Egyptian pharaohs', type: 'hat', rarity: 'epic', price: 450, country: 'Egypt', icon: 'crown' },
+  { id: 'pharaoh_crown', name: 'Pharaoh Crown', description: 'Ancient golden headdress of the Egyptian pharaohs', type: 'hat', rarity: 'epic', price: 450, country: 'Egypt', icon: 'crown', isNew: true },
   { id: 'geisha_hairpin', name: 'Geisha Hairpin', description: 'Ornate floral hairpin from traditional Japan', type: 'hat', rarity: 'rare', price: 280, country: 'Japan', icon: 'sparkles' },
   { id: 'cowboy_hat', name: 'Cowboy Hat', description: 'Yeehaw! A rugged hat from the American frontier', type: 'hat', rarity: 'uncommon', price: 160, country: 'USA', icon: 'star' },
   { id: 'toque_chef_hat', name: 'Toque Chef Hat', description: 'Tall white hat worn by master French chefs', type: 'hat', rarity: 'uncommon', price: 140, country: 'France', icon: 'food' },
@@ -57,7 +61,7 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'pirate_coat', name: 'Pirate Coat', description: 'Swashbuckling long coat with golden trim', type: 'outfit', rarity: 'rare', price: 320, icon: 'star' },
   { id: 'knight_armor', name: 'Knight Armor', description: 'Full plate armor of a medieval knight', type: 'outfit', rarity: 'epic', price: 600, icon: 'castle' },
   { id: 'hula_outfit', name: 'Hula Outfit', description: 'Traditional grass skirt and lei from Hawaii', type: 'outfit', rarity: 'uncommon', price: 180, icon: 'nature' },
-  { id: 'flamenco_dress', name: 'Flamenco Dress', description: 'Fiery ruffled dress for passionate Spanish dance', type: 'outfit', rarity: 'rare', price: 340, country: 'Spain', icon: 'flame' },
+  { id: 'flamenco_dress', name: 'Flamenco Dress', description: 'Fiery ruffled dress for passionate Spanish dance', type: 'outfit', rarity: 'rare', price: 340, country: 'Spain', icon: 'flame', isNew: true },
 
   // ===================== ACCESSORIES =====================
   { id: 'sword', name: 'Viking Sword', description: 'A trusty blade for brave explorers', type: 'accessory', rarity: 'common', price: 0, icon: 'viking' },
@@ -113,7 +117,7 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'panda', name: 'Panda', description: 'Gentle bamboo-munching panda from China', type: 'companion', rarity: 'epic', price: 500, country: 'China', icon: 'nature' },
   { id: 'fox', name: 'Fox', description: 'A clever red fox that scouts the path ahead', type: 'companion', rarity: 'uncommon', price: 180, icon: 'flash' },
   { id: 'butterfly_swarm', name: 'Butterfly Swarm', description: 'A magical cloud of colorful butterflies', type: 'companion', rarity: 'common', price: 60, icon: 'sparkles' },
-  { id: 'golden_eagle', name: 'Golden Eagle', description: 'Majestic raptor soaring above your shoulder', type: 'companion', rarity: 'epic', price: 600, icon: 'star' },
+  { id: 'golden_eagle', name: 'Golden Eagle', description: 'Majestic raptor soaring above your shoulder', type: 'companion', rarity: 'epic', price: 600, icon: 'star', isFeatured: true },
 ];
 
 export const COSMETIC_TYPES: { type: CosmeticType; label: string; icon: IconName }[] = [
@@ -312,4 +316,83 @@ export const AURA_PACKS: AuraPack[] = [
   { id: 'pack_medium', amount: 500, priceLabel: '$1.99', bonus: '+50 bonus', icon: 'star', popular: true },
   { id: 'pack_large', amount: 1200, priceLabel: '$3.99', bonus: '+200 bonus', icon: 'sparkles' },
   { id: 'pack_mega', amount: 3000, priceLabel: '$7.99', bonus: '+750 bonus', icon: 'star' },
+];
+
+// ===================== BUNDLES =====================
+export const COSMETIC_BUNDLES: CosmeticBundle[] = [
+  {
+    id: 'bundle_japanese_explorer',
+    name: 'Japanese Explorer',
+    description: 'Everything you need for a journey through Japan',
+    items: ['samurai_helmet', 'kimono', 'ninja_tabi', 'fan'],
+    bundlePrice: 650,
+    originalPrice: 890,
+    icon: 'star',
+    gradient: ['#FFE4E1', '#FFD4D4'],
+  },
+  {
+    id: 'bundle_pirate_captain',
+    name: 'Pirate Captain',
+    description: 'Set sail with full pirate gear',
+    items: ['pirate_hat', 'pirate_coat', 'sword', 'telescope'],
+    bundlePrice: 600,
+    originalPrice: 860,
+    icon: 'star',
+    gradient: ['#E8F0FE', '#D0E0FF'],
+  },
+  {
+    id: 'bundle_world_traveler',
+    name: 'World Traveler',
+    description: 'Essential gear for the ultimate explorer',
+    items: ['safari_outfit', 'hiking_boots', 'explorer_backpack', 'compass_acc'],
+    bundlePrice: 300,
+    originalPrice: 410,
+    icon: 'compass',
+    gradient: ['#E8FFE8', '#D4F5D4'],
+  },
+  {
+    id: 'bundle_royal_collection',
+    name: 'Royal Collection',
+    description: 'Dress like true royalty from around the world',
+    items: ['crown', 'knight_armor', 'golden_necklace'],
+    bundlePrice: 1400,
+    originalPrice: 1880,
+    icon: 'crown',
+    gradient: ['#FFF8E0', '#FFE8A0'],
+    isLimited: true,
+  },
+  {
+    id: 'bundle_culture_pack',
+    name: 'Culture Mix',
+    description: 'A taste of traditions from every corner',
+    items: ['beret', 'sombrero', 'turban', 'fez'],
+    bundlePrice: 400,
+    originalPrice: 570,
+    icon: 'globe',
+    gradient: ['#F0ECFF', '#E0D8F8'],
+  },
+];
+
+// ===================== FEATURED ITEMS =====================
+export function getFeaturedItems(): ShopCosmetic[] {
+  return COSMETICS_CATALOG.filter((c) => c.isFeatured || c.isNew || c.rarity === 'legendary').slice(0, 6);
+}
+
+export function getEquippedGlowColor(equipped: Record<string, string | undefined>): string | undefined {
+  const equippedIds = Object.values(equipped).filter(Boolean) as string[];
+  const equippedItems = COSMETICS_CATALOG.filter((c) => equippedIds.includes(c.id));
+  const hasLegendary = equippedItems.some((c) => c.rarity === 'legendary');
+  if (hasLegendary) return '#FFD700';
+  const hasEpic = equippedItems.some((c) => c.rarity === 'epic');
+  if (hasEpic) return '#9B59B6';
+  return undefined;
+}
+
+// ===================== VISBY GIFTS =====================
+export const VISBY_GIFTS: VisbyGift[] = [
+  { id: 'gift_snack', name: 'Tasty Snack', icon: 'food', price: 30, bondBonus: 3, needsBoost: { hunger: 30 }, visbyReaction: 'Yummy! This is so good! 🍪' },
+  { id: 'gift_toy', name: 'Fun Toy', icon: 'sparkles', price: 40, bondBonus: 3, needsBoost: { happiness: 25 }, visbyReaction: 'Woohoo! I love playing with this! 🎉' },
+  { id: 'gift_book', name: 'Story Book', icon: 'book', price: 35, bondBonus: 3, needsBoost: { knowledge: 25 }, visbyReaction: 'Ooh, a new story! Let me read it! 📖' },
+  { id: 'gift_blanket', name: 'Cozy Blanket', icon: 'home', price: 25, bondBonus: 2, needsBoost: { energy: 20 }, visbyReaction: 'So warm and snuggly... 💤' },
+  { id: 'gift_special', name: 'Special Treat', icon: 'heart', price: 200, bondBonus: 10, needsBoost: { hunger: 15, happiness: 15, energy: 15, knowledge: 15, socialBattery: 15 }, visbyReaction: 'You\'re the best friend ever! I love you! 💖' },
 ];

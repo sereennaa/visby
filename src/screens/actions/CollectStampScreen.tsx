@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, { ZoomIn, FadeIn } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,7 +63,11 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
   route,
 }) => {
   const { locationId } = route.params;
-  const { user, currentLocation, addStamp, addAura, addSkillPoints } = useStore();
+  const user = useStore(s => s.user);
+  const currentLocation = useStore(s => s.currentLocation);
+  const addStamp = useStore(s => s.addStamp);
+  const addAura = useStore(s => s.addAura);
+  const addSkillPoints = useStore(s => s.addSkillPoints);
 
   const [locationName, setLocationName] = useState('');
   const [selectedType, setSelectedType] = useState<StampType>('city');
@@ -142,6 +146,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
       collectedAt: new Date(),
       photoUrl: photoUri || undefined,
       notes: notes || undefined,
+      source: 'visit',
       isFastTravel: false,
       isPublic: true,
       likes: 0,
@@ -277,7 +282,13 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
           {/* Photo */}
           {photoUri ? (
             <View style={styles.photoPreviewContainer}>
-              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.photoPreview}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+              />
               <TouchableOpacity
                 onPress={() => setPhotoUri(null)}
                 style={styles.photoRemoveButton}
@@ -308,9 +319,9 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
       </SafeAreaView>
 
       {/* Success Modal — dreamy celebration */}
-      <Modal visible={showSuccess} transparent animationType="fade">
+      <Modal visible={showSuccess} transparent animationType="none">
         <Pressable style={styles.modalOverlay} onPress={() => {}}>
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
             <FloatingParticles variant="sparkle" count={12} speed="slow" opacity={0.9} />
           </View>
           <Animated.View entering={ZoomIn.duration(500).springify()} style={styles.modalContentWrap}>

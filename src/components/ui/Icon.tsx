@@ -116,7 +116,9 @@ export const iconMap = {
   gift: { family: 'Ionicons', name: 'gift' },
   giftOutline: { family: 'Ionicons', name: 'gift-outline' },
   
-  // Learning
+  // Learning & Games
+  brain: { family: 'MaterialCommunityIcons', name: 'brain' },
+  game: { family: 'Ionicons', name: 'game-controller' },
   school: { family: 'Ionicons', name: 'school' },
   language: { family: 'MaterialCommunityIcons', name: 'translate' },
   chat: { family: 'Ionicons', name: 'chatbubble' },
@@ -138,6 +140,9 @@ export const iconMap = {
   mailSend: { family: 'MaterialCommunityIcons', name: 'email-send' },
   mailOpen: { family: 'MaterialCommunityIcons', name: 'email-open' },
   
+  // Audio
+  music: { family: 'Ionicons', name: 'musical-notes' },
+
   // Misc
   calendar: { family: 'Ionicons', name: 'calendar' },
   time: { family: 'Ionicons', name: 'time' },

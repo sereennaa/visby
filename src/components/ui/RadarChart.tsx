@@ -177,7 +177,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         </Svg>
       </Animated.View>
       {onSegmentPress && (
-        <View style={[StyleSheet.absoluteFill, styles.touchLayer]} pointerEvents="box-none">
+        <View style={[StyleSheet.absoluteFill, styles.touchLayer, { pointerEvents: 'box-none' }]}>
           {data.map((_, i) => {
             const p = getPoint(i, touchRadius);
             return (

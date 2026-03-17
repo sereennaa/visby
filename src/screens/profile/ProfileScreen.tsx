@@ -38,8 +38,17 @@ type ProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 };
 
+const SUSTAINABILITY_COMMITMENT = '10% of all subscription and purchase revenue goes to sustainability (tree planting, ocean cleanup, and environmental partners).';
+
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const { user, visby, stamps, bites, badges, logout } = useStore();
+  const user = useStore(s => s.user);
+  const visby = useStore(s => s.visby);
+  const stamps = useStore(s => s.stamps);
+  const bites = useStore(s => s.bites);
+  const badges = useStore(s => s.badges);
+  const logout = useStore(s => s.logout);
+  const getTreesPlantedByVisby = useStore(s => s.getTreesPlantedByVisby);
+  const getSustainabilityLessonsCompleted = useStore(s => s.getSustainabilityLessonsCompleted);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleSkillPress = useCallback(
@@ -108,6 +117,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   ];
 
   const skills = user?.skills || DEFAULT_SKILLS;
+  const treesPlanted = getTreesPlantedByVisby?.() ?? 0;
+  const sustainLessons = getSustainabilityLessonsCompleted?.() ?? 0;
+  const SUSTAINABILITY_LESSON_NAMES = ['Sustainable Travel', 'Food & the Planet', 'Oceans & Beaches'];
+  const nextSustainLesson = sustainLessons < 3 ? SUSTAINABILITY_LESSON_NAMES[sustainLessons] : null;
 
   const currentStage = getGrowthStage(user?.totalCarePoints || 0);
   const stageOrder = ['egg', 'baby', 'kid', 'teen', 'adult'];
@@ -322,6 +335,41 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </Animated.View>
           )}
 
+          {/* Our Planet / Impact */}
+          <Animated.View entering={FadeInDown.duration(500).delay(630)}>
+            <Card style={styles.planetCard}>
+              <View style={styles.planetHeader}>
+                <Icon name="nature" size={24} color={colors.calm.ocean} />
+                <Heading level={3}>Visby's Garden</Heading>
+              </View>
+              <View style={styles.planetRow}>
+                <View style={styles.planetStat}>
+                  <Text variant="h2" color={colors.calm.ocean}>{treesPlanted}</Text>
+                  <Caption>Trees growing</Caption>
+                </View>
+                <View style={styles.planetStat}>
+                  <Text variant="h2" color={colors.calm.ocean}>{sustainLessons}/3</Text>
+                  <Caption>Planet lessons</Caption>
+                </View>
+              </View>
+              {nextSustainLesson ? (
+                <Button
+                  title={`Next: ${nextSustainLesson}`}
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => {
+                    const lessonIds = ['sustain_travel', 'sustain_food', 'sustain_oceans'];
+                    navigation.navigate('Lesson', { lessonId: lessonIds[sustainLessons] });
+                  }}
+                  style={styles.planetCta}
+                />
+              ) : (
+                <Caption style={styles.planetComplete} color={colors.calm.ocean}>All planet lessons complete!</Caption>
+              )}
+              <Caption style={styles.commitmentText}>{SUSTAINABILITY_COMMITMENT}</Caption>
+            </Card>
+          </Animated.View>
+
           {/* Game Stats */}
           <Animated.View entering={FadeInDown.duration(500).delay(640)}>
             <Card variant="magic" style={styles.gameStatsCard}>
@@ -366,6 +414,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                       { label: 'History', value: skills.history },
                       { label: 'Cooking', value: skills.cooking },
                       { label: 'Exploration', value: skills.exploration },
+                      { label: 'Sustainability', value: skills.sustainability },
                     ]}
                     size={220}
                     animateFill={true}
@@ -500,9 +549,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </ScrollView>
 
         {/* Logout Confirmation Modal */}
-        <Modal visible={showLogoutConfirm} transparent animationType="fade">
+        <Modal visible={showLogoutConfirm} transparent animationType="none">
           <Pressable style={styles.overlay} onPress={() => setShowLogoutConfirm(false)}>
-            <Pressable style={styles.modalCard}>
+            <Animated.View entering={ZoomIn.duration(300).springify()}>
+              <Pressable style={styles.modalCard}>
               <Text variant="h2" style={styles.modalTitle}>Log Out</Text>
               <Text variant="body" color={colors.text.secondary} style={styles.modalMessage}>
                 Are you sure you want to log out?
@@ -524,6 +574,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 />
               </View>
             </Pressable>
+            </Animated.View>
           </Pressable>
         </Modal>
       </SafeAreaView>
@@ -651,6 +702,36 @@ const styles = StyleSheet.create({
   },
   streakInfo: {
     flex: 1,
+  },
+  planetCard: {
+    marginBottom: spacing.md,
+  },
+  planetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  planetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: spacing.md,
+  },
+  planetStat: {
+    alignItems: 'center',
+  },
+  planetCta: {
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  planetComplete: {
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  commitmentText: {
+    textAlign: 'center',
+    color: colors.text.muted,
+    marginTop: spacing.sm,
   },
   gameStatsCard: {
     marginBottom: spacing.lg,

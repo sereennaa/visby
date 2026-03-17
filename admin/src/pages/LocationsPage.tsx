@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase, isConfigured } from '../lib/supabase';
 import { useToast } from '../App';
 import { ImageUpload } from '../components/ImageUpload';
+import { analyzeLocationImage, isAIConfigured, type LocationAnalysis } from '../lib/ai';
 
 interface Location {
   id: string;
@@ -61,6 +62,8 @@ export default function LocationsPage() {
   const [filterCountry, setFilterCountry] = useState('all');
   const [search, setSearch] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [aiResult, setAiResult] = useState<LocationAnalysis | null>(null);
 
   useEffect(() => { loadLocations(); }, []);
 
@@ -124,6 +127,46 @@ export default function LocationsPage() {
     loadLocations();
   }
 
+  async function handleAnalyze() {
+    if (!editing?.image_url) return;
+    setAnalyzing(true);
+    setAiResult(null);
+    try {
+      const result = await analyzeLocationImage(editing.image_url);
+      setAiResult(result);
+      showToast('AI analysis complete', 'success');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'AI analysis failed';
+      showToast(message, 'error');
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  const ALL_AI_FIELDS: (keyof LocationAnalysis)[] = ['name', 'description', 'latitude', 'longitude', 'country_id', 'category', 'type', 'learning_points'];
+
+  function applyAiResult(fields?: (keyof LocationAnalysis)[], onlyEmpty = false) {
+    if (!editing || !aiResult) return;
+    const applyFields = fields || ALL_AI_FIELDS;
+    const updates: Partial<Location> = {};
+    for (const field of applyFields) {
+      if (field === 'confidence' || field === 'country_name') continue;
+      if (onlyEmpty) {
+        const current = editing[field as keyof Location];
+        const isEmpty = current === '' || current === 0 || current === emptyLocation[field as keyof Location];
+        if (!isEmpty) continue;
+      }
+      (updates as Record<string, unknown>)[field] = aiResult[field];
+    }
+    if (Object.keys(updates).length === 0) {
+      showToast('All fields already have values', 'success');
+      return;
+    }
+    setEditing({ ...editing, ...updates });
+    setAiResult(null);
+    showToast('AI suggestions applied', 'success');
+  }
+
   const filtered = locations.filter(l => {
     const matchesType = filterType === 'all' || l.type === filterType;
     const matchesCountry = filterCountry === 'all' || l.country_id === filterCountry;
@@ -161,7 +204,7 @@ export default function LocationsPage() {
           <option value="all">All Types</option>
           {locationTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
         </select>
-        <button className="btn btn-primary" onClick={() => { setEditing({ ...emptyLocation }); setIsNew(true); }}>
+        <button className="btn btn-primary" onClick={() => { setEditing({ ...emptyLocation }); setIsNew(true); setAiResult(null); }}>
           + Add Location
         </button>
       </div>
@@ -231,7 +274,7 @@ export default function LocationsPage() {
                 <td style={{ color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.description}</td>
                 <td>
                   <div className="btn-group">
-                    <button className="btn btn-secondary btn-small" onClick={() => { setEditing({ ...loc }); setIsNew(false); }}>Edit</button>
+                    <button className="btn btn-secondary btn-small" onClick={() => { setEditing({ ...loc }); setIsNew(false); setAiResult(null); }}>Edit</button>
                     <button className="btn btn-danger btn-small" onClick={() => setConfirmDelete(loc.id)}>Delete</button>
                   </div>
                 </td>
@@ -242,8 +285,8 @@ export default function LocationsPage() {
       </div>
 
       {editing && (
-        <div className="modal-overlay" onClick={() => setEditing(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => { setEditing(null); setAiResult(null); }}>
+          <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
             <h3>{isNew ? 'Add Location' : 'Edit Location'}</h3>
             <div className="form-group">
               <label>Name</label>
@@ -295,9 +338,85 @@ export default function LocationsPage() {
             </div>
             <ImageUpload
               value={editing.image_url || ''}
-              onChange={(url) => setEditing({ ...editing, image_url: url })}
+              onChange={(url) => { setEditing({ ...editing, image_url: url }); setAiResult(null); }}
               label="Location Photo"
             />
+            {editing.image_url && isAIConfigured && (
+              <button
+                className="btn btn-ai"
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                style={{ marginBottom: 16, width: '100%' }}
+              >
+                {analyzing ? (
+                  <><span className="spinner spinner-small" /> Analyzing image...</>
+                ) : (
+                  <><span className="ai-sparkle">&#10024;</span> Analyze with AI</>
+                )}
+              </button>
+            )}
+            {editing.image_url && !isAIConfigured && (
+              <div className="ai-unconfigured">
+                Add <code>VITE_OPENAI_API_KEY</code> to your .env to enable AI image analysis
+              </div>
+            )}
+            {aiResult && (
+              <div className="ai-result-card">
+                <div className="ai-result-header">
+                  <span className="ai-result-title">AI Analysis</span>
+                  <span className={`ai-confidence ai-confidence-${aiResult.confidence}`}>
+                    {aiResult.confidence} confidence
+                  </span>
+                </div>
+                {aiResult.confidence === 'low' && (
+                  <div className="ai-warning">
+                    Low confidence -- please verify the details below before applying.
+                  </div>
+                )}
+                <div className="ai-result-fields">
+                  <div className="ai-field">
+                    <span className="ai-field-label">Name</span>
+                    <span className="ai-field-value">{aiResult.name}</span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['name'])}>Use</button>
+                  </div>
+                  <div className="ai-field">
+                    <span className="ai-field-label">Country</span>
+                    <span className="ai-field-value">{aiResult.country_name}{aiResult.country_id ? ` (${aiResult.country_id})` : ''}</span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['country_id'])}>Use</button>
+                  </div>
+                  <div className="ai-field">
+                    <span className="ai-field-label">Coords</span>
+                    <span className="ai-field-value">{aiResult.latitude.toFixed(4)}, {aiResult.longitude.toFixed(4)}</span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['latitude', 'longitude'])}>Use</button>
+                  </div>
+                  <div className="ai-field">
+                    <span className="ai-field-label">Category</span>
+                    <span className="ai-field-value"><span className="pill pill-rare">{aiResult.category}</span></span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['category'])}>Use</button>
+                  </div>
+                  <div className="ai-field">
+                    <span className="ai-field-label">Type</span>
+                    <span className="ai-field-value"><span className="pill pill-common">{aiResult.type}</span></span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['type'])}>Use</button>
+                  </div>
+                  <div className="ai-field">
+                    <span className="ai-field-label">LP</span>
+                    <span className="ai-field-value">{aiResult.learning_points} pts</span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['learning_points'])}>Use</button>
+                  </div>
+                  <div className="ai-field ai-field-description">
+                    <span className="ai-field-label">Caption</span>
+                    <span className="ai-field-value">{aiResult.description}</span>
+                    <button className="btn btn-secondary btn-small" onClick={() => applyAiResult(['description'])}>Use</button>
+                  </div>
+                </div>
+                <div className="ai-result-actions">
+                  <button className="btn btn-primary" onClick={() => applyAiResult()}>Apply All</button>
+                  <button className="btn btn-secondary" onClick={() => applyAiResult(undefined, true)}>Apply Empty Fields</button>
+                  <button className="btn btn-secondary" onClick={() => setAiResult(null)}>Dismiss</button>
+                </div>
+              </div>
+            )}
             <div className="form-actions">
               <button className="btn btn-primary" onClick={handleSave}>{isNew ? 'Create' : 'Save Changes'}</button>
               <button className="btn btn-secondary" onClick={() => setEditing(null)}>Cancel</button>

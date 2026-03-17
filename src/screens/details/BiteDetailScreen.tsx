@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +13,8 @@ import { Button } from '../../components/ui/Button';
 import { Icon } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
+import { BITE_CATEGORIES_INFO } from '../../config/constants';
+import { getDishById } from '../../config/worldFoods';
 
 type BiteDetailScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'BiteDetail'>;
@@ -19,7 +23,7 @@ type BiteDetailScreenProps = {
 
 export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, route }) => {
   const { biteId } = route.params;
-  const { bites } = useStore();
+  const bites = useStore(s => s.bites);
   const bite = bites.find((b) => b.id === biteId);
 
   if (!bite) {
@@ -41,25 +45,16 @@ export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, 
     );
   }
 
-  const renderStars = () => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Icon
-          key={i}
-          name={i <= bite.rating ? 'star' : 'starOutline'}
-          size={24}
-          color={i <= bite.rating ? colors.reward.gold : colors.text.light}
-        />,
-      );
-    }
-    return stars;
-  };
-
-  const categoryLabel = bite.category
+  const worldDish = bite.worldDishId ? getDishById(bite.worldDishId) : undefined;
+  const recipe = worldDish?.recipe || bite.recipe;
+  const categoryLabel = (worldDish?.category || bite.category)
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+  const heroImage = worldDish?.imageUrl || bite.photoUrl;
+  const dishTitle = worldDish?.name || bite.name;
+  const dishCountry = worldDish?.countryName || bite.country || bite.cuisine;
+  const isDiscovery = Boolean(worldDish);
 
   return (
     <LinearGradient
@@ -73,14 +68,22 @@ export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, 
           showsVerticalScrollIndicator={false}
         >
           {/* Back Button */}
+          <Animated.View entering={FadeInDown.duration(400).delay(50)}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={28} color={colors.text.primary} />
           </TouchableOpacity>
+          </Animated.View>
 
-          {/* Photo Area */}
+          <Animated.View entering={FadeInDown.duration(400).delay(100)}>
           <View style={styles.photoContainer}>
-            {bite.photoUrl ? (
-              <Image source={{ uri: bite.photoUrl }} style={styles.photo} resizeMode="cover" />
+            {heroImage ? (
+              <Image
+                source={{ uri: heroImage }}
+                style={styles.photo}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+              />
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Icon name="food" size={48} color={colors.text.muted} />
@@ -89,87 +92,148 @@ export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, 
             )}
           </View>
 
-          {/* Food Name & Badges */}
           <Heading level={1} style={styles.foodName}>
-            {bite.name}
+            {dishTitle}
           </Heading>
 
           <View style={styles.badgeRow}>
             <View style={[styles.badge, { backgroundColor: colors.primary.wisteriaFaded }]}>
-              <Text variant="label" color={colors.primary.wisteriaDark}>{bite.cuisine}</Text>
+              <Text variant="label" color={colors.primary.wisteriaDark}>{dishCountry}</Text>
             </View>
             <View style={[styles.badge, { backgroundColor: colors.reward.peachLight }]}>
               <Text variant="label" color={colors.text.secondary}>{categoryLabel}</Text>
             </View>
+            {isDiscovery && (
+              <View style={[styles.badge, { backgroundColor: colors.success.honeydew }]}>
+                <Text variant="label" color={colors.success.emerald}>Discovered</Text>
+              </View>
+            )}
           </View>
 
-          {/* Star Rating */}
-          <View style={styles.starsRow}>{renderStars()}</View>
-
-          {/* Restaurant / Homemade */}
-          <Card style={styles.infoCard}>
-            {bite.isMadeAtHome ? (
-              <View style={styles.restaurantRow}>
-                <Icon name="heart" size={20} color={colors.accent.rose} />
-                <View style={[styles.badge, { backgroundColor: colors.accent.blush }]}>
-                  <Text variant="label" color={colors.text.secondary}>Homemade</Text>
+          {isDiscovery ? (
+            <>
+              <Card style={styles.infoCard}>
+                <View style={styles.sectionTitleRow}>
+                  <Icon name="globe" size={18} color={colors.primary.wisteriaDark} />
+                  <Text variant="h3">Origin Story</Text>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.restaurantRow}>
-                <Icon name="location" size={20} color={colors.primary.wisteriaDark} />
-                <Text variant="body">{bite.restaurantName || 'Unknown restaurant'}</Text>
-              </View>
-            )}
-
-            {(bite.city || bite.country) && (
-              <View style={styles.locationRow}>
-                <Icon name="globe" size={16} color={colors.text.secondary} />
-                <Text variant="bodySmall" color={colors.text.secondary}>
-                  {[bite.city, bite.country].filter(Boolean).join(', ')}
+                <Text variant="body" color={colors.text.secondary}>
+                  {worldDish?.originStory}
                 </Text>
-              </View>
-            )}
-          </Card>
+              </Card>
 
-          {/* Notes */}
-          {bite.notes ? (
-            <Card style={styles.notesCard}>
-              <View style={styles.sectionTitleRow}>
-                <Icon name="edit" size={18} color={colors.primary.wisteriaDark} />
-                <Text variant="h3">Notes</Text>
-              </View>
-              <Text variant="body" color={colors.text.secondary}>
-                {bite.notes}
-              </Text>
-            </Card>
-          ) : null}
+              <Card style={styles.notesCard}>
+                <View style={styles.sectionTitleRow}>
+                  <Icon name={BITE_CATEGORIES_INFO[worldDish?.category || bite.category]?.icon || 'food'} size={18} color={colors.reward.peachDark} />
+                  <Text variant="h3">Cultural Meaning</Text>
+                </View>
+                <Text variant="body" color={colors.text.secondary}>
+                  {worldDish?.culturalSignificance}
+                </Text>
+              </Card>
 
-          {/* Recipe */}
-          {bite.recipe ? (
+              <Card style={styles.notesCard}>
+                <View style={styles.sectionTitleRow}>
+                  <Icon name="sparkles" size={18} color={colors.reward.amber} />
+                  <Text variant="h3">Did You Know?</Text>
+                </View>
+                <Text variant="body" color={colors.text.secondary}>
+                  {worldDish?.funFact}
+                </Text>
+              </Card>
+
+              {worldDish && (
+                <Card style={styles.notesCard}>
+                  <View style={styles.sectionTitleRow}>
+                    <Icon name="food" size={18} color={colors.primary.wisteriaDark} />
+                    <Text variant="h3">Key Ingredients</Text>
+                  </View>
+                  <View style={styles.tagsContainer}>
+                    {worldDish.keyIngredients.map((ingredient) => (
+                      <View key={ingredient} style={styles.tag}>
+                        <Text variant="caption" color={colors.primary.wisteriaDark}>{ingredient}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </Card>
+              )}
+            </>
+          ) : (
+            <>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Icon
+                    key={i}
+                    name={i <= bite.rating ? 'star' : 'starOutline'}
+                    size={24}
+                    color={i <= bite.rating ? colors.reward.gold : colors.text.light}
+                  />
+                ))}
+              </View>
+
+              <Card style={styles.infoCard}>
+                {bite.isMadeAtHome ? (
+                  <View style={styles.restaurantRow}>
+                    <Icon name="heart" size={20} color={colors.accent.rose} />
+                    <View style={[styles.badge, { backgroundColor: colors.accent.blush }]}>
+                      <Text variant="label" color={colors.text.secondary}>Homemade</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.restaurantRow}>
+                    <Icon name="location" size={20} color={colors.primary.wisteriaDark} />
+                    <Text variant="body">{bite.restaurantName || 'Unknown restaurant'}</Text>
+                  </View>
+                )}
+
+                {(bite.city || bite.country) && (
+                  <View style={styles.locationRow}>
+                    <Icon name="globe" size={16} color={colors.text.secondary} />
+                    <Text variant="bodySmall" color={colors.text.secondary}>
+                      {[bite.city, bite.country].filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
+                )}
+              </Card>
+
+              {bite.notes ? (
+                <Card style={styles.notesCard}>
+                  <View style={styles.sectionTitleRow}>
+                    <Icon name="edit" size={18} color={colors.primary.wisteriaDark} />
+                    <Text variant="h3">Notes</Text>
+                  </View>
+                  <Text variant="body" color={colors.text.secondary}>
+                    {bite.notes}
+                  </Text>
+                </Card>
+              ) : null}
+            </>
+          )}
+
+          {recipe ? (
             <Card style={styles.recipeCard}>
               <View style={styles.sectionTitleRow}>
                 <Icon name="recipe" size={20} color={colors.primary.wisteriaDark} />
-                <Text variant="h3">Recipe</Text>
+                <Text variant="h3">{isDiscovery ? 'Unlocked Recipe' : 'Recipe'}</Text>
               </View>
 
               <View style={styles.recipeMetaRow}>
                 <View style={styles.recipeMeta}>
                   <Icon name="time" size={14} color={colors.text.muted} />
-                  <Caption>Prep {bite.recipe.prepTime}m</Caption>
+                  <Caption>Prep {recipe.prepTime}m</Caption>
                 </View>
                 <View style={styles.recipeMeta}>
                   <Icon name="flame" size={14} color={colors.text.muted} />
-                  <Caption>Cook {bite.recipe.cookTime}m</Caption>
+                  <Caption>Cook {recipe.cookTime}m</Caption>
                 </View>
                 <View style={styles.recipeMeta}>
                   <Icon name="person" size={14} color={colors.text.muted} />
-                  <Caption>{bite.recipe.servings} servings</Caption>
+                  <Caption>{recipe.servings} servings</Caption>
                 </View>
               </View>
 
               <Text variant="h3" style={styles.recipeSubheading}>Ingredients</Text>
-              {bite.recipe.ingredients.map((ingredient, idx) => (
+              {recipe.ingredients.map((ingredient, idx) => (
                 <View key={idx} style={styles.ingredientRow}>
                   <View style={styles.bullet} />
                   <Text variant="body" color={colors.text.secondary}>{ingredient}</Text>
@@ -177,7 +241,7 @@ export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, 
               ))}
 
               <Text variant="h3" style={styles.recipeSubheading}>Instructions</Text>
-              {bite.recipe.instructions.map((step, idx) => (
+              {recipe.instructions.map((step, idx) => (
                 <View key={idx} style={styles.instructionRow}>
                   <View style={styles.stepNumber}>
                     <Text variant="label" color={colors.text.inverse}>{idx + 1}</Text>
@@ -190,8 +254,7 @@ export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, 
             </Card>
           ) : null}
 
-          {/* Tags */}
-          {bite.tags.length > 0 && (
+          {!isDiscovery && bite.tags.length > 0 && (
             <View style={styles.tagsContainer}>
               {bite.tags.map((tag, idx) => (
                 <View key={idx} style={styles.tag}>
@@ -200,6 +263,7 @@ export const BiteDetailScreen: React.FC<BiteDetailScreenProps> = ({ navigation, 
               ))}
             </View>
           )}
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -369,3 +433,5 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.round,
   },
 });
+
+export default BiteDetailScreen;

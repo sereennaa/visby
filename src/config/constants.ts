@@ -24,6 +24,10 @@ export const AURA_REWARDS = {
   BITE_UPLOAD: 25,
   BITE_WITH_RECIPE: 40,
   BITE_FIRST_IN_CUISINE: 75,
+  DISCOVER_DISH: 25,
+  DISCOVERY_QUIZ_CORRECT: 15,
+  DISCOVERY_FIRST_COUNTRY: 40,
+  DISCOVERY_COMPLETE_COUNTRY: 75,
   
   // Learning
   LESSON_COMPLETE: 50,
@@ -42,6 +46,9 @@ export const AURA_REWARDS = {
   BADGE_RARE: 200,
   BADGE_EPIC: 500,
   BADGE_LEGENDARY: 1000,
+
+  // Sustainability
+  SUSTAINABILITY_LESSON_BONUS: 15,
 };
 
 // Fast Travel Costs
@@ -714,13 +721,51 @@ export const COUNTRIES: Country[] = [
     { id: 'au4', countryId: 'au', title: 'Vegemite', content: 'Vegemite is a spread made from yeast. Australians love it on toast for breakfast!', icon: 'food', category: 'food' },
     { id: 'au5', countryId: 'au', title: 'Aboriginal culture', content: 'Aboriginal people have lived in Australia for over 65,000 years. Art and stories are passed down!', icon: 'culture', category: 'culture' },
   ]},
-  { id: 'nz', name: 'New Zealand', countryCode: 'NZ', flagEmoji: '', visitCostAura: 75, housePriceAura: 460, description: 'Hobbiton, Maori culture, and fjords!', roomTheme: 'nature', accentColor: '#00247D', facts: [
+  { id: 'nz', name: 'New Zealand', countryCode: 'NZ', flagEmoji: '', visitCostAura: 75, housePriceAura: 460, description: 'Hobbiton, Maori culture, and fjords!', roomTheme: 'nature', accentColor: '#00247D', continent: 'Oceania', facts: [
     { id: 'nz1', countryId: 'nz', title: 'Hobbiton', content: 'The Lord of the Rings was filmed in New Zealand. You can visit the Hobbit holes!', icon: 'culture', category: 'fun' },
     { id: 'nz2', countryId: 'nz', title: 'Kia ora!', content: '"Kia ora" means "hello" and "thank you" in Maori. Maori is an official language!', icon: 'language', category: 'language' },
     { id: 'nz3', countryId: 'nz', title: 'Maori haka', content: 'The haka is a powerful Maori dance. The All Blacks do it before rugby games!', icon: 'culture', category: 'culture' },
     { id: 'nz4', countryId: 'nz', title: 'Milford Sound', content: 'Milford Sound is a fjord with cliffs and waterfalls. Dolphins and seals live there!', icon: 'nature', category: 'nature' },
     { id: 'nz5', countryId: 'nz', title: 'Sheep', content: 'New Zealand has way more sheep than people. Lamb and wool are big!', icon: 'nature', category: 'fun' },
   ]},
+  {
+    id: 'eg',
+    name: 'Egypt',
+    countryCode: 'EG',
+    flagEmoji: '',
+    visitCostAura: 450,
+    housePriceAura: 1900,
+    description: 'Ancient pyramids, pharaohs, and the mighty Nile River!',
+    roomTheme: 'traditional',
+    accentColor: '#C41E3A',
+    continent: 'Africa',
+    facts: [
+      { id: 'eg1', countryId: 'eg', title: 'Pyramids of Giza', content: 'The Great Pyramid is over 4,500 years old and was the tallest building in the world for 3,800 years!', icon: 'landmark', category: 'history' },
+      { id: 'eg2', countryId: 'eg', title: 'The Nile', content: 'The Nile River is the longest in the world. Ancient Egyptians depended on it for water, food, and travel!', icon: 'nature', category: 'nature' },
+      { id: 'eg3', countryId: 'eg', title: 'Hieroglyphics', content: 'Ancient Egyptians wrote with pictures called hieroglyphics. The Rosetta Stone helped us learn to read them!', icon: 'culture', category: 'history' },
+      { id: 'eg4', countryId: 'eg', title: 'Marhaba!', content: '"Marhaba" means "hello" in Arabic. Egypt is home to one of the oldest civilizations on Earth!', icon: 'language', category: 'language' },
+      { id: 'eg5', countryId: 'eg', title: 'Felucca rides', content: 'People sail on traditional wooden boats called feluccas on the Nile. No engine — just wind and oars!', icon: 'culture', category: 'culture' },
+    ],
+  },
+  {
+    id: 'za',
+    name: 'South Africa',
+    countryCode: 'ZA',
+    flagEmoji: '',
+    visitCostAura: 480,
+    housePriceAura: 2000,
+    description: 'Safaris, Table Mountain, and the Rainbow Nation!',
+    roomTheme: 'nature',
+    accentColor: '#007749',
+    continent: 'Africa',
+    facts: [
+      { id: 'za1', countryId: 'za', title: 'Big Five', content: 'South Africa is famous for the Big Five: lions, leopards, rhinos, elephants, and buffalo. See them on safari!', icon: 'nature', category: 'nature' },
+      { id: 'za2', countryId: 'za', title: 'Table Mountain', content: 'Table Mountain overlooks Cape Town. It looks flat on top like a table — you can take a cable car up!', icon: 'mountain', category: 'nature' },
+      { id: 'za3', countryId: 'za', title: '11 languages', content: 'South Africa has 11 official languages! Zulu, Xhosa, Afrikaans, and English are just a few.', icon: 'language', category: 'language' },
+      { id: 'za4', countryId: 'za', title: 'Braai culture', content: 'A braai is a South African barbecue. Families gather to grill meat and share stories — it\'s a way of life!', icon: 'food', category: 'food' },
+      { id: 'za5', countryId: 'za', title: 'Penguins at Boulders', content: 'African penguins live on Boulders Beach near Cape Town. You can swim near them!', icon: 'nature', category: 'fun' },
+    ],
+  },
 ];
 
 // ===================================

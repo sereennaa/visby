@@ -32,11 +32,13 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../../store/useStore';
+import { analyticsService } from '../../services/analytics';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
+import { getDiscoveryCookingRecipes } from '../../config/worldFoods';
 
-const RECIPES = [
+const BASE_RECIPES = [
   {
     name: 'Japanese Ramen',
     country: 'Japan',
@@ -196,11 +198,36 @@ const IngredientButton: React.FC<IngredientButtonProps> = ({ name, onPress, disa
   );
 };
 
-export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation }) => {
-  const { addAura, feedVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion, setAdventureGamePlayed, getVisbyMood, addVisbyChatMessage } = useStore();
+const GAME_NAME = 'CookingGame';
 
-  const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * RECIPES.length));
-  const recipe = RECIPES[recipeIndex];
+export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation, route }) => {
+  const pathNodeId = route.params?.pathNodeId;
+  const addAura = useStore(s => s.addAura);
+  const bites = useStore(s => s.bites);
+  const feedVisby = useStore(s => s.feedVisby);
+  const addSkillPoints = useStore(s => s.addSkillPoints);
+  const incrementGameStat = useStore(s => s.incrementGameStat);
+  const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
+  const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
+  const getVisbyMood = useStore(s => s.getVisbyMood);
+  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
+  const completePathNode = useStore(s => s.completePathNode);
+
+  const RECIPES = useMemo(() => {
+    const discoveredIds = bites.filter(b => b.worldDishId).map(b => b.worldDishId!);
+    const discoveryRecipes = getDiscoveryCookingRecipes(discoveredIds).map(r => ({
+      ...r,
+      icon: 'food' as IconName,
+    }));
+    return [...BASE_RECIPES, ...discoveryRecipes];
+  }, [bites]);
+
+  useEffect(() => {
+    analyticsService.trackGameStart(GAME_NAME);
+  }, []);
+
+  const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * BASE_RECIPES.length));
+  const recipe = RECIPES[recipeIndex % RECIPES.length];
 
   const shuffledIngredients = useMemo(
     () => shuffleArray([...recipe.correctIngredients, ...recipe.wrongIngredients]),
@@ -214,10 +241,12 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
   const [gamePhase, setGamePhase] = useState<'playing' | 'won' | 'lost'>('playing');
   const [score, setScore] = useState(0);
   const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
     return () => {
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+      timersRef.current.forEach(clearTimeout);
     };
   }, []);
 
@@ -253,7 +282,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
         if (nextCorrectIndex + 1 >= recipe.correctIngredients.length) {
           const bonus = lives === 3 ? 15 : 0;
           const finalScore = score + 10 + bonus;
-          setTimeout(() => {
+          timersRef.current.push(setTimeout(() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
             setScore(finalScore);
             setGamePhase('won');
@@ -265,12 +294,14 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             addVisbyChatMessage('visby', getPostGameLine('CookingGame', outcome, getVisbyMood()));
             addSkillPoints('cooking', 5);
             incrementGameStat('gamesPlayed');
+            analyticsService.trackGameComplete(GAME_NAME, finalScore, lives === 3);
             checkDailyMissionCompletion('play_minigame', 1);
             setAdventureGamePlayed();
+            if (pathNodeId) completePathNode(pathNodeId);
             if (lives === 3) {
               incrementGameStat('perfectCookingGames');
             }
-          }, 600);
+          }, 600));
         }
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
@@ -283,7 +314,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
         }, 600);
 
         if (newLives <= 0) {
-          setTimeout(() => {
+          timersRef.current.push(setTimeout(() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
             setGamePhase('lost');
             const finalScore = score;
@@ -292,7 +323,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             addVisbyChatMessage('visby', getPostGameLine('CookingGame', 'lost', getVisbyMood()));
             checkDailyMissionCompletion('play_minigame', 1);
             setAdventureGamePlayed();
-          }, 700);
+          }, 700));
         }
       }
     },
@@ -300,7 +331,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
   );
 
   const handlePlayAgain = () => {
-    const newIndex = (recipeIndex + 1) % RECIPES.length;
+    const newIndex = (recipeIndex + 1) % (RECIPES.length || 1);
     setRecipeIndex(newIndex);
     setAddedIngredients([]);
     setLives(3);
@@ -393,6 +424,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
   return (
     <LinearGradient colors={['#FFF5E8', '#FFECD2']} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -417,14 +449,16 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             ))}
           </View>
         </View>
+        </Animated.View>
 
+        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ flex: 1 }}>
         <ScrollView
           style={styles.scrollContent}
           contentContainerStyle={styles.scrollContentContainer}
           showsVerticalScrollIndicator={false}
         >
           {/* Recipe Card */}
-          <Animated.View entering={FadeInDown.duration(400)}>
+          <Animated.View>
             <Card variant="gradient" gradientColors={['#FFFAF0', '#FFF0DB']} style={styles.recipeCard}>
               <View style={styles.recipeHeader}>
                 <View style={styles.recipeIconWrap}>
@@ -507,6 +541,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             ))}
           </View>
         </ScrollView>
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );

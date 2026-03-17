@@ -167,6 +167,11 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({ navigation }
           {/* Tier Cards */}
           {MEMBERSHIP_TIERS.map(renderTierCard)}
 
+          <View style={styles.sustainabilityNote}>
+            <Icon name="nature" size={16} color={colors.calm.ocean} />
+            <Caption color={colors.text.secondary}>10% of this purchase goes to our sustainability fund.</Caption>
+          </View>
+
           {/* Bottom Motivator */}
           <View style={styles.bottomSection}>
             <Icon name="sparkles" size={24} color={colors.reward.gold} />
@@ -286,6 +291,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base.parchment,
     borderWidth: 1,
     borderColor: colors.text.light,
+  },
+  sustainabilityNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   bestValueBadge: {
     position: 'absolute',

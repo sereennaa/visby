@@ -6,9 +6,12 @@ import {
   ALL_FLASHCARDS,
   LESSON_CONTENT,
   COUNTRY_QUIZ_QUESTIONS,
+  COUNTRY_LOCATIONS,
+  setCountryLocationsOverride,
   type QuizQuestion,
   type FlashcardItem,
   type LessonData,
+  type CountryLocation,
 } from '../config/learningContent';
 import {
   COUNTRY_HOUSES,
@@ -35,6 +38,7 @@ const CACHE_KEYS = {
   rooms: `${STORAGE_PREFIX}rooms`,
   locations: `${STORAGE_PREFIX}locations`,
   cosmetics: `${STORAGE_PREFIX}cosmetics`,
+  countryLocations: `${STORAGE_PREFIX}country_locations`,
 } as const;
 
 const cache = new Map<string, unknown>();
@@ -282,6 +286,27 @@ async function fetchLocations(): Promise<SampleLocation[]> {
   return (data ?? []).map(rowToLocation);
 }
 
+function rowToCountryLocation(r: Record<string, unknown>): CountryLocation {
+  return {
+    id: r.id as string,
+    name: r.name as string,
+    description: (r.description as string) || '',
+    category: (r.category as CountryLocation['category']) || 'landmark',
+    learningPoints: (r.learning_points as number) || 10,
+    imageUrl: (r.image_url as string) || undefined,
+  };
+}
+
+async function fetchCountryLocations(countryId: string): Promise<CountryLocation[]> {
+  const { data, error } = await supabase
+    .from('locations')
+    .select('*')
+    .eq('country_id', countryId)
+    .order('name');
+  if (error) throw error;
+  return (data ?? []).map(rowToCountryLocation);
+}
+
 async function fetchCosmetics(): Promise<ShopCosmetic[]> {
   const { data, error } = await supabase.from('cosmetics').select('*');
   if (error) throw error;
@@ -375,6 +400,19 @@ export const contentService = {
     );
   },
 
+  async getCountryLocations(countryId: string): Promise<CountryLocation[]> {
+    const key = `${CACHE_KEYS.countryLocations}_${countryId}`;
+    const locations = await cachedFetch(
+      key,
+      () => fetchCountryLocations(countryId),
+      () => COUNTRY_LOCATIONS[countryId] ?? [],
+    );
+    if (locations.length > 0) {
+      setCountryLocationsOverride(countryId, locations);
+    }
+    return locations;
+  },
+
   async getCosmetics(): Promise<ShopCosmetic[]> {
     return cachedFetch(
       CACHE_KEYS.cosmetics,
@@ -391,13 +429,15 @@ export const contentService = {
 export async function refreshContent(): Promise<void> {
   cache.clear();
 
+  const countries = await contentService.getCountries();
+
   await Promise.all([
-    contentService.getCountries(),
     contentService.getQuizQuestions(),
     contentService.getFlashcards(),
     contentService.getLessons(),
     contentService.getLocations(),
     contentService.getCosmetics(),
+    ...countries.map(c => contentService.getCountryLocations(c.id)),
   ]);
 }
 

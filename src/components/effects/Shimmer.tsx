@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withTiming,
+  cancelAnimation,
   Easing,
   interpolate,
 } from 'react-native-reanimated';
@@ -37,6 +38,7 @@ export const Shimmer: React.FC<ShimmerProps> = ({
       -1,
       false,
     );
+    return () => cancelAnimation(translateX);
   }, [width, duration]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -73,6 +75,7 @@ export const PulseGlow: React.FC<PulseGlowProps> = ({
   style,
 }) => {
   const glow = useSharedValue(0);
+  const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
     glow.value = withRepeat(
@@ -80,12 +83,13 @@ export const PulseGlow: React.FC<PulseGlowProps> = ({
       -1,
       true,
     );
+    return () => cancelAnimation(glow);
   }, [speed]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const radius = interpolate(glow.value, [0, 1], [intensity * 0.5, intensity]);
     const opacity = interpolate(glow.value, [0, 1], [0.2, 0.7]);
-    if (Platform.OS === 'web') {
+    if (isWeb) {
       return {
         boxShadow: `0 0 ${radius}px rgba(199, 184, 234, ${opacity})`,
       } as any;

@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,7 +18,7 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
-import { getFlashcardDeck, getAllFlashcardsMixed, FlashcardItem, FLASHCARD_DECKS } from '../../config/learningContent';
+import { getFlashcardDeckWithDiscoveries, getAllFlashcardsMixedWithDiscoveries, FlashcardItem, FLASHCARD_DECKS } from '../../config/learningContent';
 import { AURA_REWARDS } from '../../config/constants';
 
 type FlashcardsScreenProps = {
@@ -26,12 +27,23 @@ type FlashcardsScreenProps = {
 };
 
 export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, route }) => {
-  const { addAura } = useStore();
+  const addAura = useStore(s => s.addAura);
+  const bites = useStore(s => s.bites);
+  const completePathNode = useStore(s => s.completePathNode);
+  const gradeFlashcard = useStore(s => s.gradeFlashcard);
+  const initFlashcardSR = useStore(s => s.initFlashcardSR);
+  const studyWithVisby = useStore(s => s.studyWithVisby);
   const deckId = route.params?.deckId;
+  const pathNodeId = route.params?.pathNodeId;
   const deckMeta = deckId ? FLASHCARD_DECKS.find(d => d.id === deckId) : undefined;
-  const [cards] = useState<FlashcardItem[]>(() =>
-    deckId ? getFlashcardDeck(deckId) : getAllFlashcardsMixed(12)
-  );
+  const [cards] = useState<FlashcardItem[]>(() => {
+    const discoveredIds = bites.filter(b => b.worldDishId).map(b => b.worldDishId!);
+    const loaded = deckId
+      ? getFlashcardDeckWithDiscoveries(deckId, discoveredIds)
+      : getAllFlashcardsMixedWithDiscoveries(discoveredIds, 12);
+    initFlashcardSR(loaded.map((c) => c.id));
+    return loaded;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [knewCount, setKnewCount] = useState(0);
@@ -62,9 +74,12 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
 
   const advanceCard = (knew: boolean) => {
     if (knew) setKnewCount(prev => prev + 1);
+    gradeFlashcard(card.id, knew);
 
     if (isLastCard) {
       addAura(AURA_REWARDS.FLASHCARD_SESSION);
+      studyWithVisby();
+      if (pathNodeId) completePathNode(pathNodeId);
       setIsFinished(true);
     } else {
       setCurrentIndex(prev => prev + 1);
@@ -158,15 +173,16 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
     <LinearGradient colors={[colors.calm.skyLight, colors.base.cream]} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)} style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Heading level={2}>{deckMeta ? deckMeta.title : 'Flashcards'}</Heading>
           <View style={styles.headerSpacer} />
-        </View>
+        </Animated.View>
 
         {/* Progress */}
+        <Animated.View entering={FadeInDown.duration(400).delay(100)}>
         <View style={styles.progressContainer}>
           <ProgressBar progress={progress} variant="default" height={8} />
           <Caption style={styles.progressLabel}>
@@ -223,6 +239,7 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
             </TouchableOpacity>
           </View>
         </View>
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );

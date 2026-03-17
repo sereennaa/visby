@@ -12,7 +12,9 @@ import { useStore } from '../../store/useStore';
 const CHECK_INTERVAL_MS = 30 * 1000; // check every 30 seconds
 
 export const SessionRestOverlay: React.FC = () => {
-  const { settings, sessionStartedAt, setSessionStartedNow } = useStore();
+  const settings = useStore(s => s.settings);
+  const sessionStartedAt = useStore(s => s.sessionStartedAt);
+  const setSessionStartedNow = useStore(s => s.setSessionStartedNow);
   const [show, setShow] = useState(false);
 
   const sessionTimerMinutes = (settings as { sessionTimerMinutes?: number }).sessionTimerMinutes ?? 0;

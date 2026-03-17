@@ -18,6 +18,7 @@ import Animated, {
   withSequence,
   interpolate,
   FadeIn,
+  FadeInDown,
   FadeInUp,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -30,6 +31,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
+import { analyticsService } from '../../services/analytics';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
@@ -205,8 +207,24 @@ const MemoryCard: React.FC<{
   );
 };
 
-export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, playWithVisby, incrementGameStat, addSkillPoints, checkDailyMissionCompletion, setAdventureGamePlayed, getVisbyMood, addVisbyChatMessage } = useStore();
+const GAME_NAME = 'MemoryCards';
+
+export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation, route }) => {
+  const pathNodeId = route.params?.pathNodeId;
+  const addAura = useStore(s => s.addAura);
+  const studyWithVisby = useStore(s => s.studyWithVisby);
+  const playWithVisby = useStore(s => s.playWithVisby);
+  const incrementGameStat = useStore(s => s.incrementGameStat);
+  const addSkillPoints = useStore(s => s.addSkillPoints);
+  const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
+  const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
+  const getVisbyMood = useStore(s => s.getVisbyMood);
+  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
+  const completePathNode = useStore(s => s.completePathNode);
+
+  React.useEffect(() => {
+    analyticsService.trackGameStart(GAME_NAME);
+  }, []);
   const [deck, setDeck] = useState(() => buildDeck());
   const [cardStates, setCardStates] = useState<FlipState[]>(
     () => Array(PAIRS_PER_GAME * 2).fill('down'),
@@ -301,8 +319,10 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
           studyWithVisby();
           playWithVisby();
           incrementGameStat('gamesPlayed');
+          analyticsService.trackGameComplete(GAME_NAME, newMatched, finalMoves <= 15);
           checkDailyMissionCompletion('play_minigame', 1);
           setAdventureGamePlayed();
+          if (pathNodeId) completePathNode(pathNodeId);
           addSkillPoints('culture', 3);
           const outcome = finalMoves <= 15 ? 'perfect' : 'won';
           addVisbyChatMessage('visby', getPostGameLine('MemoryCards', outcome, getVisbyMood()));
@@ -453,6 +473,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -514,6 +535,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
             ))}
           </View>
         </View>
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );

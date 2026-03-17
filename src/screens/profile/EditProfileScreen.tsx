@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,16 +14,22 @@ import { useStore } from '../../store/useStore';
 import { copy } from '../../config/copy';
 import { showToast } from '../../store/useToast';
 import { RootStackParamList } from '../../types';
+import { FloatingParticles } from '../../components/effects/FloatingParticles';
 
 type EditProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'EditProfile'>;
 };
 
 export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation }) => {
-  const { user, setUser } = useStore();
+  const user = useStore(s => s.user);
+  const setUser = useStore(s => s.setUser);
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || '');
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    return () => timersRef.current.forEach(clearTimeout);
+  }, []);
 
   const handleSave = () => {
     if (!displayName.trim() || !username.trim()) {
@@ -35,7 +41,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
     }
     setMessage({ text: 'Your profile has been updated!', type: 'success' });
     showToast(copy.success.profileSaved, 'success');
-    setTimeout(() => navigation.goBack(), 1500);
+    timersRef.current.push(setTimeout(() => navigation.goBack(), 1500));
   };
 
   return (
@@ -43,6 +49,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ navigation
       colors={[colors.base.cream, colors.primary.wisteriaFaded]}
       style={styles.container}
     >
+      <FloatingParticles count={4} variant="dust" opacity={0.12} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <Button title="" onPress={() => navigation.goBack()} variant="ghost" size="sm"
@@ -130,3 +137,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+export default EditProfileScreen;

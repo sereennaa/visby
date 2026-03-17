@@ -5,6 +5,7 @@
  */
 
 export type ParticleVariant = 'sparkle' | 'stars' | 'mixed' | 'snow' | 'hearts' | 'petals' | 'dust' | 'aurora';
+export type ParticleShape = 'circle' | 'petal' | 'raindrop' | 'snowflake' | 'star' | 'leaf';
 
 export interface CountryAtmosphere {
   /** Gradient for the "window" strip at top of room (looking out into the world) */
@@ -15,6 +16,8 @@ export interface CountryAtmosphere {
   particleVariant: ParticleVariant;
   /** Optional custom particle colors (overrides variant palette) */
   particleColors?: readonly string[];
+  /** Particle shape override (defaults to variant-specific shape) */
+  particleShape?: ParticleShape;
   /** Short label for the vibe (e.g. "Cherry blossom garden", "Château window") */
   vibeLabel: string;
 }
@@ -42,6 +45,7 @@ export const COUNTRY_ATMOSPHERE: Record<string, CountryAtmosphere> = {
     immersiveBg: ['#FFF5F8', '#FFE4EC', '#F8E8ED'],
     particleVariant: 'petals',
     particleColors: ['#FFB6C1', '#FFC0CB', '#FFE4EC', '#FFFFFF', '#F8B4C4'],
+    particleShape: 'petal',
     vibeLabel: 'Cherry blossom garden',
   },
   fr: {
@@ -67,18 +71,21 @@ export const COUNTRY_ATMOSPHERE: Record<string, CountryAtmosphere> = {
     windowSky: GB_SKY,
     immersiveBg: ['#F0EDE8', '#E8E4DC', '#E0DCD4'],
     particleVariant: 'dust',
+    particleShape: 'raindrop',
     vibeLabel: 'Castle window',
   },
   br: {
     windowSky: BR_SKY,
     immersiveBg: ['#F1F8E9', '#E8F5E9', '#FFF8E1'],
     particleVariant: 'mixed',
+    particleShape: 'leaf',
     vibeLabel: 'Rainforest light',
   },
   kr: {
     windowSky: KR_SKY,
     immersiveBg: ['#FAF5FC', '#F3E5F5', '#FFF8E1'],
     particleVariant: 'sparkle',
+    particleShape: 'star',
     vibeLabel: 'Hanok garden',
   },
   th: {
@@ -110,6 +117,7 @@ export const COUNTRY_ATMOSPHERE: Record<string, CountryAtmosphere> = {
     immersiveBg: ['#E8F4FC', '#E3F2FD', '#F5F5F5'],
     particleVariant: 'aurora',
     particleColors: ['#A5D6A7', '#81C784', '#B3E5FC', '#90CAF9', '#CE93D8'],
+    particleShape: 'snowflake',
     vibeLabel: 'Northern window',
   },
   tr: {

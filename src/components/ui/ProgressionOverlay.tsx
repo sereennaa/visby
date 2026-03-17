@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Modal, Platform } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { View, StyleSheet, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ZoomIn, BounceIn } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
@@ -10,7 +10,10 @@ import { Button } from './Button';
 import { Icon, IconName } from './Icon';
 import { useStore, getGrowthStage } from '../../store/useStore';
 import { soundService } from '../../services/sound';
+import { hapticService } from '../../services/haptics';
 import type { StoryChapter } from '../../config/storyChapters';
+import { BADGE_DEFINITIONS, type BadgeDefinition } from '../../config/badges';
+import { AchievementCeremony } from '../effects/AchievementCeremony';
 
 const LEVEL_TITLES: Record<number, string> = {
   1: 'Novice Explorer',
@@ -33,60 +36,154 @@ const STAGE_INFO: Record<string, { title: string; desc: string; icon: IconName }
   adult: { title: 'Adult Visby!', desc: 'Your Visby is fully grown! Legendary explorer!', icon: 'trophy' },
 };
 
-const STAGE_LABELS = ['E', 'B', 'K', 'T', 'A'];
-const STAGES = ['egg', 'baby', 'kid', 'teen', 'adult'];
+const STREAK_MILESTONES = [7, 14, 30, 50, 100];
+const RARITY_AURA: Record<string, number> = {
+  common: 10,
+  uncommon: 25,
+  rare: 50,
+  epic: 100,
+  legendary: 200,
+};
+
+interface CeremonyItem {
+  id: string;
+  icon: IconName;
+  title: string;
+  subtitle?: string;
+  auraReward?: number;
+}
 
 export const ProgressionOverlay: React.FC = () => {
-  const { user, getNextChapterToShow, markStoryBeatShown } = useStore();
-  const [lastCelebratedLevel, setLastCelebratedLevel] = useState(user?.level || 1);
-  const [showLevelUp, setShowLevelUp] = useState(false);
-  const [showStageUp, setShowStageUp] = useState(false);
-  const [lastStage, setLastStage] = useState(getGrowthStage(user?.totalCarePoints || 0));
+  const user = useStore(s => s.user);
+  const badges = useStore(s => s.badges);
+  const getNextChapterToShow = useStore(s => s.getNextChapterToShow);
+  const markStoryBeatShown = useStore(s => s.markStoryBeatShown);
+
   const [chapterToShow, setChapterToShow] = useState<StoryChapter | null>(null);
 
+  const [ceremonyQueue, setCeremonyQueue] = useState<CeremonyItem[]>([]);
+  const [activeCeremony, setActiveCeremony] = useState<CeremonyItem | null>(null);
+
+  const lastCelebratedLevelRef = useRef(user?.level || 1);
+  const lastStageRef = useRef(getGrowthStage(user?.totalCarePoints || 0));
+  const lastBadgeCountRef = useRef(badges.length);
+  const lastStreakRef = useRef(user?.currentStreak ?? 0);
+
   const chapterUnlockKey = useStore((s) =>
-    `${s.user?.visitedCountries?.length ?? 0}-${s.stamps.length}-${s.badges.length}-${s.lessonProgress.filter((p) => p.completed).length}-${s.storyBeatsShown.length}`
+    `${s.user?.visitedCountries?.length ?? 0}-${s.bites.length}-${s.stamps.length}-${s.badges.length}-${s.lessonProgress.filter((p) => p.completed).length}-${s.userHouses.length}-${s.user?.currentStreak ?? 0}-${s.storyBeatsShown.length}`
   );
+
+  const enqueueCeremony = useCallback((item: CeremonyItem) => {
+    setCeremonyQueue((prev) => [...prev, item]);
+  }, []);
+
+  useEffect(() => {
+    if (activeCeremony || ceremonyQueue.length === 0) return;
+    setCeremonyQueue((prev) => {
+      const [next, ...rest] = prev;
+      if (next) setActiveCeremony(next);
+      return rest;
+    });
+  }, [ceremonyQueue, activeCeremony]);
 
   useEffect(() => {
     if (!user) return;
 
-    if (user.level > lastCelebratedLevel) {
+    if (user.level > lastCelebratedLevelRef.current) {
       soundService.playLevelUp();
-      setShowLevelUp(true);
-      setLastCelebratedLevel(user.level);
+      hapticService.success();
+      enqueueCeremony({
+        id: `level_${user.level}`,
+        icon: 'star',
+        title: 'Level Up!',
+        subtitle: LEVEL_TITLES[user.level] || 'Explorer',
+        auraReward: 0,
+      });
+      lastCelebratedLevelRef.current = user.level;
     }
 
     const currentStage = getGrowthStage(user.totalCarePoints || 0);
-    if (currentStage !== lastStage) {
+    if (currentStage !== lastStageRef.current) {
+      const stageInfo = STAGE_INFO[currentStage];
       soundService.playLevelUp();
-      setShowStageUp(true);
-      setLastStage(currentStage);
+      hapticService.success();
+      enqueueCeremony({
+        id: `stage_${currentStage}`,
+        icon: stageInfo?.icon || 'sparkles',
+        title: stageInfo?.title || 'Evolution!',
+        subtitle: stageInfo?.desc || 'Your Visby evolved!',
+        auraReward: 50,
+      });
+      lastStageRef.current = currentStage;
     }
-  }, [user?.level, user?.totalCarePoints]);
+  }, [user?.level, user?.totalCarePoints, enqueueCeremony]);
+
+  useEffect(() => {
+    if (badges.length > lastBadgeCountRef.current) {
+      const newBadges = badges.slice(lastBadgeCountRef.current);
+      for (const badge of newBadges) {
+        const def = BADGE_DEFINITIONS.find((b: BadgeDefinition) => b.id === badge.badgeId);
+        if (def) {
+          soundService.playBadgeEarned();
+          enqueueCeremony({
+            id: `badge_${badge.badgeId}`,
+            icon: def.icon,
+            title: `Badge Unlocked!`,
+            subtitle: def.name,
+            auraReward: RARITY_AURA[def.rarity] || 10,
+          });
+        }
+      }
+    }
+    lastBadgeCountRef.current = badges.length;
+  }, [badges.length, badges, enqueueCeremony]);
+
+  useEffect(() => {
+    const currentStreak = user?.currentStreak ?? 0;
+    if (currentStreak > lastStreakRef.current) {
+      for (const milestone of STREAK_MILESTONES) {
+        if (currentStreak >= milestone && lastStreakRef.current < milestone) {
+          soundService.playStreakMilestone();
+          enqueueCeremony({
+            id: `streak_${milestone}`,
+            icon: 'flame',
+            title: `${milestone}-Day Streak!`,
+            subtitle: `You've explored for ${milestone} days straight!`,
+          });
+        }
+      }
+    }
+    lastStreakRef.current = currentStreak;
+  }, [user?.currentStreak, enqueueCeremony]);
 
   useEffect(() => {
     const next = getNextChapterToShow();
-    if (next) setChapterToShow(next);
+    if (next) {
+      setChapterToShow(next);
+      soundService.playChapterUnlocked();
+      hapticService.success();
+    }
   }, [chapterUnlockKey, getNextChapterToShow]);
 
-  const stage = getGrowthStage(user?.totalCarePoints || 0);
-  const info = STAGE_INFO[stage];
-
-  const dismissChapter = () => {
+  const dismissChapter = useCallback(() => {
     if (chapterToShow) {
       markStoryBeatShown(chapterToShow.storyBeatId);
       setChapterToShow(null);
     }
-  };
+  }, [chapterToShow, markStoryBeatShown]);
+
+  const dismissActiveCeremony = useCallback(() => {
+    setActiveCeremony(null);
+  }, []);
 
   return (
     <>
-      <Modal visible={!!chapterToShow} transparent animationType="fade">
+      {/* Chapter unlock modal */}
+      <Modal visible={!!chapterToShow} transparent animationType="none">
         <View style={s.overlay}>
-          <Animated.View entering={ZoomIn.duration(500)} style={s.card}>
+          <Animated.View entering={ZoomIn.duration(300).springify()} style={s.card}>
             <LinearGradient colors={[colors.primary.wisteriaLight, colors.primary.wisteriaDark]} style={s.iconCircle}>
-              <Icon name="compass" size={48} color="#FFFFFF" />
+              <Icon name="compass" size={48} color={colors.text.inverse} />
             </LinearGradient>
             <Animated.View entering={BounceIn.delay(300)}>
               <Heading level={1} style={s.title}>{chapterToShow?.title}</Heading>
@@ -97,50 +194,16 @@ export const ProgressionOverlay: React.FC = () => {
         </View>
       </Modal>
 
-      <Modal visible={showLevelUp} transparent animationType="fade">
-        <View style={s.overlay}>
-          <Animated.View entering={ZoomIn.duration(500)} style={s.card}>
-            <LinearGradient colors={['#FFD700', '#FFA500']} style={s.iconCircle}>
-              <Icon name="star" size={48} color="#FFFFFF" />
-            </LinearGradient>
-            <Animated.View entering={BounceIn.delay(300)}>
-              <Heading level={1} style={s.title}>Level Up!</Heading>
-            </Animated.View>
-            <View style={s.levelBadge}>
-              <Text style={s.levelNum}>{user?.level || 1}</Text>
-            </View>
-            <Text style={s.desc}>
-              {LEVEL_TITLES[user?.level || 1] || 'Explorer'}
-            </Text>
-            <Caption style={s.sub}>Keep exploring to level up more!</Caption>
-            <Button title="Awesome!" onPress={() => setShowLevelUp(false)} variant="primary" style={s.btn} />
-          </Animated.View>
-        </View>
-      </Modal>
-
-      <Modal visible={showStageUp} transparent animationType="fade">
-        <View style={s.overlay}>
-          <Animated.View entering={ZoomIn.duration(500)} style={s.card}>
-            <LinearGradient colors={['#B794F4', '#8B6FC0']} style={s.iconCircle}>
-              <Icon name={info?.icon || 'sparkles'} size={48} color="#FFFFFF" />
-            </LinearGradient>
-            <Animated.View entering={BounceIn.delay(300)}>
-              <Heading level={1} style={s.title}>{info?.title || 'Evolution!'}</Heading>
-            </Animated.View>
-            <Text style={s.desc}>{info?.desc || 'Your Visby evolved!'}</Text>
-            <View style={s.stageRow}>
-              {STAGES.map((st, i) => (
-                <View key={st} style={[s.stageDot, st === stage && s.stageDotActive]}>
-                  <Text style={[s.stageDotText, st === stage && s.stageDotTextActive]}>
-                    {STAGE_LABELS[i]}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            <Button title="Amazing!" onPress={() => setShowStageUp(false)} variant="primary" style={s.btn} />
-          </Animated.View>
-        </View>
-      </Modal>
+      {/* Queued ceremonies (level-up, stage-up, badges, streaks) */}
+      {activeCeremony && (
+        <AchievementCeremony
+          icon={activeCeremony.icon}
+          title={activeCeremony.title}
+          subtitle={activeCeremony.subtitle}
+          auraReward={activeCeremony.auraReward}
+          onDismiss={dismissActiveCeremony}
+        />
+      )}
     </>
   );
 };
@@ -153,7 +216,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.card,
     borderRadius: spacing.radius.xxl,
     maxWidth: 320,
     width: '85%',
@@ -173,57 +236,12 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.lg,
   },
-  levelBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFD700',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.md,
-  },
-  levelNum: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
   desc: {
     textAlign: 'center',
     marginTop: spacing.md,
   },
-  sub: {
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    color: colors.text.muted,
-  },
   btn: {
     marginTop: spacing.xl,
-  },
-  stageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  stageDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.base.parchment ?? '#E8E0F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stageDotActive: {
-    backgroundColor: '#8B6FC0',
-  },
-  stageDotText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.muted,
-  },
-  stageDotTextActive: {
-    color: '#FFFFFF',
   },
 });
 

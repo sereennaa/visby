@@ -6,6 +6,7 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,7 +32,9 @@ type MapScreenProps = {
 };
 
 export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
-  const { currentLocation, setLocation, stamps } = useStore();
+  const currentLocation = useStore(s => s.currentLocation);
+  const setLocation = useStore(s => s.setLocation);
+  const stamps = useStore(s => s.stamps);
   const [loading, setLoading] = useState(false);
   const [locationError, setLocationError] = useState(false);
   const [selectedType, setSelectedType] = useState<StampType | 'all'>('all');
@@ -174,7 +177,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)} style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
@@ -187,9 +190,10 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
           <TouchableOpacity onPress={fetchLocation} style={styles.headerIcon}>
             <Icon name="refresh" size={24} color={colors.text.secondary} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        {/* Current Location */}
+        {/* Current Location - controls only */}
+        <Animated.View entering={FadeInDown.duration(400).delay(100)}>
         <Card style={styles.currentLocationCard}>
           <View style={styles.currentLocationContent}>
             <Icon name="location" size={28} color={colors.primary.wisteriaDark} />
@@ -208,8 +212,9 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
             </Text>
           )}
         </Card>
+        </Animated.View>
 
-        {/* Nearby map: You + places by distance */}
+        {/* Nearby map: You + places by distance - no animation for map */}
         <View style={styles.nearbyMapWrap}>
           <NearbyMapView
             locations={sortedLocations}
@@ -219,7 +224,8 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
           <Caption style={styles.sampleNotice}>{copy.stamps.samplePlacesNotice}</Caption>
         </View>
 
-        {/* Search */}
+        {/* Search and controls */}
+        <Animated.View entering={FadeInDown.duration(400).delay(100)}>
         <View style={styles.searchContainer}>
           <Icon name="search" size={18} color={colors.text.muted} />
           <TextInput
@@ -344,16 +350,17 @@ export const MapScreen: React.FC<MapScreenProps> = ({ navigation }) => {
             }
           />
         </View>
+        </Animated.View>
 
-        {/* Add current location to passport — dreamy floating CTA */}
+        {/* Log current location as a visit */}
         <View style={styles.floatingButtonWrap}>
           <View style={styles.floatingButton}>
             <Button
-              title="Add current location"
+              title="Log current location"
               onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'current' })}
               variant="primary"
               size="lg"
-              icon={<Icon name="stamp" size={20} color={colors.text.inverse} />}
+              icon={<Icon name="location" size={20} color={colors.text.inverse} />}
             />
           </View>
         </View>

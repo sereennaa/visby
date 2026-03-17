@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -66,7 +67,7 @@ type LessonCategoryScreenProps = {
 
 export const LessonCategoryScreen: React.FC<LessonCategoryScreenProps> = ({ navigation, route }) => {
   const { categoryId } = route.params;
-  const { lessonProgress } = useStore();
+  const lessonProgress = useStore(s => s.lessonProgress);
   const category = CATEGORIES[categoryId];
   const rawLessons = LESSONS_BY_CATEGORY[categoryId] || [];
   const lessons = rawLessons.map(l => ({
@@ -97,6 +98,7 @@ export const LessonCategoryScreen: React.FC<LessonCategoryScreenProps> = ({ navi
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <Animated.View entering={FadeInDown.duration(400).delay(50)}>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -177,6 +179,7 @@ export const LessonCategoryScreen: React.FC<LessonCategoryScreenProps> = ({ navi
               </Card>
             ))}
           </View>
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>

@@ -81,16 +81,70 @@ export const authService = {
       return createDemoUser(email, password, username);
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    // Try Supabase auth — if anything goes wrong, fall back to local/demo mode
+    try {
+      // Try sign-in first (handles existing accounts from previous attempts)
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (!signInErr && signInData?.user) {
+        // Signed in — ensure profile exists
+        const { data: profile } = await supabase.from('users').select('id').eq('id', signInData.user.id).single();
+        if (!profile) {
+          await supabase.from('users').insert({ id: signInData.user.id, email, username, display_name: username, visby_id: `visby_${signInData.user.id}` }).single();
+          await supabase.from('visbies').insert({ id: `visby_${signInData.user.id}`, user_id: signInData.user.id, name: `${username}'s Visby` }).single();
+        }
+        return this._buildLocalData(signInData.user.id, email, username);
+      }
 
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('No user returned');
+      // Sign-in failed — try sign-up
+      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
+      if (!authError && authData?.user) {
+        return this._buildLocalData(authData.user.id, email, username);
+      }
+    } catch {
+      // Supabase completely failed — fall through to demo mode below
+    }
 
-    const newUser: Partial<User> = {
-      id: authData.user.id,
+    // Supabase didn't work — use local demo mode so the app still works
+    return createDemoUser(email, password, username);
+  },
+
+  async _signInAndEnsureProfile(email: string, password: string, username: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      const msg = (error.message || '').toLowerCase();
+      // "Email not confirmed" means account exists & password is correct —
+      // just proceed with local data so the user isn't blocked.
+      if (msg.includes('not confirmed') || msg.includes('not been confirmed')) {
+        return this._buildLocalData(`local_${Date.now()}`, email, username);
+      }
+      throw error;
+    }
+    if (!data.user) throw new Error('Sign in failed');
+
+    // Check if profile exists, create it if the trigger didn't fire
+    const { data: profile } = await supabase.from('users').select('id').eq('id', data.user.id).single();
+    if (!profile) {
+      await supabase.from('users').insert({
+        id: data.user.id,
+        email,
+        username,
+        display_name: username,
+        visby_id: `visby_${data.user.id}`,
+      });
+      await supabase.from('visbies').insert({
+        id: `visby_${data.user.id}`,
+        user_id: data.user.id,
+        name: `${username}'s Visby`,
+      });
+    }
+
+    return this._buildLocalData(data.user.id, email, username);
+  },
+
+  _buildLocalData(userId: string, email: string, username: string) {
+    const newUser: User = {
+      id: userId,
       email,
       username,
       displayName: username,
@@ -107,6 +161,14 @@ export const authService = {
       badgesEarned: 0,
       countriesVisited: 0,
       citiesVisited: 0,
+      totalCarePoints: 0,
+      gamesPlayed: 0,
+      perfectCookingGames: 0,
+      perfectWordMatches: 0,
+      treasureHuntsCompleted: 0,
+      visitedCountries: [],
+      visbyId: `visby_${userId}`,
+      skills: { ...DEFAULT_SKILLS },
       settings: {
         notifications: true,
         locationTracking: true,
@@ -116,30 +178,19 @@ export const authService = {
       },
     };
 
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert(newUser);
-
-    if (profileError) throw profileError;
-
-    const newVisby: Partial<Visby> = {
-      id: `visby_${authData.user.id}`,
-      userId: authData.user.id,
+    const newVisby: Visby = {
+      id: `visby_${userId}`,
+      userId,
       name: `${username}'s Visby`,
       createdAt: new Date(),
       appearance: DEFAULT_VISBY_APPEARANCE,
       equipped: { outfit: 'default_tunic', hat: 'viking_helmet', accessory: 'sword' },
       ownedCosmetics: ['default_tunic', 'default_boots', 'default_backpack', 'viking_helmet', 'sword'],
       currentMood: 'happy',
+      needs: { ...DEFAULT_NEEDS },
     };
 
-    const { error: visbyError } = await supabase
-      .from('visbies')
-      .insert(newVisby);
-
-    if (visbyError) throw visbyError;
-
-    return { user: newUser as User, visby: newVisby as Visby };
+    return { user: newUser, visby: newVisby };
   },
 
   async signIn(email: string, password: string) {
@@ -193,7 +244,45 @@ export const authService = {
       if (__DEV__) console.error('Error fetching user profile:', error);
       return null;
     }
-    return data;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      email: data.email,
+      username: data.username,
+      displayName: data.display_name,
+      photoURL: data.photo_url ?? undefined,
+      createdAt: new Date(data.created_at),
+      lastActive: new Date(data.last_active),
+      level: data.level,
+      aura: data.aura,
+      totalAuraEarned: data.total_aura_earned,
+      currentStreak: data.current_streak,
+      longestStreak: data.longest_streak,
+      lastCheckIn: new Date(data.last_check_in),
+      stampsCollected: data.stamps_collected,
+      bitesCollected: data.bites_collected,
+      badgesEarned: data.badges_earned,
+      countriesVisited: data.countries_visited,
+      citiesVisited: data.cities_visited,
+      totalCarePoints: data.total_care_points,
+      gamesPlayed: data.games_played,
+      perfectCookingGames: data.perfect_cooking_games,
+      perfectWordMatches: data.perfect_word_matches,
+      treasureHuntsCompleted: data.treasure_hunts_completed,
+      visitedCountries: data.visited_countries ?? [],
+      lessonsCompletedToday: data.lessons_completed_today,
+      lastLessonDate: data.last_lesson_date,
+      visbyId: data.visby_id ?? '',
+      skills: data.skills ?? { ...DEFAULT_SKILLS },
+      settings: data.settings ?? {
+        notifications: true,
+        locationTracking: true,
+        privateProfile: false,
+        language: 'en',
+        measurementUnit: 'metric',
+      },
+    };
   },
 
   async getVisby(userId: string): Promise<Visby | null> {
@@ -207,14 +296,26 @@ export const authService = {
     const { data, error } = await supabase
       .from('visbies')
       .select('*')
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
       if (__DEV__) console.error('Error fetching visby:', error);
       return null;
     }
-    return data;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      createdAt: new Date(data.created_at),
+      appearance: data.appearance ?? {},
+      equipped: data.equipped ?? {},
+      ownedCosmetics: data.owned_cosmetics ?? [],
+      currentMood: data.current_mood ?? 'happy',
+      needs: data.needs ?? { ...DEFAULT_NEEDS },
+    };
   },
 
   async updateVisby(visbyId: string, updates: Partial<Visby>) {
@@ -228,9 +329,17 @@ export const authService = {
       return;
     }
 
+    const row: Record<string, unknown> = {};
+    if (updates.name !== undefined) row.name = updates.name;
+    if (updates.appearance !== undefined) row.appearance = updates.appearance;
+    if (updates.equipped !== undefined) row.equipped = updates.equipped;
+    if (updates.ownedCosmetics !== undefined) row.owned_cosmetics = updates.ownedCosmetics;
+    if (updates.currentMood !== undefined) row.current_mood = updates.currentMood;
+    if (updates.needs !== undefined) row.needs = updates.needs;
+
     const { error } = await supabase
       .from('visbies')
-      .update(updates)
+      .update(row)
       .eq('id', visbyId);
 
     if (error) throw error;

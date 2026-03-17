@@ -38,6 +38,7 @@ import {
   RARITY_COLORS,
   RARITY_LABELS,
   ShopCosmetic,
+  getEquippedGlowColor,
 } from '../../config/cosmetics';
 
 const SIDE = spacing.screenPadding;
@@ -133,11 +134,22 @@ const RARITY_GLOW: Record<string, string> = {
 
 const SLOTS_WITH_CHARACTER_PREVIEW: CosmeticType[] = ['hat', 'outfit', 'accessory'];
 
+const WARDROBE_EMPTY_COPY: Partial<Record<CosmeticType, { title: string; subtitle: string }>> = {
+  hat: copy.empty.noWardrobeHat,
+  outfit: copy.empty.noWardrobeOutfit,
+  accessory: copy.empty.noWardrobeAccessory,
+  shoes: copy.empty.noWardrobeShoes,
+  backpack: copy.empty.noWardrobeBackpack,
+  companion: copy.empty.noWardrobeCompanion,
+};
+
 export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
   const { width: screenW } = useWindowDimensions();
   const itemWidth = (screenW - SIDE * 2 - GAP * (NUM_COLS - 1)) / NUM_COLS;
 
-  const { visby, updateVisbyAppearance, equipCosmetic } = useStore();
+  const visby = useStore(s => s.visby);
+  const updateVisbyAppearance = useStore(s => s.updateVisbyAppearance);
+  const equipCosmetic = useStore(s => s.equipCosmetic);
   const [wardrobeTab, setWardrobeTab] = useState<CosmeticType>('hat');
 
   const currentMoodInfo = MOOD_INFO_MAP[visby?.currentMood || 'happy'] || MOOD_INFO_MAP.happy;
@@ -153,10 +165,18 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
   const equipped = visby?.equipped || {};
   const owned = visby?.ownedCosmetics || [];
   const aura = useStore.getState().user?.aura || 0;
+  const equippedGlow = getEquippedGlowColor(equipped);
 
   const ownedItems = COSMETICS_CATALOG.filter(
     (c) => c.type === wardrobeTab && (owned.includes(c.id) || c.price === 0)
   );
+
+  const showCharacterPreview = SLOTS_WITH_CHARACTER_PREVIEW.includes(wardrobeTab);
+
+  const equippedForPreview = useCallback((item: ShopCosmetic) => ({
+    ...equipped,
+    [item.type]: item.id,
+  }), [equipped]);
 
   const isEquipped = (id: string, type: CosmeticType) => equipped[type] === id;
 
@@ -257,13 +277,14 @@ export const AvatarScreen: React.FC<AvatarScreenProps> = ({ navigation }) => {
               end={{ x: 1, y: 1 }}
               style={styles.characterGradient}
             >
-              <PulseGlow color="rgba(199, 184, 234, 0.6)" intensity={24} speed={3000}>
+              <PulseGlow color={equippedGlow ? `${equippedGlow}88` : 'rgba(199, 184, 234, 0.6)'} intensity={equippedGlow ? 30 : 24} speed={3000}>
                 <VisbyCharacter
                   appearance={appearance}
                   equipped={equipped}
                   mood={visby?.currentMood || 'happy'}
                   size={220}
                   animated={true}
+                  glowColor={equippedGlow}
                 />
               </PulseGlow>
               <Text variant="h2" align="center" style={styles.visbyName}>

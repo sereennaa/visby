@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,45 +14,73 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { BiteCard, BiteGridItem } from '../../components/collectibles/BiteCard';
 import { SkeletonCard } from '../../components/ui/SkeletonCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { copy } from '../../config/copy';
 import { useStore } from '../../store/useStore';
-import { BITE_CATEGORIES_INFO } from '../../config/constants';
-import { RootStackParamList, Bite, BiteCategory } from '../../types';
+import { RootStackParamList, Bite } from '../../types';
+import { getCountriesWithDishes, getDishCountryId, getDishById } from '../../config/worldFoods';
 
 type BitesScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Bites'>;
 };
 
 export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
-  const { bites, isLoading } = useStore();
-  const [selectedCategory, setSelectedCategory] = useState<BiteCategory | 'all'>('all');
+  const bites = useStore(s => s.bites);
+  const isLoading = useStore(s => s.isLoading);
+  const [selectedCountry, setSelectedCountry] = useState<string | 'all'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards');
+  const countries = useMemo(() => getCountriesWithDishes(), []);
 
-  // Count bites by category
-  const biteCounts: Record<string, number> = { all: bites.length };
-  bites.forEach(bite => {
-    biteCounts[bite.category] = (biteCounts[bite.category] || 0) + 1;
-  });
-
-  const categories: (BiteCategory | 'all')[] = ['all', ...Object.keys(BITE_CATEGORIES_INFO) as BiteCategory[]];
-
-  const filteredBites = selectedCategory === 'all'
-    ? bites
-    : bites.filter(b => b.category === selectedCategory);
-
-  const sortedBites = [...filteredBites].sort(
-    (a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime()
+  const discoveryBites = useMemo(
+    () => bites.filter((bite) => Boolean(bite.worldDishId)),
+    [bites]
   );
 
-  const totalRatings = bites.reduce((sum, b) => sum + b.rating, 0);
-  const avgRating = bites.length > 0 ? (totalRatings / bites.length).toFixed(1) : '0';
-  const recipesCount = bites.filter(b => b.recipe).length;
-  const homemadeCount = bites.filter(b => b.isMadeAtHome).length;
+  const countryProgress = useMemo(() => {
+    return countries.map((country) => {
+      const discoveredCount = discoveryBites.filter((bite) => {
+        if (!bite.worldDishId) return false;
+        return getDishCountryId(bite.worldDishId) === country.id;
+      }).length;
+
+      return {
+        ...country,
+        discoveredCount,
+      };
+    });
+  }, [discoveryBites, countries]);
+
+  const filteredBites = useMemo(
+    () => {
+      if (selectedCountry === 'all') return bites;
+      const selectedCountryMeta = countries.find((country) => country.id === selectedCountry);
+      return bites.filter((bite) => {
+        if (bite.worldDishId) {
+          return getDishCountryId(bite.worldDishId) === selectedCountry;
+        }
+        return bite.country === selectedCountryMeta?.name || bite.cuisine === selectedCountryMeta?.name;
+      });
+    },
+    [bites, countries, selectedCountry]
+  );
+
+  const sortedBites = useMemo(
+    () => [...filteredBites].sort(
+      (a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime()
+    ),
+    [filteredBites]
+  );
+
+  const { discoveredCount, countriesTasted, recipesUnlocked } = useMemo(() => {
+    return {
+      discoveredCount: discoveryBites.length,
+      countriesTasted: countryProgress.filter((country) => country.discoveredCount > 0).length,
+      recipesUnlocked: discoveryBites.filter((bite) => bite.recipeUnlocked || bite.recipe).length,
+    };
+  }, [countryProgress, discoveryBites]);
 
   const renderBiteCard = ({ item }: { item: Bite }) => (
     <BiteCard
@@ -74,7 +104,7 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)} style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
@@ -84,13 +114,15 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Heading level={1}>My Bites</Heading>
-            <Caption>{bites.length} food memories</Caption>
+            <Heading level={1}>Taste Atlas</Heading>
+            <Caption>{discoveredCount} dishes discovered</Caption>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={() => setViewMode(viewMode === 'cards' ? 'grid' : 'cards')}
               style={styles.viewToggle}
+              accessibilityRole="button"
+              accessibilityLabel={viewMode === 'cards' ? 'Switch to grid view' : 'Switch to list view'}
             >
               <Icon
                 name={viewMode === 'cards' ? 'grid' : 'list'}
@@ -101,94 +133,103 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               onPress={() => navigation.navigate('AddBite')}
               style={styles.addButton}
+              accessibilityRole="button"
+              accessibilityLabel="Add bite"
             >
               <Icon name="add" size={20} color={colors.text.inverse} />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Stats Overview */}
+        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.contentWrap}>
         {bites.length > 0 && (
           <Card style={styles.statsCard}>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Icon name="star" size={24} color={colors.reward.gold} />
-                <Text variant="h2">{avgRating}</Text>
-                <Caption>Avg Rating</Caption>
+                <Icon name="food" size={24} color={colors.reward.peachDark} />
+                <Text variant="h2">{discoveredCount}</Text>
+                <Caption>Dishes</Caption>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Icon name="globe" size={24} color={colors.primary.wisteriaDark} />
+                <Text variant="h2">{countriesTasted}</Text>
+                <Caption>Countries</Caption>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Icon name="recipe" size={24} color={colors.calm.ocean} />
-                <Text variant="h2">{recipesCount}</Text>
+                <Text variant="h2">{recipesUnlocked}</Text>
                 <Caption>Recipes</Caption>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Icon name="homemade" size={24} color={colors.success.emerald} />
-                <Text variant="h2">{homemadeCount}</Text>
-                <Caption>Homemade</Caption>
               </View>
             </View>
           </Card>
         )}
 
-        {/* Category Filter */}
         {bites.length > 0 && (
-          <FlatList
-            horizontal
-            data={categories}
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterList}
-            contentContainerStyle={styles.filterContent}
-            keyExtractor={(item) => item}
-            renderItem={({ item }) => {
-              const isSelected = selectedCategory === item;
-              const categoryInfo = item === 'all'
-                ? { icon: 'all' as IconName, label: 'All' }
-                : BITE_CATEGORIES_INFO[item];
-              const count = biteCounts[item] || 0;
-
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterList} contentContainerStyle={styles.filterContent}>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedCountry === 'all' && styles.filterChipSelected]}
+              onPress={() => setSelectedCountry('all')}
+              accessibilityRole="tab"
+              accessibilityLabel="All countries"
+              accessibilityState={{ selected: selectedCountry === 'all' }}
+            >
+              <Icon
+                name={'globe' as IconName}
+                size={16}
+                color={selectedCountry === 'all' ? colors.text.inverse : colors.text.secondary}
+              />
+              <Text variant="caption" color={selectedCountry === 'all' ? colors.text.inverse : colors.text.secondary}>
+                All
+              </Text>
+            </TouchableOpacity>
+            {countryProgress.map((country) => {
+              const isSelected = selectedCountry === country.id;
               return (
                 <TouchableOpacity
-                  style={[
-                    styles.filterChip,
-                    isSelected && styles.filterChipSelected,
-                  ]}
-                  onPress={() => setSelectedCategory(item)}
+                  key={country.id}
+                  style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+                  onPress={() => setSelectedCountry(country.id)}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`${country.name}, ${country.discoveredCount} of ${country.dishCount} dishes`}
+                  accessibilityState={{ selected: isSelected }}
                 >
-                  <Icon
-                    name={categoryInfo?.icon || 'food'}
-                    size={16}
-                    color={isSelected ? colors.text.inverse : colors.text.secondary}
-                  />
-                  <Text
-                    variant="caption"
-                    color={isSelected ? colors.text.inverse : colors.text.secondary}
-                  >
-                    {categoryInfo?.label || item}
+                  <Text variant="caption" color={isSelected ? colors.text.inverse : colors.text.secondary}>
+                    {country.flag}
                   </Text>
-                  <View
-                    style={[
-                      styles.countBadge,
-                      isSelected && styles.countBadgeSelected,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.countText,
-                        isSelected && styles.countTextSelected,
-                      ]}
-                    >
-                      {count}
+                  <Text variant="caption" color={isSelected ? colors.text.inverse : colors.text.secondary}>
+                    {country.name}
+                  </Text>
+                  <View style={[styles.countBadge, isSelected && styles.countBadgeSelected]}>
+                    <Text style={[styles.countText, isSelected && styles.countTextSelected]}>
+                      {country.discoveredCount}/{country.dishCount}
                     </Text>
                   </View>
                 </TouchableOpacity>
               );
-            }}
+            })}
+          </ScrollView>
+        )}
+
+        {bites.length > 0 && (
+          <FlatList
+            data={countryProgress.filter((country) => country.discoveredCount > 0)}
+            horizontal
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            style={styles.progressList}
+            contentContainerStyle={styles.filterContent}
+            renderItem={({ item }) => (
+              <Card style={styles.progressCard}>
+                <Text variant="bodySmall" style={styles.progressCountry}>{item.flag} {item.name}</Text>
+                <Text variant="h3">{item.discoveredCount}/{item.dishCount}</Text>
+                <Caption>discovered</Caption>
+              </Card>
+            )}
           />
         )}
 
-        {/* Bites List/Grid */}
         {isLoading ? (
           <View style={styles.skeletonGrid}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -205,6 +246,10 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
             contentContainerStyle={styles.bitesContent}
             columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={8}
+            maxToRenderPerBatch={6}
+            windowSize={5}
+            removeClippedSubviews={true}
           />
         ) : (
           <EmptyState
@@ -216,6 +261,7 @@ export const BitesScreen: React.FC<BitesScreenProps> = ({ navigation }) => {
             style={styles.emptyState}
           />
         )}
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -226,6 +272,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeArea: {
+    flex: 1,
+  },
+  contentWrap: {
     flex: 1,
   },
   header: {
@@ -275,7 +324,7 @@ const styles = StyleSheet.create({
   },
   filterList: {
     flexGrow: 0,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   filterContent: {
     paddingHorizontal: spacing.screenPadding,
@@ -311,6 +360,16 @@ const styles = StyleSheet.create({
   },
   countTextSelected: {
     color: colors.text.inverse,
+  },
+  progressList: {
+    flexGrow: 0,
+    marginBottom: spacing.md,
+  },
+  progressCard: {
+    minWidth: 120,
+  },
+  progressCountry: {
+    marginBottom: spacing.xxs,
   },
   skeletonGrid: {
     flexDirection: 'row',

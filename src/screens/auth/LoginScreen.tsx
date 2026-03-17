@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,7 +33,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState('');
 
-  const { setUser, setVisby } = useStore();
+  const setUser = useStore(s => s.setUser);
+  const setVisby = useStore(s => s.setVisby);
 
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -84,19 +86,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
               <Icon name="back" size={20} color={colors.text.secondary} />
               <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
 
-            <View style={styles.header}>
+            <Animated.View entering={FadeInDown.duration(400).delay(50)} style={styles.header}>
               <View style={styles.iconCircle}>
                 <Icon name="hand" size={30} color={colors.text.primary} />
               </View>
               <Text style={styles.title}>Welcome back!</Text>
               <Text style={styles.subtitle}>Continue your adventure</Text>
-            </View>
+            </Animated.View>
 
+            <Animated.View entering={FadeInDown.duration(400).delay(100)}>
             <View style={styles.formCard}>
               <Input
                 label="EMAIL"
@@ -146,10 +149,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             <View style={styles.signUpContainer}>
               <Text style={styles.switchText}>New to Visby? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+              <TouchableOpacity onPress={() => navigation.navigate('SignUp')} accessibilityRole="button" accessibilityLabel="Create account">
                 <Text style={styles.switchLink}>Create account</Text>
               </TouchableOpacity>
             </View>
+            </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

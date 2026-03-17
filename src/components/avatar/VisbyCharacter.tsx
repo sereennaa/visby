@@ -1,12 +1,17 @@
-import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useAnimatedProps,
   useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
+  withDelay,
+  withSpring,
   Easing,
+  interpolate,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import Svg, {
   Circle,
@@ -20,6 +25,8 @@ import Svg, {
   Stop,
   ClipPath,
 } from 'react-native-svg';
+
+const AnimatedG = Animated.createAnimatedComponent(G);
 import { colors } from '../../theme/colors';
 
 export interface VisbyAppearance {
@@ -34,7 +41,12 @@ export interface VisbyEquipped {
   hat?: string;
   outfit?: string;
   accessory?: string;
+  shoes?: string;
+  backpack?: string;
+  companion?: string;
 }
+
+export type VisbyReactionType = 'excited_jump' | 'happy_wiggle' | 'love' | 'sparkle' | null;
 
 export interface VisbyCharacterProps {
   appearance?: VisbyAppearance;
@@ -43,6 +55,9 @@ export interface VisbyCharacterProps {
   size?: number;
   animated?: boolean;
   stage?: 'egg' | 'baby' | 'kid' | 'teen' | 'adult';
+  reaction?: VisbyReactionType;
+  onReactionComplete?: () => void;
+  glowColor?: string;
 }
 
 const defaultAppearance: VisbyAppearance = {
@@ -285,6 +300,111 @@ const renderHat = (hatId: string | undefined, hair: string, hairL: string) => {
           ))}
         </G>
       );
+    case 'pharaoh_crown':
+      return (
+        <G>
+          <Path d="M 40 40 Q 42 8 75 0 Q 108 8 110 40 Z" fill="#2C5AA0" />
+          <Path d="M 55 0 L 75 -14 L 95 0" fill="#FFD700" />
+          <Rect x={38} y={36} width={74} height={6} rx={3} fill="#FFD700" />
+          <Circle cx={CX} cy={20} r={5} fill="#FFD700" />
+          <Path d="M 70 -10 Q 75 -18 80 -10" fill="#DC143C" />
+        </G>
+      );
+    case 'geisha_hairpin':
+      return (
+        <G>
+          <Path d="M 92 18 L 94 38" stroke="#2F2F2F" strokeWidth={2} strokeLinecap="round" />
+          <Circle cx={92} cy={14} r={7} fill="#FF69B4" />
+          <Circle cx={92} cy={13} r={4} fill="#FFB6C1" />
+          <Circle cx={88} cy={10} r={3} fill="#FF1493" opacity={0.6} />
+          <Circle cx={96} cy={10} r={2.5} fill="#FF69B4" opacity={0.5} />
+          <Path d="M 86 20 L 84 28" stroke="#FFD700" strokeWidth={1.2} strokeLinecap="round" />
+          <Circle cx={84} cy={30} r={2} fill="#FFD700" />
+        </G>
+      );
+    case 'cowboy_hat':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={34} rx={50} ry={8} fill="#8B5A30" />
+          <Path d="M 50 34 Q 52 10 75 6 Q 98 10 100 34 Z" fill="#A0703C" />
+          <Ellipse cx={CX} cy={34} rx={46} ry={3} fill="none" stroke="#6B3A20" strokeWidth={1.5} />
+          <Rect x={62} y={28} width={26} height={4} rx={2} fill="#6B3A20" />
+          <Circle cx={CX} cy={30} r={2} fill="#FFD700" />
+        </G>
+      );
+    case 'toque_chef_hat':
+      return (
+        <G>
+          <Rect x={52} y={18} width={46} height={22} rx={4} fill="#FFFFFF" />
+          <Ellipse cx={CX} cy={14} rx={28} ry={16} fill="#FFFFFF" />
+          <Ellipse cx={CX} cy={12} rx={24} ry={12} fill="#F8F8F8" />
+          <Path d="M 58 14 Q 62 6 68 10" stroke="#E8E8E8" strokeWidth={1} fill="none" />
+        </G>
+      );
+    case 'conical_straw_hat':
+      return (
+        <G>
+          <Path d="M 28 42 L 75 0 L 122 42 Z" fill="#DEB887" />
+          <Path d="M 38 38 L 75 6 L 112 38" fill="none" stroke="#C4A060" strokeWidth={1.5} />
+          <Path d="M 48 34 L 75 12 L 102 34" fill="none" stroke="#C4A060" strokeWidth={1} />
+          <Ellipse cx={CX} cy={42} rx={48} ry={4} fill="#C4A060" />
+        </G>
+      );
+    case 'flower_crown':
+      return (
+        <G>
+          <Path d="M 42 36 Q 58 28 75 30 Q 92 28 108 36" stroke="#228B22" strokeWidth={4} fill="none" strokeLinecap="round" />
+          {[
+            { cx: 48, cy: 32, c: '#FF69B4' }, { cx: 58, cy: 28, c: '#FFD700' },
+            { cx: 68, cy: 26, c: '#FF6347' }, { cx: 78, cy: 25, c: '#DA70D6' },
+            { cx: 88, cy: 27, c: '#87CEEB' }, { cx: 98, cy: 30, c: '#FFB6C1' },
+          ].map((f, i) => (
+            <G key={i}>
+              <Circle cx={f.cx} cy={f.cy} r={5} fill={f.c} />
+              <Circle cx={f.cx} cy={f.cy} r={2.5} fill="#FFFFFF" opacity={0.4} />
+            </G>
+          ))}
+        </G>
+      );
+    case 'pirate_hat':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={30} rx={38} ry={20} fill="#2F2F2F" />
+          <Path d="M 40 30 Q 50 8 75 12 Q 100 8 110 30" fill="#2F2F2F" />
+          <Ellipse cx={CX} cy={30} rx={36} ry={4} fill="#3D3D3D" />
+          <Circle cx={CX} cy={18} r={6} fill="#FFFFFF" />
+          <Path d="M 72 14 L 75 18 L 78 14 L 76 18 L 79 16 L 76 19 L 75 22 L 74 19 L 71 16 L 74 18 Z" fill="#2F2F2F" />
+        </G>
+      );
+    case 'astronaut_helmet':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={40} rx={42} ry={38} fill="#D0D0D8" />
+          <Ellipse cx={CX} cy={38} rx={36} ry={32} fill="#1A2744" opacity={0.6} />
+          <Ellipse cx={CX} cy={36} rx={32} ry={28} fill="#87CEEB" opacity={0.3} />
+          <Path d="M 54 18 Q 62 10 72 14" stroke="#FFFFFF" strokeWidth={2.5} fill="none" strokeLinecap="round" opacity={0.5} />
+          <Rect x={44} y={66} width={62} height={6} rx={3} fill="#A0A0B4" />
+        </G>
+      );
+    case 'festival_headband':
+      return (
+        <G>
+          <Rect x={42} y={32} width={66} height={6} rx={3} fill="#FF6B9D" />
+          {[48, 58, 68, 78, 88, 98].map((x, i) => (
+            <Circle key={i} cx={x} cy={35} r={2.5} fill={['#FFD700', '#40E0D0', '#FF6347', '#9B59B6', '#50C878', '#FF69B4'][i]} />
+          ))}
+          <Path d="M 42 35 Q 36 40 34 50" stroke="#FF6B9D" strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 108 35 Q 114 40 116 50" stroke="#FF6B9D" strokeWidth={3} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'arctic_hood':
+      return (
+        <G>
+          <Path d="M 36 44 Q 38 10 75 4 Q 112 10 114 44 Z" fill="#4A6E8C" />
+          <Ellipse cx={CX} cy={44} rx={42} ry={8} fill="#E8D8C4" />
+          <Ellipse cx={CX} cy={44} rx={38} ry={5} fill="#F5EDE0" />
+        </G>
+      );
     default:
       return null;
   }
@@ -321,23 +441,606 @@ const renderAccessory = (accessoryId: string | undefined) => {
           <Circle cx={CX} cy={96} r={4} fill="#40E0D0" />
         </G>
       );
+    case 'fan':
+      return (
+        <G>
+          <Path d="M 120 78 L 130 60 Q 140 54 144 62 L 130 82 Z" fill="#F5E6D0" />
+          <Path d="M 122 76 L 132 62" stroke="#DC143C" strokeWidth={0.8} fill="none" />
+          <Path d="M 126 78 L 136 62" stroke="#DC143C" strokeWidth={0.8} fill="none" />
+          <Rect x={118} y={78} width={14} height={3} rx={1.5} fill="#8B5A30" />
+        </G>
+      );
+    case 'maracas':
+      return (
+        <G>
+          <Rect x={120} y={80} width={3} height={18} rx={1.5} fill="#8B5A30" />
+          <Ellipse cx={121.5} cy={76} rx={7} ry={8} fill="#FF6347" />
+          <Path d="M 117 74 Q 121 70 126 74" stroke="#FFD700" strokeWidth={1.5} fill="none" />
+        </G>
+      );
+    case 'lantern':
+      return (
+        <G>
+          <Path d="M 120 66 L 122 62 L 128 62 L 130 66" stroke="#8B5A30" strokeWidth={1.5} fill="none" />
+          <Ellipse cx={125} cy={76} rx={8} ry={10} fill="#FF4500" opacity={0.8} />
+          <Ellipse cx={125} cy={76} rx={5} ry={7} fill="#FFD700" opacity={0.5} />
+          <Rect x={122} y={64} width={6} height={3} rx={1} fill="#DC143C" />
+        </G>
+      );
+    case 'bagpipes':
+      return (
+        <G>
+          <Ellipse cx={16} cy={90} rx={10} ry={8} fill="#8B4513" />
+          <Rect x={14} y={76} width={3} height={14} rx={1} fill="#2F2F2F" />
+          <Rect x={20} y={72} width={3} height={10} rx={1} fill="#2F2F2F" />
+          <Rect x={8} y={80} width={3} height={10} rx={1} fill="#2F2F2F" />
+          <Path d="M 26 90 Q 35 92 44 88" stroke="#3D6B3D" strokeWidth={3} fill="none" />
+        </G>
+      );
+    case 'magic_wand':
+      return (
+        <G>
+          <Rect x={120} y={68} width={3} height={28} rx={1.5} fill="#5C4D7D" />
+          <Path d="M 121.5 64 L 123 60 L 124.5 64 L 128.5 65.5 L 124.5 67 L 123 71 L 121.5 67 L 117.5 65.5 Z" fill="#FFD700" />
+          <Circle cx={121.5} cy={65.5} r={2} fill="#FFFFFF" opacity={0.6} />
+        </G>
+      );
+    case 'compass_acc':
+      return (
+        <G>
+          <Circle cx={124} cy={84} r={8} fill="#D4A060" />
+          <Circle cx={124} cy={84} r={6.5} fill="#F5F0E8" />
+          <Path d="M 124 78 L 124 90 M 118 84 L 130 84" stroke="#DC143C" strokeWidth={1} />
+          <Path d="M 122 82 L 124 78 L 126 82" fill="#DC143C" />
+        </G>
+      );
+    case 'telescope':
+      return (
+        <G>
+          <Rect x={118} y={72} width={4} height={22} rx={2} fill="#8B6F4E" />
+          <Rect x={116} y={68} width={8} height={6} rx={2} fill="#6B5030" />
+          <Circle cx={120} cy={68} r={4.5} fill="#87CEEB" opacity={0.4} />
+        </G>
+      );
+    case 'golden_necklace':
+      return (
+        <G>
+          <Path d="M 46 90 Q 75 100 104 90" stroke="#FFD700" strokeWidth={2} fill="none" />
+          <Circle cx={CX} cy={98} r={5} fill="#FFD700" />
+          <Circle cx={CX} cy={97} r={3} fill="#FFF4B0" />
+          <Circle cx={74} cy={96} r={1} fill="#FFFFFF" opacity={0.8} />
+        </G>
+      );
+    case 'friendship_bracelet':
+      return (
+        <G>
+          <Ellipse cx={28} cy={94} rx={6} ry={3} fill="none" stroke="#FF69B4" strokeWidth={2.5} />
+          <Ellipse cx={28} cy={94} rx={6} ry={3} fill="none" stroke="#40E0D0" strokeWidth={1} strokeDasharray="2 2" />
+        </G>
+      );
+    case 'drum':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={118} rx={16} ry={4} fill="#6B3A20" />
+          <Rect x={59} y={106} width={32} height={12} rx={2} fill="#A0522D" />
+          <Ellipse cx={CX} cy={106} rx={16} ry={4} fill="#D4A060" />
+          <Path d="M 59 110 L 91 110" stroke="#FFD700" strokeWidth={1} />
+        </G>
+      );
+    case 'paintbrush':
+      return (
+        <G>
+          <Rect x={120} y={74} width={3} height={20} rx={1} fill="#D4A060" />
+          <Path d="M 118 70 Q 121.5 64 125 70 L 123 76 L 120 76 Z" fill="#4169E1" />
+          <Circle cx={121} cy={68} r={1.5} fill="#FFFFFF" opacity={0.4} />
+        </G>
+      );
+    case 'camera_acc':
+      return (
+        <G>
+          <Rect x={114} y={78} width={18} height={12} rx={3} fill="#2F2F2F" />
+          <Circle cx={123} cy={84} r={4} fill="#1A1A2E" />
+          <Circle cx={123} cy={84} r={2.5} fill="#4A6E8C" />
+          <Circle cx={122} cy={83} r={1} fill="#FFFFFF" opacity={0.5} />
+          <Rect x={118} y={76} width={6} height={3} rx={1} fill="#3D3D3D" />
+        </G>
+      );
+    case 'fishing_rod':
+      return (
+        <G>
+          <Path d="M 124 60 L 124 110" stroke="#8B5A30" strokeWidth={2.5} strokeLinecap="round" />
+          <Path d="M 124 60 Q 130 56 136 62" stroke="#A0A0B4" strokeWidth={1} fill="none" />
+          <Path d="M 136 62 L 136 72" stroke="#A0A0B4" strokeWidth={0.8} />
+          <Circle cx={136} cy={74} r={2} fill="#FF6347" />
+        </G>
+      );
+    case 'musical_instrument':
+      return (
+        <G>
+          <Circle cx={18} cy={94} r={10} fill="#D4A060" />
+          <Circle cx={18} cy={94} r={4} fill="#2F2F2F" />
+          <Rect x={26} y={80} width={3} height={20} rx={1} fill="#8B5A30" />
+          <Path d="M 27 80 L 27 76 M 25 76 L 29 76" stroke="#A0A0B4" strokeWidth={1} />
+        </G>
+      );
     default:
       return null;
   }
 };
 
-export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
+const renderShoes = (shoeId: string | undefined) => {
+  switch (shoeId) {
+    case 'default_boots':
+      return (
+        <G>
+          <Rect x={50} y={128} width={20} height={12} rx={4} fill="#8B5A30" />
+          <Rect x={80} y={128} width={20} height={12} rx={4} fill="#8B5A30" />
+          <Rect x={50} y={128} width={20} height={5} rx={2} fill="#A0703C" />
+          <Rect x={80} y={128} width={20} height={5} rx={2} fill="#A0703C" />
+        </G>
+      );
+    case 'wooden_clogs':
+      return (
+        <G>
+          <Path d="M 48 132 Q 48 126 60 126 Q 72 126 72 132 L 72 140 Q 60 142 48 140 Z" fill="#DEB887" />
+          <Path d="M 78 132 Q 78 126 90 126 Q 102 126 102 132 L 102 140 Q 90 142 78 140 Z" fill="#DEB887" />
+          <Path d="M 50 130 L 70 130" stroke="#C4A060" strokeWidth={1} />
+          <Path d="M 80 130 L 100 130" stroke="#C4A060" strokeWidth={1} />
+        </G>
+      );
+    case 'sandals':
+      return (
+        <G>
+          <Ellipse cx={60} cy={136} rx={10} ry={5} fill="#D4A060" />
+          <Ellipse cx={90} cy={136} rx={10} ry={5} fill="#D4A060" />
+          <Path d="M 54 134 Q 60 128 66 134" stroke="#8B5A30" strokeWidth={2} fill="none" />
+          <Path d="M 84 134 Q 90 128 96 134" stroke="#8B5A30" strokeWidth={2} fill="none" />
+        </G>
+      );
+    case 'cowboy_boots':
+      return (
+        <G>
+          <Path d="M 48 124 L 48 140 L 72 140 L 72 134 L 64 134 L 64 124 Z" fill="#6B3A20" />
+          <Path d="M 78 124 L 78 140 L 102 140 L 102 134 L 94 134 L 94 124 Z" fill="#6B3A20" />
+          <Rect x={48} y={126} width={16} height={3} rx={1} fill="#8B5A30" />
+          <Rect x={78} y={126} width={16} height={3} rx={1} fill="#8B5A30" />
+          <Path d="M 50 132 L 62 132" stroke="#A0522D" strokeWidth={1} />
+          <Path d="M 80 132 L 92 132" stroke="#A0522D" strokeWidth={1} />
+        </G>
+      );
+    case 'ballet_slippers':
+      return (
+        <G>
+          <Ellipse cx={60} cy={136} rx={10} ry={5} fill="#FFB6C1" />
+          <Ellipse cx={90} cy={136} rx={10} ry={5} fill="#FFB6C1" />
+          <Path d="M 56 130 Q 60 124 64 130" stroke="#FF69B4" strokeWidth={1.5} fill="none" />
+          <Path d="M 86 130 Q 90 124 94 130" stroke="#FF69B4" strokeWidth={1.5} fill="none" />
+          <Circle cx={60} cy={132} r={2} fill="#FF69B4" />
+          <Circle cx={90} cy={132} r={2} fill="#FF69B4" />
+        </G>
+      );
+    case 'ninja_tabi':
+      return (
+        <G>
+          <Rect x={50} y={128} width={20} height={10} rx={3} fill="#1A1A1A" />
+          <Rect x={80} y={128} width={20} height={10} rx={3} fill="#1A1A1A" />
+          <Path d="M 60 138 L 60 130" stroke="#2D2D2D" strokeWidth={1} />
+          <Path d="M 90 138 L 90 130" stroke="#2D2D2D" strokeWidth={1} />
+        </G>
+      );
+    case 'hiking_boots':
+      return (
+        <G>
+          <Rect x={48} y={126} width={22} height={14} rx={4} fill="#5C4033" />
+          <Rect x={80} y={126} width={22} height={14} rx={4} fill="#5C4033" />
+          <Rect x={48} y={138} width={24} height={4} rx={2} fill="#3D2B1F" />
+          <Rect x={80} y={138} width={24} height={4} rx={2} fill="#3D2B1F" />
+          <Path d="M 52 130 L 66 130 M 52 134 L 66 134" stroke="#FFD700" strokeWidth={1} />
+          <Path d="M 84 130 L 98 130 M 84 134 L 98 134" stroke="#FFD700" strokeWidth={1} />
+        </G>
+      );
+    case 'gladiator_sandals':
+      return (
+        <G>
+          <Ellipse cx={60} cy={138} rx={10} ry={4} fill="#A0703C" />
+          <Ellipse cx={90} cy={138} rx={10} ry={4} fill="#A0703C" />
+          {[126, 130, 134].map((y) => (
+            <G key={y}>
+              <Path d={`M 52 ${y} L 68 ${y}`} stroke="#8B5A30" strokeWidth={2} />
+              <Path d={`M 82 ${y} L 98 ${y}`} stroke="#8B5A30" strokeWidth={2} />
+            </G>
+          ))}
+        </G>
+      );
+    case 'snow_boots':
+      return (
+        <G>
+          <Rect x={46} y={124} width={24} height={18} rx={6} fill="#4A6E8C" />
+          <Rect x={80} y={124} width={24} height={18} rx={6} fill="#4A6E8C" />
+          <Ellipse cx={58} cy={126} rx={13} ry={4} fill="#F5EDE0" />
+          <Ellipse cx={92} cy={126} rx={13} ry={4} fill="#F5EDE0" />
+          <Rect x={46} y={138} width={26} height={5} rx={2.5} fill="#3A5A72" />
+          <Rect x={80} y={138} width={26} height={5} rx={2.5} fill="#3A5A72" />
+        </G>
+      );
+    case 'moon_boots':
+      return (
+        <G>
+          <Rect x={44} y={122} width={26} height={20} rx={6} fill="#C0C0D0" />
+          <Rect x={80} y={122} width={26} height={20} rx={6} fill="#C0C0D0" />
+          <Rect x={44} y={140} width={28} height={5} rx={2.5} fill="#A0A0B4" />
+          <Rect x={80} y={140} width={28} height={5} rx={2.5} fill="#A0A0B4" />
+          <Path d="M 50 126 L 64 126 M 50 132 L 64 132" stroke="#87CEEB" strokeWidth={1.5} />
+          <Path d="M 86 126 L 100 126 M 86 132 L 100 132" stroke="#87CEEB" strokeWidth={1.5} />
+        </G>
+      );
+    case 'running_shoes':
+      return (
+        <G>
+          <Rect x={48} y={130} width={22} height={10} rx={5} fill="#4169E1" />
+          <Rect x={80} y={130} width={22} height={10} rx={5} fill="#4169E1" />
+          <Path d="M 52 134 L 58 132 L 64 134" stroke="#FFFFFF" strokeWidth={1.5} fill="none" />
+          <Path d="M 84 134 L 90 132 L 96 134" stroke="#FFFFFF" strokeWidth={1.5} fill="none" />
+          <Rect x={48} y={138} width={24} height={3} rx={1.5} fill="#2F2F8F" />
+          <Rect x={80} y={138} width={24} height={3} rx={1.5} fill="#2F2F8F" />
+        </G>
+      );
+    default:
+      return null;
+  }
+};
+
+const renderBackpack = (backpackId: string | undefined) => {
+  switch (backpackId) {
+    case 'default_backpack':
+      return (
+        <G>
+          <Rect x={56} y={88} width={38} height={30} rx={6} fill="#6B5B95" />
+          <Rect x={60} y={92} width={30} height={10} rx={3} fill="#5C4D7D" />
+          <Rect x={68} y={86} width={14} height={6} rx={2} fill="#7B6BA5" />
+        </G>
+      );
+    case 'explorer_backpack':
+      return (
+        <G>
+          <Rect x={54} y={86} width={42} height={34} rx={6} fill="#5C4033" />
+          <Rect x={58} y={90} width={34} height={12} rx={3} fill="#6B4D3A" />
+          <Rect x={66} y={84} width={18} height={8} rx={3} fill="#7B5D4A" />
+          <Circle cx={CX} cy={84} r={2.5} fill="#FFD700" />
+          <Path d="M 62 98 L 88 98" stroke="#8B5A30" strokeWidth={1.5} />
+        </G>
+      );
+    case 'samurai_pack':
+      return (
+        <G>
+          <Rect x={56} y={86} width={38} height={32} rx={4} fill="#2F3040" />
+          <Path d="M 56 90 L 94 90 M 56 100 L 94 100" stroke="#FFD700" strokeWidth={1} />
+          <Circle cx={CX} cy={95} r={4} fill="#C41E3A" />
+        </G>
+      );
+    case 'school_backpack':
+      return (
+        <G>
+          <Rect x={56} y={88} width={38} height={30} rx={8} fill="#4169E1" />
+          <Rect x={62} y={92} width={26} height={10} rx={3} fill="#2E5090" />
+          <Rect x={68} y={86} width={14} height={6} rx={3} fill="#5588DD" />
+          <Circle cx={CX} cy={88} r={2} fill="#FFD700" />
+        </G>
+      );
+    case 'treasure_chest_pack':
+      return (
+        <G>
+          <Rect x={56} y={90} width={38} height={26} rx={4} fill="#8B5A30" />
+          <Rect x={56} y={88} width={38} height={8} rx={3} fill="#A0703C" />
+          <Rect x={72} y={98} width={6} height={6} rx={1} fill="#FFD700" />
+          <Circle cx={CX} cy={101} r={2} fill="#FFF4B0" />
+        </G>
+      );
+    case 'camping_backpack':
+      return (
+        <G>
+          <Rect x={52} y={84} width={46} height={38} rx={6} fill="#228B22" />
+          <Rect x={56} y={88} width={38} height={14} rx={3} fill="#1B6B1B" />
+          <Rect x={64} y={82} width={22} height={8} rx={3} fill="#2EA02E" />
+          <Ellipse cx={CX} cy={126} rx={8} ry={4} fill="#3D3D3D" />
+          <Path d="M 60 94 L 90 94" stroke="#FFD700" strokeWidth={1.5} />
+        </G>
+      );
+    case 'jetpack':
+      return (
+        <G>
+          <Rect x={58} y={86} width={14} height={28} rx={4} fill="#A0A0B4" />
+          <Rect x={78} y={86} width={14} height={28} rx={4} fill="#A0A0B4" />
+          <Rect x={60} y={88} width={10} height={6} rx={2} fill="#87CEEB" opacity={0.5} />
+          <Rect x={80} y={88} width={10} height={6} rx={2} fill="#87CEEB" opacity={0.5} />
+          <Ellipse cx={65} cy={118} rx={5} ry={8} fill="#FF6347" opacity={0.6} />
+          <Ellipse cx={85} cy={118} rx={5} ry={8} fill="#FF6347" opacity={0.6} />
+          <Ellipse cx={65} cy={116} rx={3} ry={5} fill="#FFD700" opacity={0.4} />
+          <Ellipse cx={85} cy={116} rx={3} ry={5} fill="#FFD700" opacity={0.4} />
+        </G>
+      );
+    case 'messenger_bag':
+      return (
+        <G>
+          <Path d="M 42 86 Q 42 82 46 82 L 108 82 Q 112 82 112 86" stroke="#8B5A30" strokeWidth={2.5} fill="none" />
+          <Rect x={86} y={90} width={28} height={22} rx={4} fill="#A0703C" />
+          <Rect x={88} y={94} width={24} height={8} rx={2} fill="#8B5A30" />
+          <Circle cx={100} cy={92} r={2} fill="#FFD700" />
+        </G>
+      );
+    case 'drum_backpack':
+      return (
+        <G>
+          <Ellipse cx={CX} cy={92} rx={18} ry={4} fill="#8B5A30" />
+          <Rect x={57} y={92} width={36} height={22} rx={2} fill="#A0522D" />
+          <Ellipse cx={CX} cy={114} rx={18} ry={4} fill="#8B5A30" />
+          <Path d="M 62 96 L 88 110 M 88 96 L 62 110" stroke="#F5DEB3" strokeWidth={1.5} />
+        </G>
+      );
+    default:
+      return null;
+  }
+};
+
+const renderCompanion = (companionId: string | undefined) => {
+  switch (companionId) {
+    case 'shiba_inu':
+      return (
+        <G>
+          <Ellipse cx={130} cy={134} rx={10} ry={8} fill="#D4883A" />
+          <Circle cx={134} cy={126} r={7} fill="#D4883A" />
+          <Path d="M 130 120 L 128 114 L 132 120" fill="#D4883A" />
+          <Path d="M 136 120 L 138 114 L 140 120" fill="#D4883A" />
+          <Circle cx={132} cy={125} r={1.5} fill="#2F2F2F" />
+          <Circle cx={137} cy={125} r={1.5} fill="#2F2F2F" />
+          <Ellipse cx={134.5} cy={128} rx={2} ry={1.5} fill="#2F2F2F" />
+          <Path d="M 120 136 Q 116 130 118 126" stroke="#D4883A" strokeWidth={3} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'parrot':
+      return (
+        <G>
+          <Ellipse cx={34} cy={56} rx={6} ry={8} fill="#FF4500" />
+          <Circle cx={34} cy={48} r={5} fill="#FF6347" />
+          <Circle cx={32} cy={47} r={1.5} fill="#2F2F2F" />
+          <Path d="M 36 48 L 40 47 L 37 50" fill="#FFD700" />
+          <Path d="M 30 62 Q 28 70 32 74" stroke="#40E0D0" strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 34 62 Q 32 70 36 74" stroke="#FFD700" strokeWidth={2} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'cat':
+      return (
+        <G>
+          <Ellipse cx={130} cy={136} rx={8} ry={6} fill="#6B6B6B" />
+          <Circle cx={134} cy={130} r={5.5} fill="#6B6B6B" />
+          <Path d="M 130 126 L 129 120 L 132 125" fill="#6B6B6B" />
+          <Path d="M 137 126 L 139 120 L 140 125" fill="#6B6B6B" />
+          <Circle cx={132} cy={129} r={1.2} fill="#50C878" />
+          <Circle cx={136} cy={129} r={1.2} fill="#50C878" />
+          <Path d="M 122 138 Q 118 134 120 130" stroke="#6B6B6B" strokeWidth={2} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'penguin':
+      return (
+        <G>
+          <Ellipse cx={130} cy={134} rx={8} ry={10} fill="#2F2F2F" />
+          <Ellipse cx={130} cy={136} rx={5} ry={7} fill="#FFFFFF" />
+          <Circle cx={130} cy={126} r={6} fill="#2F2F2F" />
+          <Circle cx={128} cy={125} r={1.5} fill="#FFFFFF" />
+          <Circle cx={132} cy={125} r={1.5} fill="#FFFFFF" />
+          <Circle cx={128} cy={125.5} r={0.8} fill="#2F2F2F" />
+          <Circle cx={132} cy={125.5} r={0.8} fill="#2F2F2F" />
+          <Path d="M 129 128 L 130 130 L 131 128" fill="#FF8C00" />
+          <Ellipse cx={128} cy={142} rx={3} ry={1.5} fill="#FF8C00" />
+          <Ellipse cx={132} cy={142} rx={3} ry={1.5} fill="#FF8C00" />
+        </G>
+      );
+    case 'baby_dragon':
+      return (
+        <G>
+          <Ellipse cx={18} cy={42} rx={8} ry={6} fill="#50C878" />
+          <Circle cx={18} cy={34} r={6} fill="#50C878" />
+          <Circle cx={16} cy={33} r={1.5} fill="#FFD700" />
+          <Circle cx={20} cy={33} r={1.5} fill="#FFD700" />
+          <Path d="M 16 37 L 18 39 L 20 37" fill="#FF6347" />
+          <Path d="M 12 36 Q 6 30 10 26" stroke="#50C878" strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 24 36 Q 30 30 26 26" stroke="#50C878" strokeWidth={3} fill="none" strokeLinecap="round" />
+          <Path d="M 26 42 Q 30 46 28 50" stroke="#50C878" strokeWidth={2.5} fill="none" strokeLinecap="round" />
+          <Path d="M 16 30 L 14 26 L 18 28" fill="#50C878" />
+          <Path d="M 20 30 L 22 26 L 24 28" fill="#50C878" />
+        </G>
+      );
+    case 'owl':
+      return (
+        <G>
+          <Ellipse cx={34} cy={52} rx={7} ry={9} fill="#8B6F4E" />
+          <Circle cx={34} cy={44} r={6} fill="#A08060" />
+          <Circle cx={32} cy={43} r={3} fill="#FFFFFF" />
+          <Circle cx={36} cy={43} r={3} fill="#FFFFFF" />
+          <Circle cx={32} cy={43.5} r={1.5} fill="#2F2F2F" />
+          <Circle cx={36} cy={43.5} r={1.5} fill="#2F2F2F" />
+          <Path d="M 33 47 L 34 48.5 L 35 47" fill="#D4A060" />
+          <Path d="M 30 38 L 28 34 L 31 37" fill="#A08060" />
+          <Path d="M 38 38 L 40 34 L 37 37" fill="#A08060" />
+        </G>
+      );
+    case 'panda':
+      return (
+        <G>
+          <Ellipse cx={130} cy={134} rx={10} ry={8} fill="#FFFFFF" />
+          <Circle cx={130} cy={126} r={7} fill="#FFFFFF" />
+          <Circle cx={128} cy={125} r={3.5} fill="#2F2F2F" />
+          <Circle cx={132} cy={125} r={3.5} fill="#2F2F2F" />
+          <Circle cx={128} cy={125} r={1.5} fill="#FFFFFF" />
+          <Circle cx={132} cy={125} r={1.5} fill="#FFFFFF" />
+          <Ellipse cx={130} cy={128.5} rx={2} ry={1.5} fill="#2F2F2F" />
+          <Circle cx={126} cy={120} r={3} fill="#2F2F2F" />
+          <Circle cx={134} cy={120} r={3} fill="#2F2F2F" />
+          <Ellipse cx={122} cy={136} rx={3} ry={5} fill="#2F2F2F" />
+          <Ellipse cx={138} cy={136} rx={3} ry={5} fill="#2F2F2F" />
+        </G>
+      );
+    case 'fox':
+      return (
+        <G>
+          <Ellipse cx={130} cy={136} rx={8} ry={6} fill="#D4620A" />
+          <Circle cx={132} cy={128} r={6} fill="#D4620A" />
+          <Path d="M 128 124 L 126 118 L 130 123" fill="#D4620A" />
+          <Path d="M 136 124 L 138 118 L 140 123" fill="#D4620A" />
+          <Circle cx={130} cy={127} r={1.2} fill="#2F2F2F" />
+          <Circle cx={134} cy={127} r={1.2} fill="#2F2F2F" />
+          <Ellipse cx={132} cy={130} rx={1.5} ry={1} fill="#2F2F2F" />
+          <Ellipse cx={132} cy={132} rx={3} ry={2} fill="#FFFFFF" />
+          <Path d="M 122 138 Q 118 132 116 128" stroke="#FFFFFF" strokeWidth={3} fill="none" strokeLinecap="round" />
+        </G>
+      );
+    case 'butterfly_swarm':
+      return (
+        <G>
+          {[
+            { x: 18, y: 30, c: '#FF69B4', s: 4 },
+            { x: 128, y: 26, c: '#87CEEB', s: 3.5 },
+            { x: 22, y: 50, c: '#FFD700', s: 3 },
+            { x: 132, y: 46, c: '#DA70D6', s: 4.5 },
+            { x: 16, y: 70, c: '#40E0D0', s: 3 },
+          ].map((b, i) => (
+            <G key={i}>
+              <Path d={`M ${b.x} ${b.y} Q ${b.x - b.s} ${b.y - b.s} ${b.x - b.s * 1.2} ${b.y} Q ${b.x - b.s} ${b.y + b.s} ${b.x} ${b.y}`} fill={b.c} opacity={0.7} />
+              <Path d={`M ${b.x} ${b.y} Q ${b.x + b.s} ${b.y - b.s} ${b.x + b.s * 1.2} ${b.y} Q ${b.x + b.s} ${b.y + b.s} ${b.x} ${b.y}`} fill={b.c} opacity={0.7} />
+            </G>
+          ))}
+        </G>
+      );
+    case 'golden_eagle':
+      return (
+        <G>
+          <Ellipse cx={20} cy={24} rx={6} ry={4} fill="#8B6F4E" />
+          <Circle cx={20} cy={18} r={4.5} fill="#D4A060" />
+          <Circle cx={18.5} cy={17} r={1.2} fill="#2F2F2F" />
+          <Path d="M 22 18 L 26 17 L 23 20" fill="#FFD700" />
+          <Path d="M 14 22 Q 4 16 8 8" stroke="#8B6F4E" strokeWidth={4} fill="none" strokeLinecap="round" />
+          <Path d="M 26 22 Q 36 16 32 8" stroke="#8B6F4E" strokeWidth={4} fill="none" strokeLinecap="round" />
+          <Path d="M 5 10 L 8 8 L 6 6" fill="#8B6F4E" />
+          <Path d="M 35 10 L 32 8 L 34 6" fill="#8B6F4E" />
+        </G>
+      );
+    default:
+      return null;
+  }
+};
+
+const ReactionParticles: React.FC<{ reaction: VisbyReactionType; size: number; onDone?: () => void }> = ({ reaction, size, onDone }) => {
+  const particles = useMemo(() => {
+    if (reaction === 'love') {
+      return Array.from({ length: 5 }, (_, i) => ({
+        id: i,
+        x: size * 0.3 + Math.random() * size * 0.4,
+        delay: i * 120,
+        symbol: '\u2764',
+        color: '#FF69B4',
+      }));
+    }
+    if (reaction === 'sparkle') {
+      return Array.from({ length: 8 }, (_, i) => ({
+        id: i,
+        x: size * 0.15 + Math.random() * size * 0.7,
+        delay: i * 80,
+        symbol: '\u2728',
+        color: '#FFD700',
+      }));
+    }
+    return [];
+  }, [reaction, size]);
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden', pointerEvents: 'none' }]}>
+      {particles.map((p) => (
+        <ReactionDot key={p.id} x={p.x} delay={p.delay} symbol={p.symbol} size={size} onDone={p.id === 0 ? onDone : undefined} />
+      ))}
+    </View>
+  );
+};
+
+const ReactionDot: React.FC<{ x: number; delay: number; symbol: string; size: number; onDone?: () => void }> = ({ x, delay, symbol, size, onDone }) => {
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    translateY.value = withDelay(delay, withTiming(-size * 0.6, { duration: 900, easing: Easing.out(Easing.cubic) }));
+    opacity.value = withDelay(delay + 600, withTiming(0, { duration: 300 }, () => {
+      if (onDone) {
+        // runOnJS(onDone)() - we call it from the parent timeout instead
+      }
+    }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: x,
+    top: size * 0.3,
+    fontSize: size * 0.1,
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  return <Animated.Text style={style}>{symbol}</Animated.Text>;
+};
+
+export const VisbyCharacter: React.FC<VisbyCharacterProps> = React.memo(({
   appearance = defaultAppearance,
   equipped,
   mood = 'happy',
   size = 150,
   animated = true,
   stage = 'kid',
+  reaction = null,
+  onReactionComplete,
+  glowColor,
 }) => {
   const bounce = useSharedValue(0);
+  const breathe = useSharedValue(0);
+  const blink = useSharedValue(1);
+  const hairSway = useSharedValue(0);
+  const reactionY = useSharedValue(0);
+  const reactionRotate = useSharedValue(0);
+  const reactionScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (!reaction) return;
+
+    if (reaction === 'excited_jump') {
+      reactionScale.value = withSequence(
+        withTiming(0.9, { duration: 100 }),
+        withSpring(1.05, { damping: 8, stiffness: 200 }),
+        withSpring(1, { damping: 12 }),
+      );
+      reactionY.value = withSequence(
+        withTiming(0, { duration: 100 }),
+        withSpring(-20, { damping: 6, stiffness: 180 }),
+        withSpring(0, { damping: 10 }),
+      );
+    } else if (reaction === 'happy_wiggle') {
+      reactionRotate.value = withSequence(
+        withTiming(5, { duration: 60 }),
+        withTiming(-5, { duration: 60 }),
+        withTiming(4, { duration: 60 }),
+        withTiming(-4, { duration: 60 }),
+        withTiming(3, { duration: 60 }),
+        withTiming(-3, { duration: 60 }),
+        withTiming(0, { duration: 80 }),
+      );
+    }
+
+    const timeout = setTimeout(() => {
+      onReactionComplete?.();
+    }, 1200);
+
+    return () => clearTimeout(timeout);
+  }, [reaction]);
 
   useEffect(() => {
     if (!animated) return;
+
     bounce.value = withRepeat(
       withSequence(
         withTiming(-4, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
@@ -345,11 +1048,73 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       ),
       -1, true,
     );
-    return () => { bounce.value = 0; };
+
+    breathe.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+        withTiming(0, { duration: 1500, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+      ),
+      -1, true,
+    );
+
+    hairSway.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+        withTiming(-1, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+      ),
+      -1, true,
+    );
+
+    const startBlink = () => {
+      const delay = 2500 + Math.random() * 3000;
+      blink.value = withDelay(delay,
+        withSequence(
+          withTiming(0.05, { duration: 80 }),
+          withTiming(1, { duration: 120 }),
+          withDelay(200 + Math.random() * 800,
+            withSequence(
+              withTiming(0.05, { duration: 80 }),
+              withTiming(1, { duration: 120 }),
+            ),
+          ),
+        ),
+      );
+    };
+
+    startBlink();
+    const blinkInterval = setInterval(startBlink, 4000 + Math.random() * 2000);
+
+    return () => {
+      cancelAnimation(bounce);
+      cancelAnimation(breathe);
+      cancelAnimation(blink);
+      cancelAnimation(hairSway);
+      clearInterval(blinkInterval);
+    };
   }, [animated]);
 
+  const EY = 64;
+  const LX = 54, RX = 96;
+  const ER = 13;
+
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bounce.value }],
+    transform: [
+      { translateY: bounce.value + reactionY.value },
+      { rotate: `${reactionRotate.value}deg` },
+      { scale: reactionScale.value },
+    ],
+  }));
+
+  const bodyAnimatedProps = useAnimatedProps(() => ({
+    transform: `translate(${CX}, ${BY}) scale(${interpolate(breathe.value, [0, 1], [1, 0.997])}, ${interpolate(breathe.value, [0, 1], [1, 1.012])}) translate(${-CX}, ${-BY})`,
+  }));
+
+  const eyeAnimatedProps = useAnimatedProps(() => ({
+    transform: `translate(${CX}, ${EY}) scale(1, ${blink.value}) translate(${-CX}, ${-EY})`,
+  }));
+
+  const hairAnimatedProps = useAnimatedProps(() => ({
+    transform: `rotate(${interpolate(hairSway.value, [-1, 1], [-1.5, 1.5])}, ${CX}, 40)`,
   }));
 
   const skin = appearance.skinTone;
@@ -358,10 +1123,6 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
   const eye = appearance.eyeColor;
   const hair = appearance.hairColor;
   const hairL = lighten(hair, 22);
-
-  const EY = 64;
-  const LX = 54, RX = 96;
-  const ER = 13;
 
   const eyeShape = appearance.eyeShape || 'round';
 
@@ -647,9 +1408,11 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       </Defs>
       <Ellipse cx={CX} cy={143} rx={22} ry={4} fill="rgba(0,0,0,0.06)" />
       {/* Smaller round body base (no legs) */}
+      <Ellipse cx={CX} cy={115} rx={28} ry={22} fill={skin} />
       <Ellipse cx={CX} cy={115} rx={28} ry={22} fill="url(#bodyG)" />
       {/* Bigger head */}
       <G transform="translate(75, 60) scale(1.2) translate(-75, -60)">
+        <Ellipse cx={CX} cy={60} rx={38} ry={40} fill={skin} />
         <Ellipse cx={CX} cy={60} rx={38} ry={40} fill="url(#bodyG)" />
         {/* Ears */}
         <Circle cx={36} cy={52} r={7} fill={skin} />
@@ -692,6 +1455,13 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
   const renderFullCharacter = () => (
     <G>
       <Defs>
+        {glowColor && (
+          <RadialGradient id="equippedGlow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={glowColor} stopOpacity={0.4} />
+            <Stop offset="60%" stopColor={glowColor} stopOpacity={0.15} />
+            <Stop offset="100%" stopColor={glowColor} stopOpacity={0} />
+          </RadialGradient>
+        )}
         <RadialGradient id="bodyG" cx="40%" cy="35%" r="62%">
           <Stop offset="0%" stopColor={skinL} />
           <Stop offset="85%" stopColor={skin} />
@@ -715,6 +1485,11 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
         </RadialGradient>
       </Defs>
 
+      {/* Equipped item rarity glow */}
+      {glowColor && (
+        <Ellipse cx={CX} cy={BY + bodyOffsetY / 2} rx={55} ry={65} fill="url(#equippedGlow)" />
+      )}
+
       {/* Adult sparkle/glow effect */}
       {stage === 'adult' && (
         <G>
@@ -730,14 +1505,24 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       {/* Ground shadow */}
       <Ellipse cx={CX} cy={143} rx={30} ry={5} fill="rgba(0,0,0,0.06)" />
 
-      {/* Tiny feet */}
-      <Ellipse cx={60} cy={136} rx={9} ry={5.5} fill={skinD} />
-      <Ellipse cx={90} cy={136} rx={9} ry={5.5} fill={skinD} />
-      <Ellipse cx={60} cy={135} rx={7.5} ry={4.5} fill={skin} />
-      <Ellipse cx={90} cy={135} rx={7.5} ry={4.5} fill={skin} />
+      {/* Backpack (behind body) */}
+      {renderBackpack(equipped?.backpack)}
 
-      {/* Main body — taller for teen/adult */}
-      <Ellipse cx={CX} cy={BY + bodyOffsetY / 2} rx={stage === 'adult' ? 47 : 44} ry={52 + bodyOffsetY / 2} fill="url(#bodyG)" />
+      {/* Feet / Shoes */}
+      {equipped?.shoes ? renderShoes(equipped.shoes) : (
+        <G>
+          <Ellipse cx={60} cy={136} rx={9} ry={5.5} fill={skinD} />
+          <Ellipse cx={90} cy={136} rx={9} ry={5.5} fill={skinD} />
+          <Ellipse cx={60} cy={135} rx={7.5} ry={4.5} fill={skin} />
+          <Ellipse cx={90} cy={135} rx={7.5} ry={4.5} fill={skin} />
+        </G>
+      )}
+
+      {/* Main body — solid skin fill as fallback (gradient on top) */}
+      <AnimatedG animatedProps={animated ? bodyAnimatedProps : undefined}>
+        <Ellipse cx={CX} cy={BY + bodyOffsetY / 2} rx={stage === 'adult' ? 47 : 44} ry={52 + bodyOffsetY / 2} fill={skin} />
+        <Ellipse cx={CX} cy={BY + bodyOffsetY / 2} rx={stage === 'adult' ? 47 : 44} ry={52 + bodyOffsetY / 2} fill="url(#bodyG)" />
+      </AnimatedG>
 
       {/* Stub arms — broader for adult */}
       <Ellipse cx={stage === 'adult' ? 25 : 28} cy={86 + bodyOffsetY / 3} rx={stage === 'adult' ? 13 : 11} ry={stage === 'adult' ? 9 : 8} fill={skin} />
@@ -832,8 +1617,86 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
           <Path d="M 44 98 L 44 120 M 106 98 L 106 120" stroke="#8B8B8B" strokeWidth={2} fill="none" />
         </G>
       )}
+      {hasCustomOutfit && equipped?.outfit === 'kilt' && (
+        <G>
+          <Path d="M 38 98 Q 38 92 75 90 Q 112 92 112 98 L 114 128 Q 75 134 36 128 Z" fill="#1B4332" />
+          <Path d="M 42 96 L 42 124 M 58 96 L 58 124 M 75 96 L 75 124 M 92 96 L 92 124 M 108 96 L 108 124" stroke="#DC143C" strokeWidth={1.5} fill="none" />
+          <Path d="M 38 106 L 112 106" stroke="#FFD700" strokeWidth={1} />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'pharaoh_robe' && (
+        <G>
+          <Path d="M 36 96 Q 36 90 75 88 Q 114 90 114 96 L 116 128 Q 75 136 34 128 Z" fill="#1A1A6B" />
+          <Path d="M 48 100 Q 75 94 102 100" stroke="#FFD700" strokeWidth={2} fill="none" />
+          <Path d="M 52 110 Q 75 106 98 110" stroke="#FFD700" strokeWidth={1.5} fill="none" />
+          <Circle cx={CX} cy={102} r={4} fill="#40E0D0" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'mariachi_suit' && (
+        <G>
+          <Path d="M 38 96 Q 38 92 75 90 Q 112 92 112 96 L 114 128 Q 75 134 36 128 Z" fill="#1A1A1A" />
+          <Path d="M 44 96 L 44 126 M 106 96 L 106 126" stroke="#FFD700" strokeWidth={2} fill="none" />
+          <Path d="M 50 104 Q 60 100 70 104 M 80 104 Q 90 100 100 104" stroke="#FFD700" strokeWidth={1} fill="none" />
+          <Circle cx={CX} cy={100} r={3} fill="#FFD700" />
+          <Circle cx={CX} cy={108} r={2.5} fill="#FFD700" />
+          <Circle cx={CX} cy={115} r={2} fill="#FFD700" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'safari_outfit' && (
+        <G>
+          <Path d="M 40 96 Q 40 92 75 90 Q 110 92 110 96 L 112 126 Q 75 132 38 126 Z" fill="#C4A060" />
+          <Rect x={70} y={104} width={10} height={8} rx={2} fill="#A08050" />
+          <Path d="M 44 94 L 44 110" stroke="#8B6F4E" strokeWidth={2} fill="none" />
+          <Path d="M 106 94 L 106 110" stroke="#8B6F4E" strokeWidth={2} fill="none" />
+          <Rect x={62} y={116} width={26} height={3} rx={1.5} fill="#8B5A30" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'space_suit' && (
+        <G>
+          <Path d="M 36 96 Q 36 92 75 90 Q 114 92 114 96 L 116 128 Q 75 134 34 128 Z" fill="#D0D0D8" />
+          <Path d="M 42 94 Q 75 91 108 94" fill="none" stroke="#FFFFFF" strokeWidth={1.5} opacity={0.5} />
+          <Circle cx={CX} cy={108} r={6} fill="#87CEEB" opacity={0.4} />
+          <Rect x={62} y={118} width={26} height={4} rx={2} fill="#A0A0B4" />
+          <Circle cx={52} cy={106} r={2.5} fill="#FF6347" />
+          <Circle cx={98} cy={106} r={2.5} fill="#4169E1" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'pirate_coat' && (
+        <G>
+          <Path d="M 36 96 Q 36 92 75 90 Q 114 92 114 96 L 116 130 Q 75 138 34 130 Z" fill="#2F2F2F" />
+          <Path d="M 42 94 L 44 126" stroke="#FFD700" strokeWidth={1.5} fill="none" />
+          <Path d="M 108 94 L 106 126" stroke="#FFD700" strokeWidth={1.5} fill="none" />
+          <Circle cx={60} cy={102} r={2} fill="#FFD700" />
+          <Circle cx={60} cy={110} r={2} fill="#FFD700" />
+          <Rect x={62} y={120} width={26} height={4} rx={2} fill="#8B5A30" />
+          <Circle cx={CX} cy={122} r={2.5} fill="#FFD700" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'hula_outfit' && (
+        <G>
+          <Path d="M 42 110 Q 75 106 108 110 L 110 130 Q 75 136 40 130 Z" fill="#228B22" />
+          {[46, 54, 62, 70, 78, 86, 94, 102].map((x, i) => (
+            <Path key={i} d={`M ${x} 110 L ${x + 2} 128`} stroke="#2EA02E" strokeWidth={2.5} fill="none" />
+          ))}
+          <Path d="M 48 96 Q 75 104 102 96" stroke="#FF6347" strokeWidth={3} fill="none" />
+          <Circle cx={60} cy={98} r={3} fill="#FFD700" />
+          <Circle cx={75} cy={100} r={3} fill="#FFD700" />
+          <Circle cx={90} cy={98} r={3} fill="#FFD700" />
+        </G>
+      )}
+      {hasCustomOutfit && equipped?.outfit === 'flamenco_dress' && (
+        <G>
+          <Path d="M 36 96 Q 36 92 75 90 Q 114 92 114 96 L 118 130 Q 75 140 32 130 Z" fill="#DC143C" />
+          <Path d="M 42 94 Q 75 90 108 94" fill="none" stroke="#B01030" strokeWidth={1} />
+          <Path d="M 38 118 Q 75 124 112 118" stroke="#1A1A1A" strokeWidth={2} fill="none" />
+          <Path d="M 36 124 Q 75 132 114 124" stroke="#1A1A1A" strokeWidth={1.5} fill="none" />
+          {[44, 60, 76, 92].map((x, i) => (
+            <Circle key={i} cx={x} cy={108} r={1.5} fill="#1A1A1A" />
+          ))}
+        </G>
+      )}
       {/* Generic fallback: any other outfit shows a colored tunic so every purchase is visible */}
-      {hasCustomOutfit && equipped?.outfit && !['kimono', 'hanbok', 'dashiki', 'poncho', 'sari', 'hawaiian_shirt', 'lederhosen', 'toga', 'default_tunic', 'ninja_outfit', 'knight_armor'].includes(equipped.outfit) && (() => {
+      {hasCustomOutfit && equipped?.outfit && !['kimono', 'hanbok', 'dashiki', 'poncho', 'sari', 'hawaiian_shirt', 'lederhosen', 'toga', 'default_tunic', 'ninja_outfit', 'knight_armor', 'kilt', 'pharaoh_robe', 'mariachi_suit', 'safari_outfit', 'space_suit', 'pirate_coat', 'hula_outfit', 'flamenco_dress'].includes(equipped.outfit) && (() => {
         const palette = ['#6B5B95', '#2E86AB', '#1B4332', '#5C4D7D', '#9B59B6', '#E74C3C', '#16A085', '#8E44AD'];
         const idx = equipped.outfit.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % palette.length;
         const fill = palette[idx];
@@ -853,8 +1716,10 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       <Circle cx={118} cy={56} r={5} fill={skinL} />
       <Circle cx={118} cy={56} r={3} fill="#FFACA0" opacity={0.3} />
 
-      {/* Hair */}
-      {renderHairStyle(appearance.hairStyle || 'default', hair, hairL)}
+      {/* Hair (with sway) */}
+      <AnimatedG animatedProps={animated ? hairAnimatedProps : undefined}>
+        {renderHairStyle(appearance.hairStyle || 'default', hair, hairL)}
+      </AnimatedG>
 
       {/* Teen extra hair strands */}
       {(stage === 'teen' || stage === 'adult') && (
@@ -878,8 +1743,10 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
       <Circle cx={36} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blL)'} />
       <Circle cx={114} cy={74} r={12} fill={mood === 'sick' ? 'url(#sickBlush)' : 'url(#blR)'} />
 
-      {/* Eyes */}
-      {renderEyes()}
+      {/* Eyes (with blink) */}
+      <AnimatedG animatedProps={animated ? eyeAnimatedProps : undefined}>
+        {renderEyes()}
+      </AnimatedG>
 
       {/* Mouth — bigger smile for adult */}
       {stage === 'adult' ? (
@@ -899,19 +1766,27 @@ export const VisbyCharacter: React.FC<VisbyCharacterProps> = ({
 
       {/* Accessory */}
       {renderAccessory(equipped?.accessory)}
+
+      {/* Companion */}
+      {renderCompanion(equipped?.companion)}
     </G>
   );
 
   return (
-    <Animated.View style={[styles.container, { width: safeSize, height: safeSize }, animatedStyle]}>
-      <Svg width={safeSize} height={safeSize} viewBox="0 0 150 150">
-        {stage === 'egg' && renderEgg()}
-        {stage === 'baby' && renderBaby()}
-        {(stage === 'kid' || stage === 'teen' || stage === 'adult') && renderFullCharacter()}
-      </Svg>
-    </Animated.View>
+    <View style={[styles.container, { width: safeSize, height: safeSize }]}>
+      <Animated.View style={[{ width: safeSize, height: safeSize }, animatedStyle]}>
+        <Svg width={safeSize} height={safeSize} viewBox="0 0 150 150">
+          {stage === 'egg' && renderEgg()}
+          {stage === 'baby' && renderBaby()}
+          {(stage === 'kid' || stage === 'teen' || stage === 'adult') && renderFullCharacter()}
+        </Svg>
+      </Animated.View>
+      {reaction && (reaction === 'love' || reaction === 'sparkle') && (
+        <ReactionParticles reaction={reaction} size={safeSize} onDone={onReactionComplete} />
+      )}
+    </View>
   );
-};
+}) as React.FC<VisbyCharacterProps>;
 
 const styles = StyleSheet.create({
   container: {

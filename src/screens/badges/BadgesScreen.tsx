@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,11 +29,20 @@ type BadgesScreenProps = {
 };
 
 export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
-  const { stamps, bites, badges, user, lessonProgress, userHouses, visby } = useStore();
+  const stamps = useStore(s => s.stamps);
+  const bites = useStore(s => s.bites);
+  const badges = useStore(s => s.badges);
+  const user = useStore(s => s.user);
+  const lessonProgress = useStore(s => s.lessonProgress);
+  const userHouses = useStore(s => s.userHouses);
+  const visby = useStore(s => s.visby);
 
-  const earnedBadgeIds = new Set(badges.map((b) => b.badgeId));
+  const earnedBadgeIds = useMemo(
+    () => new Set(badges.map((b) => b.badgeId)),
+    [badges]
+  );
 
-  const context: BadgeCheckContext = {
+  const context = useMemo<BadgeCheckContext>(() => ({
     stamps: stamps.length,
     bites: bites.length,
     countriesVisited: user?.countriesVisited ?? 0,
@@ -49,7 +59,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
     perfectCookingGames: user?.perfectCookingGames ?? 0,
     perfectWordMatches: user?.perfectWordMatches ?? 0,
     treasureHuntsCompleted: user?.treasureHuntsCompleted ?? 0,
-  };
+  }), [stamps, bites, user, lessonProgress, userHouses, visby, badges]);
 
   const renderBadge = ({ item }: { item: BadgeDefinition }) => {
     const earned = earnedBadgeIds.has(item.id);
@@ -117,8 +127,8 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)} style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
             <Icon name="chevronLeft" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Heading level={1}>Badges</Heading>
@@ -127,8 +137,9 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
               {badges.length}/{BADGE_DEFINITIONS.length}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
+        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.badgeListWrap}>
         <FlatList
           data={BADGE_DEFINITIONS}
           renderItem={renderBadge}
@@ -137,7 +148,12 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews={true}
         />
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -176,6 +192,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: spacing.radius.round,
+  },
+  badgeListWrap: {
+    flex: 1,
   },
   listContent: {
     paddingHorizontal: spacing.screenPadding,

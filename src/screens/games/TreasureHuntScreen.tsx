@@ -35,6 +35,7 @@ import { LoadingView } from '../../components/ui/LoadingView';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../../store/useStore';
+import { analyticsService } from '../../services/analytics';
 import { soundService } from '../../services/sound';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
@@ -58,9 +59,9 @@ const AURA_PER_ITEM_FALLBACK = 8;
 
 /** Match CountryRoomScreen layout for immersive room stage */
 const ROOM_STAGE_WINDOW_STRIP_HEIGHT = 48;
-const ROOM_STAGE_WALL_HEIGHT = 232;
+const ROOM_STAGE_WALL_HEIGHT = 280;
 const ROOM_STAGE_FLOOR_HEIGHT = 108;
-const ROOM_STAGE_OBJECTS_LAYER_HEIGHT = (ROOM_STAGE_WALL_HEIGHT - ROOM_STAGE_WINDOW_STRIP_HEIGHT) - 48;
+const ROOM_STAGE_OBJECTS_LAYER_HEIGHT = (ROOM_STAGE_WALL_HEIGHT - ROOM_STAGE_WINDOW_STRIP_HEIGHT) - 32;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -119,7 +120,7 @@ const RoomMysterySpot: React.FC<{ accentColor: string; objId: string; wrongTapTa
   return (
     <Animated.View style={[styles.mysterySpotOuter, { borderColor: accentColor + '50' }]}>
       <Animated.View style={[styles.mysterySpotInner, { backgroundColor: accentColor + '25' }, animStyle]}>
-        <Icon name="compass" size={24} color={accentColor} />
+        <Icon name="compass" size={32} color={accentColor} />
       </Animated.View>
     </Animated.View>
   );
@@ -133,7 +134,10 @@ type TreasureHuntScreenProps = {
 type GamePhase = 'picker' | 'mission_intro' | 'room_hunt' | 'reveal' | 'complete' | 'location_hunt' | 'location_reveal' | 'location_complete';
 type HuntMode = 'room' | 'location';
 
+const GAME_NAME = 'TreasureHunt';
+
 export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigation, route }) => {
+  const pathNodeId = route.params?.pathNodeId;
   const initialCountryId = route.params?.countryId ?? null;
   const {
     addAura,
@@ -147,7 +151,12 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
     completeTreasureHuntLocation,
     getVisbyMood,
     addVisbyChatMessage,
+    completePathNode,
   } = useStore();
+
+  React.useEffect(() => {
+    analyticsService.trackGameStart(GAME_NAME);
+  }, []);
 
   const countriesWithRooms = useMemo(() => getCountriesWithRooms(), []);
 
@@ -169,7 +178,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
 
   const [locationRounds, setLocationRounds] = useState<LocationHuntRound[]>([]);
   const [locationRoundIndex, setLocationRoundIndex] = useState(0);
-  const [locationFoundForSummary, setLocationFoundForSummary] = useState<{ name: string; learningPoints: number; imageUrl?: string }[]>([]);
+  const [locationFoundForSummary, setLocationFoundForSummary] = useState<{ name: string; learningPoints: number; imageUrl?: string; description?: string }[]>([]);
   const [locationReveal, setLocationReveal] = useState<LocationHuntRound['target'] | null>(null);
 
   const country = countryId ? COUNTRIES.find((c) => c.id === countryId) : null;
@@ -286,10 +295,12 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
       addVisbyChatMessage('visby', getPostGameLine('TreasureHunt', 'won', getVisbyMood()));
       playWithVisby();
       incrementGameStat('gamesPlayed');
+      analyticsService.trackGameComplete(GAME_NAME, roomHuntData.items.length, true);
       checkDailyMissionCompletion?.('play_minigame', 1);
       setAdventureGamePlayed?.();
       incrementGameStat('treasureHuntsCompleted');
       addSkillPoints('exploration', 3);
+      if (pathNodeId) completePathNode(pathNodeId);
       if (countryId) completeTreasureHuntRoom(countryId, roomHuntData.room.id);
     } else {
       setClueIndex((i) => i + 1);
@@ -305,7 +316,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
       if (locationId === round.target.id) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         soundService.playMatch();
-        setLocationFoundForSummary((prev) => [...prev, { name: round.target.name, learningPoints: round.target.learningPoints, imageUrl: round.target.imageUrl }]);
+        setLocationFoundForSummary((prev) => [...prev, { name: round.target.name, learningPoints: round.target.learningPoints, imageUrl: round.target.imageUrl, description: round.target.description }]);
         addAura(round.target.learningPoints);
         if (countryId) completeTreasureHuntLocation(countryId, round.target.id);
         setLocationReveal(round.target);
@@ -331,10 +342,12 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
       addVisbyChatMessage('visby', getPostGameLine('TreasureHunt', 'won', getVisbyMood()));
       playWithVisby();
       incrementGameStat('gamesPlayed');
+      analyticsService.trackGameComplete(GAME_NAME, locationRounds.length, true);
       checkDailyMissionCompletion?.('play_minigame', 1);
       setAdventureGamePlayed?.();
       incrementGameStat('treasureHuntsCompleted');
       addSkillPoints('exploration', 3);
+      if (pathNodeId) completePathNode(pathNodeId);
     } else {
       setLocationRoundIndex((i) => i + 1);
       setPhase('location_hunt');
@@ -565,7 +578,12 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
                       ) : (
                         <Icon name="landmark" size={18} color={accentColor} />
                       )}
-                      <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={1} style={styles.foundItemLabel}>{item.name}</Text>
+                      <View style={styles.foundItemTextWrap}>
+                        <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={1} style={styles.foundItemLabel}>{item.name}</Text>
+                        {item.description ? (
+                          <Text variant="caption" color={colors.text.light} numberOfLines={1} style={styles.foundItemCaption}>{item.description}</Text>
+                        ) : null}
+                      </View>
                     </Animated.View>
                   ))}
                 </View>
@@ -826,6 +844,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
 
           <View style={styles.roomContainer}>
             <View style={styles.roomStageFrame}>
+              <FloatingParticles count={8} variant="sparkle" opacity={0.5} speed="slow" />
               {/* Window strip (sky) */}
               {atmosphere && (
                 <LinearGradient
@@ -864,7 +883,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
                           style={[styles.roomObjectDecor, { left: `${obj.x}%`, top: `${obj.y}%` }, { pointerEvents: 'none' }]}
                         >
                           <View style={styles.roomObjectIconWrapMuted}>
-                            <Icon name={obj.icon as IconName} size={22} color={colors.text.light} />
+                            <Icon name={obj.icon as IconName} size={30} color={colors.text.light} />
                           </View>
                           <Text variant="caption" color={colors.text.light} style={styles.objectLabelMuted} numberOfLines={1}>{obj.label}</Text>
                         </View>
@@ -887,6 +906,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
                         onPress={() => handleObjectTap(obj.id)}
                         activeOpacity={0.8}
                         style={[styles.roomObjectMystery, { left: `${obj.x}%`, top: `${obj.y}%` }]}
+                        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                         accessibilityLabel={`Find: ${obj.label}`}
                         accessibilityRole="button"
                       >
@@ -1157,17 +1177,17 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -28 }, { translateY: -28 }],
   },
   mysterySpotOuter: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mysterySpotInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1321,8 +1341,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   foundItemLabel: {
+  },
+  foundItemTextWrap: {
     flex: 1,
     maxWidth: 140,
+  },
+  foundItemCaption: {
+    fontSize: 10,
+    marginTop: 1,
   },
   pickerScroll: {
     flex: 1,

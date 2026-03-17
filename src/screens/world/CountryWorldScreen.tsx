@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -36,7 +37,13 @@ type ConfirmModal = {
 };
 
 export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigation }) => {
-  const { user, userHouses, spendAura, addUserHouse, incrementCountriesVisited, getStreakMultiplier, visitCountry } = useStore();
+  const user = useStore(s => s.user);
+  const userHouses = useStore(s => s.userHouses);
+  const spendAura = useStore(s => s.spendAura);
+  const addUserHouse = useStore(s => s.addUserHouse);
+  const incrementCountriesVisited = useStore(s => s.incrementCountriesVisited);
+  const getStreakMultiplier = useStore(s => s.getStreakMultiplier);
+  const visitCountry = useStore(s => s.visitCountry);
   const aura = user?.aura ?? 0;
   const streak = user?.currentStreak ?? 0;
   const multiplier = getStreakMultiplier();
@@ -65,11 +72,16 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     unlockedCount: number;
   }>({ visible: false, countryName: '', souvenirName: '', unlockedCount: 0 });
 
-  const getUnlockedItemCount = (countryId: string) => {
-    const country = COUNTRIES.find(c => c.id === countryId);
-    if (!country) return 0;
-    return COSMETICS_CATALOG.filter(c => c.country === country.name).length;
-  };
+  const unlockedItemCountByCountry = useMemo(() => {
+    const map: Record<string, number> = {};
+    COUNTRIES.forEach(c => {
+      map[c.id] = COSMETICS_CATALOG.filter(cos => cos.country === c.name).length;
+    });
+    return map;
+  }, []);
+
+  const getUnlockedItemCount = (countryId: string) =>
+    unlockedItemCountByCountry[countryId] ?? 0;
 
   const hasHouse = (countryId: string) =>
     userHouses.some((h) => h.countryId === countryId);
@@ -195,11 +207,11 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
 
   return (
     <LinearGradient
-      colors={[colors.base.cream, colors.primary.wisteriaFaded, colors.calm.skyLight]}
+      colors={[colors.base.cream, colors.base.parchment, colors.primary.wisteriaFaded, colors.calm.skyLight]}
       style={styles.container}
-      locations={[0, 0.4, 1]}
+      locations={[0, 0.2, 0.5, 1]}
     >
-      <FloatingParticles count={10} variant="mixed" opacity={0.3} speed="normal" />
+      <FloatingParticles count={6} variant="mixed" opacity={0.2} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
@@ -335,8 +347,9 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       </SafeAreaView>
 
       {/* Confirm Modal */}
-      <Modal visible={modal.visible} transparent animationType="fade">
+      <Modal visible={modal.visible} transparent animationType="none">
         <Pressable style={styles.modalOverlay} onPress={() => setModal((m) => ({ ...m, visible: false }))}>
+          <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <Heading level={3}>{modal.title}</Heading>
             <Text variant="body" style={styles.modalBody}>{modal.message}</Text>
@@ -345,12 +358,14 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
               <Button size="sm" variant="reward" title={modal.confirmText} onPress={modal.onConfirm} />
             </View>
           </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
 
       {/* Info Modal */}
-      <Modal visible={infoModal.visible} transparent animationType="fade">
+      <Modal visible={infoModal.visible} transparent animationType="none">
         <Pressable style={styles.modalOverlay} onPress={() => setInfoModal((m) => ({ ...m, visible: false }))}>
+          <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <Heading level={3}>{infoModal.title}</Heading>
             <Text variant="body" style={styles.modalBody}>{infoModal.message}</Text>
@@ -358,12 +373,14 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
               <Button size="sm" variant="primary" title="OK" onPress={() => setInfoModal((m) => ({ ...m, visible: false }))} />
             </View>
           </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
 
       {/* Name Your House Modal */}
-      <Modal visible={nameModal.visible} transparent animationType="fade">
+      <Modal visible={nameModal.visible} transparent animationType="none">
         <Pressable style={styles.modalOverlay}>
+          <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.nameModalHeader}>
               <Icon name="home" size={48} color={colors.text.primary} />
@@ -383,15 +400,17 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
               <Button size="sm" variant="primary" title="Move In!" onPress={finishBuyHouse} />
             </View>
           </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
 
       {/* Souvenir Reward Modal */}
-      <Modal visible={souvenirModal.visible} transparent animationType="fade">
+      <Modal visible={souvenirModal.visible} transparent animationType="none">
         <Pressable style={styles.modalOverlay}>
+          <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.souvenirContent} onPress={(e) => e.stopPropagation()}>
             <LinearGradient
-              colors={['#FFF8E0', '#FFF0F5', '#F0ECFF']}
+              colors={[colors.reward.peachLight, colors.accent.blush, colors.primary.wisteriaFaded]}
               style={styles.souvenirGradient}
             >
               <Text style={styles.souvenirEmoji}>🎁</Text>
@@ -431,6 +450,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
               </View>
             </LinearGradient>
           </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
     </LinearGradient>
@@ -453,14 +473,14 @@ const styles = StyleSheet.create({
   auraRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   auraText: { fontFamily: 'Nunito-SemiBold' },
   streakRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  streakText: { fontFamily: 'Nunito-Bold', fontSize: 14, color: '#D4760A' },
+  streakText: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.status.streak },
   multiplierBadge: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.reward.gold,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
   },
-  multiplierText: { fontFamily: 'Baloo2-Bold', fontSize: 12, color: '#7A5A00' },
+  multiplierText: { fontFamily: 'Baloo2-Bold', fontSize: 12, color: colors.text.primary },
   housesOwnedRow: { marginTop: spacing.xs },
   housesOwnedText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.secondary },
   tipCard: { marginBottom: spacing.md },
@@ -479,7 +499,7 @@ const styles = StyleSheet.create({
   flagEmoji: { fontSize: 32 },
   countryInfo: { flex: 1 },
   countryNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  ownedBadge: { fontFamily: 'Nunito-Bold', fontSize: 12, color: '#4CAF50', backgroundColor: 'rgba(76,175,80,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, overflow: 'hidden' },
+  ownedBadge: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.success.emerald, backgroundColor: colors.success.honeydew, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, overflow: 'hidden' },
   newBadge: { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.reward.amber, backgroundColor: 'rgba(255,191,0,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, overflow: 'hidden', letterSpacing: 1 },
   unlockPreview: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   unlockPreviewText: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.reward.amber },
@@ -494,13 +514,13 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay.modal,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.card,
     borderRadius: 24,
     padding: spacing.xl,
     maxWidth: 360,
@@ -513,7 +533,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.text.primary,
     borderWidth: 2, borderColor: colors.primary.wisteriaFaded,
     borderRadius: 16, padding: spacing.md, marginBottom: spacing.lg,
-    backgroundColor: '#FAFAFE',
+    backgroundColor: colors.base.cream,
   },
 
   // Souvenir Modal
@@ -556,3 +576,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 });
+
+export default CountryWorldScreen;

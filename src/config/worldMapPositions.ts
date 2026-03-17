@@ -9,20 +9,20 @@ export interface WorldMapPosition {
 }
 
 export const WORLD_MAP_POSITIONS: Record<string, WorldMapPosition> = {
-  jp: { xPercent: 88, yPercent: 30 },
-  fr: { xPercent: 51, yPercent: 24 },
-  mx: { xPercent: 22, yPercent: 37 },
-  it: { xPercent: 53, yPercent: 26 },
+  jp: { xPercent: 89, yPercent: 30 },
+  fr: { xPercent: 51, yPercent: 23 },
+  mx: { xPercent: 23, yPercent: 39 },
+  it: { xPercent: 54, yPercent: 27 },
   gb: { xPercent: 49, yPercent: 20 },
-  br: { xPercent: 35, yPercent: 56 },
-  kr: { xPercent: 86, yPercent: 30 },
+  br: { xPercent: 37, yPercent: 59 },
+  kr: { xPercent: 85, yPercent: 29 },
   th: { xPercent: 78, yPercent: 42 },
-  ma: { xPercent: 48, yPercent: 32 },
-  pe: { xPercent: 29, yPercent: 56 },
-  ke: { xPercent: 61, yPercent: 50 },
-  no: { xPercent: 53, yPercent: 16 },
-  tr: { xPercent: 60, yPercent: 28 },
-  gr: { xPercent: 56, yPercent: 28 },
+  ma: { xPercent: 48, yPercent: 31 },
+  pe: { xPercent: 29, yPercent: 57 },
+  ke: { xPercent: 60, yPercent: 51 },
+  no: { xPercent: 53, yPercent: 17 },
+  tr: { xPercent: 59, yPercent: 28 },
+  gr: { xPercent: 57, yPercent: 29 },
 };
 
 export function getWorldMapPosition(countryId: string): WorldMapPosition | null {

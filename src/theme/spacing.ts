@@ -56,4 +56,7 @@ export const spacing = {
   },
 };
 
+/** Alias for spacing.radius (border radius tokens). */
+export const radii = spacing.radius;
+
 export type SpacingKey = keyof typeof spacing;

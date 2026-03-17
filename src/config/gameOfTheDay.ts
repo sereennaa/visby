@@ -7,6 +7,11 @@ const GAMES = [
   { key: 'MemoryCards', label: 'Memory Cards', shortLabel: 'Memory' },
   { key: 'CookingGame', label: 'World Cooking', shortLabel: 'Cooking' },
   { key: 'TreasureHunt', label: 'Treasure Hunt', shortLabel: 'Treasure Hunt' },
+  { key: 'FlagMatch', label: 'Flag Match', shortLabel: 'Flags' },
+  { key: 'MapPin', label: 'Map Pin', shortLabel: 'Map Pin' },
+  { key: 'CultureDressUp', label: 'Culture Dress Up', shortLabel: 'Dress Up' },
+  { key: 'SortCategorize', label: 'Sort & Categorize', shortLabel: 'Sort' },
+  { key: 'StoryBuilder', label: 'Story Builder', shortLabel: 'Stories' },
 ] as const;
 
 export const GAME_OF_THE_DAY_BONUS_AURA = 15;

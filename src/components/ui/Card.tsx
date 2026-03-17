@@ -21,6 +21,7 @@ import Animated, {
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { theme } from '../../theme';
+import { hapticService } from '../../services/haptics';
 
 interface CardProps {
   children: React.ReactNode;
@@ -72,7 +73,7 @@ export const Card: React.FC<CardProps> = ({
       return { boxShadow: `0 0 ${radius}px rgba(199,184,234,${opacity})` };
     }
     return {
-      shadowColor: '#C7B8EA',
+      shadowColor: colors.accent.lavender,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: opacity,
       shadowRadius: radius,
@@ -83,6 +84,7 @@ export const Card: React.FC<CardProps> = ({
   const handlePressIn = () => {
     if (onPress) {
       scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
+      hapticService.tap();
     }
   };
 

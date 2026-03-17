@@ -81,6 +81,17 @@ export const SKILL_CONFIG: SkillConfigItem[] = [
       { label: 'Explore the world', screen: 'Main', params: { screen: 'Explore' } },
     ],
   },
+  {
+    key: 'sustainability',
+    label: 'Sustainability',
+    icon: 'nature',
+    hint: 'Sustainability lessons, planet quiz, and impact actions boost this skill.',
+    actions: [
+      { label: 'Sustainability lessons', screen: 'LearningPath' },
+      { label: 'Planet quiz', screen: 'Quiz', params: { category: 'sustainability' } },
+      { label: 'Eco flashcards', screen: 'Flashcards', params: { deckId: 'sustainability' } },
+    ],
+  },
 ];
 
 export const SKILL_KEYS_ORDER: (keyof SkillProgress)[] = [
@@ -90,6 +101,7 @@ export const SKILL_KEYS_ORDER: (keyof SkillProgress)[] = [
   'history',
   'cooking',
   'exploration',
+  'sustainability',
 ];
 
 export function getSkillConfig(key: keyof SkillProgress): SkillConfigItem | undefined {

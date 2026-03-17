@@ -12,6 +12,7 @@ import { useStore } from '../../store/useStore';
 import { getGameOfTheDay } from '../../config/gameOfTheDay';
 import { RootStackParamList } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { copy } from '../../config/copy';
 
@@ -31,7 +32,13 @@ type ActivityItem = {
 };
 
 export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
-  const { user, stamps, bites, badges, friendRequests, getDailyMission, dailyMissionCompletedAt } = useStore();
+  const user = useStore(s => s.user);
+  const stamps = useStore(s => s.stamps);
+  const bites = useStore(s => s.bites);
+  const badges = useStore(s => s.badges);
+  const friendRequests = useStore(s => s.friendRequests);
+  const getDailyMission = useStore(s => s.getDailyMission);
+  const dailyMissionCompletedAt = useStore(s => s.dailyMissionCompletedAt);
 
   const incomingRequests = useMemo(() => friendRequests.filter((r) => r.toUserId === user?.id), [friendRequests, user?.id]);
   const dailyMission = getDailyMission();
@@ -177,11 +184,11 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
                   key={item.id}
                   entering={FadeInDown.duration(400).delay(250 + i * 60)}
                 >
-                  <TouchableOpacity
+                  <AnimatedPressable
                     style={[styles.activityCard, { backgroundColor: item.bg }]}
                     onPress={item.onPress}
-                    activeOpacity={item.onPress ? 0.7 : 1}
                     disabled={!item.onPress}
+                    scaleDown={0.97}
                   >
                     <View style={[styles.activityIconWrap, { backgroundColor: item.color + '20' }]}>
                       <Icon name={item.icon} size={22} color={item.color} />
@@ -191,7 +198,7 @@ export const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
                       <Caption numberOfLines={1}>{item.subtitle}</Caption>
                     </View>
                     {item.onPress && <Icon name="chevronRight" size={18} color={item.color} />}
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </Animated.View>
               ))
             )}

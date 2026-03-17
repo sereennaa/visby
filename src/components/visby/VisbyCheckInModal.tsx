@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,14 +9,68 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  LayoutAnimation,
 } from 'react-native';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { useNavigation } from '@react-navigation/native';
 import { useStore } from '../../store/useStore';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { Text, Caption } from '../ui/Text';
-import { Icon } from '../ui/Icon';
+import { Text, Caption, Heading } from '../ui/Text';
+import { Icon, IconName } from '../ui/Icon';
 import { VisbyCharacter } from '../avatar/VisbyCharacter';
-import type { VisbyMemory, VisbyChatMessage } from '../../types';
+import { FloatingParticles } from '../effects/FloatingParticles';
+import { GiftShop } from './GiftShop';
+import type { VisbyMemory, VisbyChatMessage, BOND_LEVEL_THRESHOLDS } from '../../types';
+import { getAIReply, isAIChatConfigured, extractMemoryAI, abortPendingAIRequest, filterUserInput, getSafetyResponse } from '../../services/aiChat';
+import { calculateTraitLevels, getDominantTrait, getPersonalityGreeting } from '../../config/visbyPersonality';
+import { analyticsService } from '../../services/analytics';
+import { speakAsVisby, stopVisbyTTS } from '../../services/visbyTTS';
+
+type NeedKey = 'hunger' | 'happiness' | 'knowledge' | 'energy';
+
+interface NeedInfo {
+  key: NeedKey;
+  icon: IconName;
+  label: string;
+  color: string;
+  bgColor: string;
+  hint: string;
+  description: string;
+  actions: { label: string; icon: IconName; screen: string; params?: object }[];
+}
+
+const NEED_INFO: NeedInfo[] = [
+  {
+    key: 'hunger', icon: 'food', label: 'Food', color: colors.reward.peachDark, bgColor: colors.reward.peachLight,
+    hint: 'Hungry!', description: 'Feed your Visby by discovering dishes from around the world. Try the Cooking Game too.',
+    actions: [
+      { label: 'Discover a Dish', icon: 'food', screen: 'AddBite' },
+      { label: 'Cooking Game', icon: 'sparkles', screen: 'CookingGame' },
+    ],
+  },
+  {
+    key: 'happiness', icon: 'sparkles', label: 'Joy', color: colors.accent.coral, bgColor: colors.accent.blush,
+    hint: 'Bored!', description: 'Explore countries, learn new things, and play mini-games — your Visby loves adventure!',
+    actions: [
+      { label: 'Explore a country', icon: 'globe', screen: 'WorldMap' as any },
+      { label: 'Treasure Hunt', icon: 'compass', screen: 'TreasureHunt' },
+    ],
+  },
+  {
+    key: 'knowledge', icon: 'book', label: 'Smarts', color: colors.primary.wisteriaDark, bgColor: colors.primary.wisteriaFaded,
+    hint: 'Curious!', description: 'Teach your Visby by taking quizzes, completing lessons, and playing Word Match!',
+    actions: [
+      { label: 'Take a Quiz', icon: 'quiz', screen: 'Quiz' },
+      { label: 'Word Match', icon: 'language', screen: 'WordMatch' },
+    ],
+  },
+  {
+    key: 'energy', icon: 'star', label: 'Energy', color: colors.calm.ocean, bgColor: colors.calm.skyLight,
+    hint: 'Tired!', description: 'Your Visby rests when you check in each day. Come back tomorrow for more energy!',
+    actions: [],
+  },
+];
 
 const SOCIAL_BATTERY_CHAT_USER = 6;
 const SOCIAL_BATTERY_CHAT_VISBY = 4;
@@ -172,13 +226,216 @@ function generateVisbyReply(
   return pickWithoutRepeat(affirmations, lastVisby);
 }
 
+function getQuickReplies(lastVisbyText: string | null, isFirstMessage: boolean): string[] {
+  if (isFirstMessage || !lastVisbyText) {
+    return ["I'm doing great!", "Not the best day", "Tell me something cool"];
+  }
+  const t = lastVisbyText.toLowerCase();
+  if (t.includes('?')) {
+    return ["Yes!", "Hmm, I'm not sure", "Tell me more"];
+  }
+  if (/adventure|explore|country|travel/.test(t)) {
+    return ["Let's go!", "Tell me a fun fact", "What should we do today?"];
+  }
+  return ["What should we do today?", "Tell me a fun fact", "How are you?"];
+}
+
+const REACTION_TRIGGERS: Record<string, 'sparkle' | 'love' | 'happy_wiggle'> = {
+  'proud': 'sparkle',
+  'amazing': 'sparkle',
+  'awesome': 'happy_wiggle',
+  'love': 'love',
+  'best': 'happy_wiggle',
+  'great job': 'sparkle',
+  'believe in you': 'love',
+};
+
+function detectReaction(text: string): 'sparkle' | 'love' | 'happy_wiggle' | undefined {
+  const t = text.toLowerCase();
+  for (const [trigger, reaction] of Object.entries(REACTION_TRIGGERS)) {
+    if (t.includes(trigger)) return reaction;
+  }
+  return undefined;
+}
+
+function getMoodParticleVariant(mood: string): 'sparkle' | 'dust' | 'snow' | 'stars' {
+  if (mood === 'happy' || mood === 'excited' || mood === 'proud') return 'sparkle';
+  if (mood === 'sleepy' || mood === 'cozy') return 'dust';
+  if (mood === 'sad' || mood === 'lonely') return 'snow';
+  return 'stars';
+}
+
 type Props = {
   visible: boolean;
   onClose: () => void;
 };
 
+const BondMeter: React.FC = () => {
+  const visbyBond = useStore((s) => s.visbyBond);
+  const level = visbyBond.level;
+  const THRESHOLDS = [0, 10, 30, 60, 100, 160, 240, 340, 460, 600];
+  const currentThreshold = THRESHOLDS[level - 1] ?? 0;
+  const nextThreshold = THRESHOLDS[level] ?? THRESHOLDS[THRESHOLDS.length - 1];
+  const progress = nextThreshold > currentThreshold
+    ? Math.min(1, (visbyBond.totalBondPoints - currentThreshold) / (nextThreshold - currentThreshold))
+    : 1;
+
+  return (
+    <View style={bondStyles.container}>
+      <View style={bondStyles.row}>
+        <Icon name="heart" size={14} color="#E74C3C" />
+        <Text style={bondStyles.levelText}>Bond Lv. {level}</Text>
+        <Text style={bondStyles.pointsText}>{visbyBond.totalBondPoints} pts</Text>
+      </View>
+      <View style={bondStyles.barBg}>
+        <View style={[bondStyles.barFill, { width: `${progress * 100}%` }]} />
+      </View>
+    </View>
+  );
+};
+
+const bondStyles = StyleSheet.create({
+  container: { marginBottom: spacing.sm, paddingHorizontal: spacing.xs },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  levelText: { fontWeight: '700', fontSize: 13, color: '#E74C3C' },
+  pointsText: { fontSize: 11, color: colors.text.muted, marginLeft: 'auto' },
+  barBg: { height: 6, backgroundColor: 'rgba(231,76,60,0.12)', borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: 6, backgroundColor: '#E74C3C', borderRadius: 3 },
+});
+
+interface NeedsDisplayProps {
+  activeHint: NeedKey | null;
+  onTapNeed: (key: NeedKey) => void;
+}
+
+const NeedsDisplay: React.FC<NeedsDisplayProps> = ({ activeHint, onTapNeed }) => {
+  const getVisbyNeeds = useStore((s) => s.getVisbyNeeds);
+  const needs = getVisbyNeeds();
+
+  const getNeedColor = (val: number) => val > 60 ? '#4CAF50' : val > 30 ? '#FF9800' : '#E74C3C';
+
+  return (
+    <View style={qaStyles.container}>
+      {NEED_INFO.map((ni) => {
+        const value = needs[ni.key] ?? 0;
+        const isActive = activeHint === ni.key;
+        return (
+          <TouchableOpacity
+            key={ni.key}
+            style={[qaStyles.action, isActive && { opacity: 1 }]}
+            onPress={() => onTapNeed(ni.key)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${ni.label}: ${value}%`}
+          >
+            <View style={[qaStyles.iconWrap, { backgroundColor: isActive ? ni.bgColor : 'rgba(184,165,224,0.12)' }]}>
+              <Icon name={ni.icon} size={16} color={isActive ? ni.color : colors.primary.wisteriaDark} />
+            </View>
+            <View style={qaStyles.meterBg}>
+              <View style={[qaStyles.meterFill, { width: `${value}%`, backgroundColor: getNeedColor(value) }]} />
+            </View>
+            <Text style={qaStyles.label}>{ni.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
+interface CareHintCardProps {
+  needKey: NeedKey;
+  onAction: (screen: string, params?: object) => void;
+  onDismiss: () => void;
+}
+
+const CareHintCard: React.FC<CareHintCardProps> = ({ needKey, onAction, onDismiss }) => {
+  const getVisbyNeeds = useStore((s) => s.getVisbyNeeds);
+  const needs = getVisbyNeeds();
+  const info = NEED_INFO.find((n) => n.key === needKey);
+  if (!info) return null;
+  const value = needs[needKey] ?? 0;
+  const isLow = value < 30;
+
+  return (
+    <View style={[careStyles.card, { borderColor: info.bgColor }]}>
+      <View style={careStyles.cardHeader}>
+        <View style={[careStyles.iconCircle, { backgroundColor: info.bgColor }]}>
+          <Icon name={info.icon} size={20} color={info.color} />
+        </View>
+        <View style={careStyles.cardHeaderText}>
+          <Text style={[careStyles.cardTitle, { color: info.color }]}>
+            {isLow ? `Your Visby is ${info.hint.replace('!', '')}!` : `${info.label}: ${value}%`}
+          </Text>
+          <Text style={careStyles.cardDesc}>{info.description}</Text>
+        </View>
+        <TouchableOpacity onPress={onDismiss} hitSlop={12} style={careStyles.dismissBtn}>
+          <Icon name="close" size={16} color={colors.text.muted} />
+        </TouchableOpacity>
+      </View>
+      {info.actions.length > 0 && (
+        <View style={careStyles.actionsRow}>
+          {info.actions.map((a) => (
+            <TouchableOpacity
+              key={a.screen}
+              style={[careStyles.actionBtn, { backgroundColor: info.bgColor }]}
+              onPress={() => onAction(a.screen, a.params)}
+              activeOpacity={0.7}
+            >
+              <Icon name={a.icon} size={16} color={info.color} />
+              <Text style={[careStyles.actionText, { color: info.color }]}>{a.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const qaStyles = StyleSheet.create({
+  container: { flexDirection: 'row', gap: 6, marginBottom: spacing.sm, paddingHorizontal: spacing.xs },
+  action: { flex: 1, alignItems: 'center', gap: 3 },
+  iconWrap: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  meterBg: { width: '100%', height: 3, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'hidden' },
+  meterFill: { height: 3, borderRadius: 2 },
+  label: { fontSize: 9, fontWeight: '600', color: colors.text.muted },
+});
+
+const careStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  iconCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardHeaderText: { flex: 1 },
+  cardTitle: { fontWeight: '700', fontSize: 13, marginBottom: 2 },
+  cardDesc: { fontSize: 12, color: colors.text.secondary, lineHeight: 17 },
+  dismissBtn: { padding: 4 },
+  actionsRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
+  actionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 8, borderRadius: 12,
+  },
+  actionText: { fontWeight: '700', fontSize: 12 },
+});
+
 export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
+  const navigation = useNavigation<any>();
   const {
+    user,
     visby,
     visbyChatMessages,
     addVisbyChatMessage,
@@ -188,10 +445,20 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
     getVisbyChatMessages,
     setLastVisbyCheckInAt,
     checkDailyMissionCompletion,
+    getGrowthStage,
+    lessonProgress,
+    getSustainabilityLessonsCompleted,
   } = useStore();
   const [input, setInput] = useState('');
   const [greeting, setGreeting] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showGifts, setShowGifts] = useState(false);
+  const [activeHint, setActiveHint] = useState<NeedKey | null>(null);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [visbyReaction, setVisbyReaction] = useState<'sparkle' | 'love' | 'happy_wiggle' | undefined>();
   const scrollRef = useRef<ScrollView>(null);
+  const visbyMood = useStore((s) => s.getVisbyMood());
 
   const memories = getVisbyMemories();
   const defaultAppearance = visby?.appearance || {
@@ -202,34 +469,169 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
     eyeShape: 'round',
   };
 
-  useEffect(() => {
-    if (visible) setGreeting(getGreetingWithMemory(memories));
-  }, [visible, memories.length]);
+  const speakReply = useCallback((text: string) => {
+    if (!ttsEnabled) return;
+    setIsSpeaking(true);
+    speakAsVisby(text, () => setIsSpeaking(false));
+  }, [ttsEnabled]);
 
-  const handleSend = () => {
+  useEffect(() => {
+    if (visible) {
+      setShowGifts(false);
+      setActiveHint(null);
+      const traits = calculateTraitLevels({
+        bites: user?.bitesCollected || 0,
+        lessonsCompleted: lessonProgress.filter((l) => l.completed).length,
+        countriesVisited: user?.countriesVisited || 0,
+        chatMessages: visbyChatMessages.length,
+        wordMatchGames: user?.perfectWordMatches || 0,
+        gamesPlayed: user?.gamesPlayed || 0,
+        stampsCollected: user?.stampsCollected || 0,
+        averageNeedLevel: 50,
+        sustainabilityLessonsCompleted: getSustainabilityLessonsCompleted?.(),
+      });
+      const dominant = getDominantTrait(traits);
+      const stage = getGrowthStage();
+
+      const personalityGreeting = getPersonalityGreeting(dominant, stage);
+      const memoryGreeting = getGreetingWithMemory(memories);
+
+      let chosen: string;
+      if (dominant && dominant.level >= 20 && Math.random() > 0.5) {
+        chosen = personalityGreeting;
+      } else {
+        chosen = memoryGreeting;
+      }
+      setGreeting(chosen);
+      speakReply(chosen);
+    }
+  }, [visible]);
+
+  const addVisbyReply = useCallback((reply: string) => {
+    addVisbyChatMessage('visby', reply);
+    chargeSocialBattery(SOCIAL_BATTERY_CHAT_VISBY);
+    speakReply(reply);
+    const reaction = detectReaction(reply);
+    if (reaction) {
+      setVisbyReaction(reaction);
+      setTimeout(() => setVisbyReaction(undefined), 2500);
+    }
+  }, [addVisbyChatMessage, chargeSocialBattery, speakReply]);
+
+  const handleSend = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || isThinking) return;
     setInput('');
+    setIsThinking(true);
     addVisbyChatMessage('user', text);
     chargeSocialBattery(SOCIAL_BATTERY_CHAT_USER);
     checkDailyMissionCompletion('chat_with_visby', 1);
+    analyticsService.trackChatMessage();
 
-    const memorySummary = extractMemory(text);
+    const safetyFlag = filterUserInput(text);
+    if (safetyFlag.level === 'high') {
+      const safeReply = getSafetyResponse(safetyFlag) || "I'm glad you told me. Please talk to a grown-up you trust. 💜";
+      addVisbyReply(safeReply);
+      setIsThinking(false);
+      return;
+    }
+
+    const memorySummary = extractMemoryAI(text) || extractMemory(text);
     if (memorySummary) addVisbyMemory(memorySummary);
 
     const recentMessages = getVisbyChatMessages();
+
+    if (isAIChatConfigured) {
+      try {
+        const reply = await getAIReply(text, recentMessages, memories);
+        addVisbyReply(reply);
+        setIsThinking(false);
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          setIsThinking(false);
+          return;
+        }
+      }
+    }
+
     const reply = generateVisbyReply(text, !!memorySummary, recentMessages);
     setTimeout(() => {
-      addVisbyChatMessage('visby', reply);
-      chargeSocialBattery(SOCIAL_BATTERY_CHAT_VISBY);
+      addVisbyReply(reply);
+      setIsThinking(false);
     }, 400 + Math.random() * 400);
   };
 
   const handleClose = () => {
+    abortPendingAIRequest();
+    stopVisbyTTS();
+    setIsThinking(false);
+    setIsSpeaking(false);
     setLastVisbyCheckInAt();
     onClose();
   };
 
+  const toggleGifts = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowGifts((prev) => !prev);
+  };
+
+  const handleTapNeed = useCallback((key: NeedKey) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setActiveHint((prev) => (prev === key ? null : key));
+  }, []);
+
+  const handleCareAction = useCallback((screen: string, params?: object) => {
+    setActiveHint(null);
+    handleClose();
+    if (params) navigation.navigate(screen, params);
+    else navigation.navigate(screen);
+  }, [navigation, handleClose]);
+
+  const handleDismissHint = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setActiveHint(null);
+  }, []);
+
+  const handleQuickReply = useCallback((text: string) => {
+    setInput(text);
+    setTimeout(() => {
+      setInput('');
+      const syntheticText = text;
+      if (!syntheticText.trim() || isThinking) return;
+      setIsThinking(true);
+      addVisbyChatMessage('user', syntheticText);
+      chargeSocialBattery(SOCIAL_BATTERY_CHAT_USER);
+      checkDailyMissionCompletion('chat_with_visby', 1);
+      analyticsService.trackChatMessage();
+      const safetyFlag = filterUserInput(syntheticText);
+      if (safetyFlag.level === 'high') {
+        const safeReply = getSafetyResponse(safetyFlag) || "I'm glad you told me. Please talk to a grown-up you trust. 💜";
+        addVisbyReply(safeReply);
+        setIsThinking(false);
+        return;
+      }
+      const recentMessages = getVisbyChatMessages();
+      if (isAIChatConfigured) {
+        getAIReply(syntheticText, recentMessages, memories).then((reply) => {
+          addVisbyReply(reply);
+          setIsThinking(false);
+        }).catch((err: any) => {
+          if (err?.name !== 'AbortError') {
+            const reply = generateVisbyReply(syntheticText, false, recentMessages);
+            addVisbyReply(reply);
+          }
+          setIsThinking(false);
+        });
+      } else {
+        const reply = generateVisbyReply(syntheticText, false, recentMessages);
+        setTimeout(() => { addVisbyReply(reply); setIsThinking(false); }, 400 + Math.random() * 400);
+      }
+    }, 0);
+  }, [isThinking, addVisbyChatMessage, chargeSocialBattery, checkDailyMissionCompletion, addVisbyReply, getVisbyChatMessages, memories]);
+
+  const lastVisbyMessage = getLastVisbyReply(visbyChatMessages);
+  const quickReplies = getQuickReplies(lastVisbyMessage || greeting, visbyChatMessages.length === 0);
   const messagesInSession = visible ? visbyChatMessages : [];
 
   return (
@@ -246,26 +648,48 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
       >
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.card}>
+          <View style={styles.particlesWrap} pointerEvents="none">
+            <FloatingParticles count={6} variant={getMoodParticleVariant(visbyMood)} opacity={0.15} speed="slow" />
+          </View>
+          {/* Compact header */}
           <View style={styles.header}>
-            <View style={styles.visbyWrap}>
-              <VisbyCharacter
-                appearance={defaultAppearance}
-                equipped={visby?.equipped}
-                mood="happy"
-                size={56}
-                animated
-              />
+            <View style={styles.headerLeft}>
+              <View style={[styles.visbyWrap, isSpeaking && styles.visbyWrapSpeaking]}>
+                <VisbyCharacter
+                  appearance={defaultAppearance}
+                  equipped={visby?.equipped}
+                  mood={isSpeaking ? 'excited' : (isThinking ? 'thinking' : 'happy')}
+                  size={44}
+                  animated
+                  reaction={visbyReaction}
+                />
+              </View>
+              <View>
+                <Text style={styles.title}>Check-in with your Visby</Text>
+                <BondMeter />
+              </View>
             </View>
+            <TouchableOpacity
+              onPress={() => { setTtsEnabled((v) => !v); if (ttsEnabled) stopVisbyTTS(); }}
+              style={styles.speakerBtn}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={ttsEnabled ? 'Mute Visby voice' : 'Unmute Visby voice'}
+            >
+              <Icon name={ttsEnabled ? 'volumeHigh' : 'volumeOff'} size={20} color={ttsEnabled ? colors.primary.wisteria : colors.text.muted} />
+            </TouchableOpacity>
             <TouchableOpacity onPress={handleClose} style={styles.closeBtn} hitSlop={12}>
               <Icon name="close" size={22} color={colors.text.muted} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.title}>Check-in with your Visby</Text>
-          {greeting ? (
-            <View style={styles.greetingBubble}>
-              <Text variant="body" style={styles.greetingText}>{greeting}</Text>
-            </View>
-          ) : null}
+
+          {/* Needs — tap for care hints */}
+          <NeedsDisplay activeHint={activeHint} onTapNeed={handleTapNeed} />
+          {activeHint && (
+            <CareHintCard needKey={activeHint} onAction={handleCareAction} onDismiss={handleDismissHint} />
+          )}
+
+          {/* Chat area — main focus */}
           <ScrollView
             ref={scrollRef}
             style={styles.messageList}
@@ -274,9 +698,17 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {greeting ? (
+              <Animated.View entering={FadeInDown.duration(300).springify()} style={[styles.messageRow, styles.messageRowVisby]}>
+                <View style={[styles.bubble, styles.bubbleVisby]}>
+                  <Text variant="body" style={styles.bubbleTextVisby}>{greeting}</Text>
+                </View>
+              </Animated.View>
+            ) : null}
             {messagesInSession.map((msg) => (
-              <View
+              <Animated.View
                 key={msg.id}
+                entering={FadeInDown.duration(250).springify()}
                 style={[styles.messageRow, msg.role === 'user' ? styles.messageRowUser : styles.messageRowVisby]}
               >
                 <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleVisby]}>
@@ -284,13 +716,49 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
                     {msg.text}
                   </Text>
                 </View>
-              </View>
+              </Animated.View>
             ))}
+            {isThinking && (
+              <Animated.View entering={FadeIn.duration(200)} style={[styles.messageRow, styles.messageRowVisby]}>
+                <View style={styles.typingBubble}>
+                  <View style={styles.thinkingVisbyWrap}>
+                    <VisbyCharacter
+                      appearance={defaultAppearance}
+                      equipped={visby?.equipped}
+                      mood="thinking"
+                      size={24}
+                      animated
+                    />
+                  </View>
+                  <View style={styles.typingDots}>
+                    <View style={[styles.dot, styles.dot1]} />
+                    <View style={[styles.dot, styles.dot2]} />
+                    <View style={[styles.dot, styles.dot3]} />
+                  </View>
+                </View>
+              </Animated.View>
+            )}
           </ScrollView>
+
+          {/* Quick reply chips */}
+          {!isThinking && !input.trim() && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickReplies} contentContainerStyle={styles.quickRepliesContent}>
+              {quickReplies.map((qr) => (
+                <TouchableOpacity key={qr} style={styles.quickChip} onPress={() => handleQuickReply(qr)} activeOpacity={0.7}>
+                  <Text style={styles.quickChipText}>{qr}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Input row */}
           <View style={styles.inputRow}>
+            <TouchableOpacity onPress={toggleGifts} style={styles.giftToggle} hitSlop={8}>
+              <Icon name="gift" size={20} color={showGifts ? colors.primary.wisteria : colors.text.muted} />
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder="Say something..."
+              placeholder={isThinking ? 'Visby is typing...' : 'Say something...'}
               placeholderTextColor={colors.text.light}
               value={input}
               onChangeText={setInput}
@@ -298,16 +766,23 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
               returnKeyType="send"
               multiline
               maxLength={300}
+              editable={!isThinking}
             />
             <TouchableOpacity
               onPress={handleSend}
-              style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
-              disabled={!input.trim()}
+              style={[styles.sendBtn, (!input.trim() || isThinking) && styles.sendBtnDisabled]}
+              disabled={!input.trim() || isThinking}
             >
-              <Icon name="send" size={20} color={input.trim() ? colors.primary.wisteriaDark : colors.text.light} />
+              <Icon name="send" size={20} color={input.trim() && !isThinking ? colors.primary.wisteriaDark : colors.text.light} />
             </TouchableOpacity>
           </View>
-          <Caption style={styles.hint}>Chatting with Visby fills their social battery. So does hanging out with friends!</Caption>
+
+          {/* Collapsible gift section */}
+          {showGifts && <GiftShop onGiftGiven={() => {}} />}
+
+          <Caption style={styles.hint}>
+            {isAIChatConfigured ? 'AI-powered chat 💜' : 'Give gifts to boost needs!'}
+          </Caption>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -331,6 +806,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl + 24,
     maxHeight: '85%',
+    overflow: 'hidden',
+  },
+  particlesWrap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
   header: {
     flexDirection: 'row',
@@ -338,36 +818,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
   visbyWrap: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  visbyWrapSpeaking: {
+    transform: [{ scale: 1.08 }],
+  },
+  speakerBtn: {
+    padding: spacing.xs,
+    marginRight: 4,
   },
   closeBtn: {
     padding: spacing.xs,
   },
   title: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: spacing.sm,
-  },
-  greetingBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary.wisteriaFaded,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 16,
-    marginBottom: spacing.sm,
-    maxWidth: '90%',
-  },
-  greetingText: {
-    color: colors.primary.wisteriaDark,
   },
   messageList: {
-    maxHeight: 220,
-    marginBottom: spacing.sm,
+    flex: 1,
+    minHeight: 180,
   },
   messageListContent: {
     paddingVertical: spacing.xs,
@@ -405,9 +885,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     backgroundColor: colors.base.parchment,
     borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     marginBottom: spacing.xs,
+  },
+  giftToggle: {
+    padding: 8,
   },
   input: {
     flex: 1,
@@ -423,8 +906,58 @@ const styles = StyleSheet.create({
   sendBtnDisabled: {
     opacity: 0.5,
   },
+  quickReplies: {
+    maxHeight: 40,
+    marginBottom: spacing.xs,
+  },
+  quickRepliesContent: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  quickChip: {
+    backgroundColor: colors.primary.wisteriaFaded,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(184,165,224,0.25)',
+  },
+  quickChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary.wisteriaDark,
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary.wisteriaFaded,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    gap: 8,
+  },
+  thinkingVisbyWrap: {
+    width: 24,
+    height: 24,
+  },
+  typingDots: {
+    flexDirection: 'row',
+    gap: 3,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary.wisteria,
+    opacity: 0.4,
+  },
+  dot1: { opacity: 0.4 },
+  dot2: { opacity: 0.6 },
+  dot3: { opacity: 0.8 },
   hint: {
     color: colors.text.muted,
     textAlign: 'center',
+    marginTop: 4,
   },
 });

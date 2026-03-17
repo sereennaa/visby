@@ -67,6 +67,19 @@ export interface UserSettings {
   measurementUnit: 'metric' | 'imperial';
 }
 
+/** App-level settings (store) — matches useStore settings shape */
+export interface AppSettings {
+  notifications: boolean;
+  reminderTime: string; // 'HH:mm', default '19:00'
+  locationTracking: boolean;
+  privateProfile: boolean;
+  soundEffects: boolean;
+  sessionTimerMinutes: 0 | 10 | 15 | 20;
+  focusMode: boolean;
+  quieterMode: boolean;
+  ambientSound: boolean;
+}
+
 // ===================================
 // FRIENDS (Club Penguin–style)
 // ===================================
@@ -111,12 +124,15 @@ export interface PresencePlace {
   label?: string;
 }
 
+export type ChatEmote = 'wave' | 'heart' | 'laugh' | 'wow' | 'cool' | 'dance' | 'sparkle' | 'thumbsup';
+
 /** One message in a place chat (Club Penguin style) */
 export interface PlaceChatMessage {
   id: string;
   userId: string;
   username: string;
   message: string;
+  emote?: ChatEmote;
   createdAt: Date;
 }
 
@@ -130,7 +146,8 @@ export type DailyMissionType =
   | 'play_minigame'
   | 'chat_with_visby'
   | 'read_facts'
-  | 'complete_lesson';
+  | 'complete_lesson'
+  | 'complete_sustainability_lesson';
 
 export interface DailyMission {
   type: DailyMissionType;
@@ -221,6 +238,12 @@ export interface VisbyMemory {
   createdAt: string; // ISO
 }
 
+/** Result of screening user input for child-safety concerns */
+export interface SafetyFlag {
+  level: 'none' | 'low' | 'high';
+  category?: 'self_harm' | 'abuse_disclosure' | 'violence' | 'inappropriate' | 'personal_info' | 'distress';
+}
+
 export interface SkillProgress {
   language: number;    // 0-100
   geography: number;   // 0-100
@@ -228,6 +251,7 @@ export interface SkillProgress {
   history: number;     // 0-100
   cooking: number;     // 0-100
   exploration: number; // 0-100
+  sustainability: number; // 0-100 — planet, travel, food waste, oceans
 }
 
 // ===================================
@@ -306,6 +330,11 @@ export interface Stamp {
   photoUrl?: string;
   notes?: string;
   
+  // How the stamp was earned
+  source: 'learning' | 'visit';
+  /** For learning stamps: the skill category that earned it */
+  learningCategory?: string;
+  
   // Fast Travel
   isFastTravel: boolean;
   auraSpent?: number;
@@ -381,6 +410,10 @@ export interface Bite {
   collectedAt: Date;
   isPublic: boolean;
   likes: number;
+  worldDishId?: string;
+  quizScore?: number;
+  auraEarned?: number;
+  recipeUnlocked?: boolean;
   
   // Tags
   tags: string[];
@@ -405,6 +438,16 @@ export interface Recipe {
   cookTime: number; // minutes
   servings: number;
   difficulty: 'easy' | 'medium' | 'hard';
+}
+
+// FOOD DISCOVERY
+export interface DiscoveredDish {
+  id: string;
+  worldDishId: string;
+  discoveredAt: Date;
+  quizScore: number;
+  auraEarned: number;
+  recipeUnlocked: boolean;
 }
 
 // ===================================
@@ -599,6 +642,8 @@ export interface Country {
   housePriceAura: number;
   /** Short kid-friendly description */
   description: string;
+  /** Continent for grouping/filtering */
+  continent?: string;
   /** Background / room style for walk-through */
   roomTheme: 'traditional' | 'modern' | 'nature' | 'city' | 'coastal' | 'mountain';
   /** Hex or theme key for room accent */
@@ -630,6 +675,8 @@ export interface UserHouse {
   /** Last time they visited this room */
   lastVisitedAt?: Date;
   roomCustomizations?: Record<string, RoomCustomization>;
+  /** Room IDs the user has unlocked beyond the defaults */
+  unlockedRooms?: string[];
 }
 
 /** What the Visby can do with this furniture — fulfills needs + earns Aura */
@@ -702,6 +749,160 @@ export interface LocationData {
 }
 
 // ===================================
+// SPACED REPETITION
+// ===================================
+
+export interface FlashcardSRData {
+  cardId: string;
+  ease: number;        // SM-2 easiness factor (≥1.3)
+  interval: number;    // days until next review
+  repetitions: number; // consecutive correct
+  nextReview: string;  // ISO date
+  lastReview: string;  // ISO date
+}
+
+export type FlashcardGrade = 0 | 1 | 2 | 3 | 4 | 5; // SM-2 grades: 0=blackout, 5=perfect
+
+// ===================================
+// LEARNING PATH
+// ===================================
+
+export interface LearningPathNode {
+  id: string;
+  type: 'lesson' | 'quiz' | 'flashcards' | 'game';
+  title: string;
+  icon: string;
+  /** Prerequisite node IDs that must be completed first */
+  requires: string[];
+  /** Country-specific (optional) */
+  countryId?: string;
+  /** Route params for navigation */
+  routeName: string;
+  routeParams?: Record<string, string>;
+  /** Skill category for skill points */
+  skillCategory?: string;
+}
+
+// ===================================
+// SEASONAL EVENTS
+// ===================================
+
+export interface SeasonalEvent {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  startDate: string;  // MM-DD
+  endDate: string;    // MM-DD
+  auraMultiplier: number;
+  featuredCountryId?: string;
+  exclusiveCosmetics: string[];
+  specialMissions: DailyMission[];
+  bgGradient: [string, string];
+}
+
+// ===================================
+// VISBY PERSONALITY
+// ===================================
+
+export interface VisbyPersonality {
+  traits: VisbyTrait[];
+  favoriteCountry?: string;
+  favoriteFood?: string;
+  catchphrase?: string;
+}
+
+export interface VisbyTrait {
+  id: string;
+  name: string;
+  level: number; // 0-100, earned through play patterns
+}
+
+// ===================================
+// ANALYTICS
+// ===================================
+
+export interface AnalyticsEvent {
+  name: string;
+  properties?: Record<string, string | number | boolean>;
+  timestamp: string;
+}
+
+// ===================================
+// VISBY BOND / RELATIONSHIP
+// ===================================
+
+export interface VisbyBond {
+  level: number; // 1-10
+  totalBondPoints: number;
+  milestones: string[]; // e.g., "first_hat", "first_house", "100_conversations"
+}
+
+export const BOND_LEVEL_THRESHOLDS = [0, 10, 30, 60, 100, 160, 240, 340, 460, 600];
+
+export interface VisbyGift {
+  id: string;
+  name: string;
+  icon: string;
+  price: number;
+  bondBonus: number;
+  needsBoost: Partial<VisbyNeeds>;
+  visbyReaction: string;
+}
+
+// ===================================
+// ROOM EXPANSION
+// ===================================
+
+export interface RoomDefinition {
+  id: string;
+  name: string;
+  icon: string;
+  unlockPrice: number;
+  isDefault: boolean;
+}
+
+export const DEFAULT_ROOM_DEFINITIONS: RoomDefinition[] = [
+  { id: 'living', name: 'Living Room', icon: 'home', unlockPrice: 0, isDefault: true },
+  { id: 'kitchen', name: 'Kitchen', icon: 'food', unlockPrice: 0, isDefault: true },
+  { id: 'bedroom', name: 'Bedroom', icon: 'star', unlockPrice: 200, isDefault: false },
+  { id: 'study', name: 'Study', icon: 'book', unlockPrice: 250, isDefault: false },
+  { id: 'garden', name: 'Garden', icon: 'nature', unlockPrice: 300, isDefault: false },
+  { id: 'trophy', name: 'Trophy Room', icon: 'trophy', unlockPrice: 500, isDefault: false },
+];
+
+// ===================================
+// SHOP: BUNDLES & SAVED LOOKS
+// ===================================
+
+export interface CosmeticBundle {
+  id: string;
+  name: string;
+  description: string;
+  items: string[];
+  bundlePrice: number;
+  originalPrice: number;
+  icon: string;
+  gradient: [string, string];
+  isLimited?: boolean;
+}
+
+export interface FurnitureSet {
+  id: string;
+  name: string;
+  countryOrigin?: string;
+  items: string[];
+  bundlePrice: number;
+  description: string;
+}
+
+export interface SavedLook {
+  id: string;
+  name: string;
+  equipped: EquippedCosmetics;
+}
+
+// ===================================
 // NAVIGATION
 // ===================================
 
@@ -744,9 +945,9 @@ export type RootStackParamList = {
   SkillDetail: { skillKey: keyof SkillProgress };
   DiscoveryLog: undefined;
   LessonCategory: { categoryId: string };
-  Lesson: { lessonId: string };
-  Quiz: { category?: string } | undefined;
-  Flashcards: { deckId?: string } | undefined;
+  Lesson: { lessonId: string; pathNodeId?: string };
+  Quiz: { category?: string; pathNodeId?: string } | undefined;
+  Flashcards: { deckId?: string; pathNodeId?: string } | undefined;
   
   // Profile & Friends
   Profile: undefined;
@@ -758,16 +959,25 @@ export type RootStackParamList = {
   FriendProfile: { friendUserId: string };
   
   // Mini-Games
-  WordMatch: { countryId?: string } | undefined;
-  MemoryCards: { category?: string } | undefined;
-  CookingGame: { countryId?: string } | undefined;
-  TreasureHunt: { countryId?: string } | undefined;
+  WordMatch: { countryId?: string; pathNodeId?: string } | undefined;
+  MemoryCards: { category?: string; pathNodeId?: string } | undefined;
+  CookingGame: { countryId?: string; pathNodeId?: string } | undefined;
+  TreasureHunt: { countryId?: string; pathNodeId?: string } | undefined;
+  FlagMatch: { pathNodeId?: string } | undefined;
+  MapPin: { pathNodeId?: string } | undefined;
+  CultureDressUp: { countryId?: string; pathNodeId?: string } | undefined;
+  SortCategorize: { countryId?: string; pathNodeId?: string } | undefined;
+  StoryBuilder: { countryId?: string; pathNodeId?: string } | undefined;
+
+  // Learning Path
+  LearningPath: undefined;
 
   // Shop & Membership
   CosmeticShop: undefined;
   FurnitureShop: undefined;
   AuraStore: undefined;
   Membership: undefined;
+  ShopHub: undefined;
 }
 
 // Explore tab has its own stack so Map/CountryWorld/CountryRoom keep the tab bar visible

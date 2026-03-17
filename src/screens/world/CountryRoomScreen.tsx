@@ -1,15 +1,13 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
   ScrollView,
+  Image,
   Modal,
   Pressable,
-  Image,
-  TextInput,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +17,17 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  withRepeat,
+  withSequence,
+  ZoomIn,
+  FadeIn,
+  FadeOut,
+  FadeInDown,
+  SlideInRight,
+  SlideInLeft,
+  FadeInRight,
+  FadeInLeft,
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -28,11 +37,12 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
 import { COUNTRIES } from '../../config/constants';
 import { useStore } from '../../store/useStore';
-import { ExploreStackParamList, PlacedFurniture } from '../../types';
+import { Tooltip } from '../../components/ui/Tooltip';
+import { ExploreStackParamList, PlacedFurniture, DEFAULT_ROOM_DEFINITIONS } from '../../types';
 import type { CountryFact } from '../../types';
-import { FURNITURE_CATALOG, getAvailableFurniture, WALLPAPER_OPTIONS, FLOORING_OPTIONS } from '../../config/furniture';
-import { FloatingParticles } from '../../components/effects/FloatingParticles';
-import { getCountryQuiz, QuizQuestion, getCountryLocations, CountryLocation } from '../../config/learningContent';
+import { FURNITURE_CATALOG } from '../../config/furniture';
+import { FloatingParticles, getCountryParticleVariant } from '../../components/effects/FloatingParticles';
+import { getCountryQuiz, getCountryLocations, getMythsForCountry, getNatureForCountry, getHistoryForCountry, getPhrasesForCountry } from '../../config/learningContent';
 import { COUNTRY_HOUSES, RoomObject, HouseRoom } from '../../config/countryRooms';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
 import { getCountryStampProgress } from '../../config/collectionGoals';
@@ -41,14 +51,54 @@ import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
 import { NavBreadcrumb } from '../../components/ui/NavBreadcrumb';
 import type { FurnitureInteractionType } from '../../types';
 
+import * as Haptics from 'expo-haptics';
+import { PlaceChatModal } from '../../components/room/PlaceChatModal';
+import { RoomQuizModal } from '../../components/room/RoomQuizModal';
+import { RoomFactModal } from '../../components/room/RoomFactModal';
+import { FurniturePanel } from '../../components/room/FurniturePanel';
+import { ObjectDetailModal, FurnitureInteractionModal, MicroEventModal, GamesModal } from '../../components/room/RoomObjectInteraction';
+import { LocationsModal } from '../../components/room/LocationsModal';
+import { DraggableFurniture, GridOverlay } from '../../components/room/DraggableFurniture';
+import { RoomTintOverlay, DynamicWindow } from '../../components/room/RoomAtmosphere';
+import { FurnitureMicroAnim, getAnimTypeForInteraction } from '../../components/room/FurnitureMicroAnim';
+import { VisbyReactions, ReactionTrigger } from '../../components/visby/VisbyReactions';
+import { AchievementCeremony } from '../../components/effects/AchievementCeremony';
+import { calculateTraitLevels, getDominantTrait } from '../../config/visbyPersonality';
+import { getActiveSeasonalVisuals } from '../../config/seasonalEvents';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AVATAR_SIZE = 84;
-const ROOM_HEIGHT = 340;
-const WALL_HEIGHT = 232;
-const FLOOR_HEIGHT = 108;
-const WINDOW_STRIP_HEIGHT = 48;
+const ROOM_HEIGHT = 560;
+const WALL_HEIGHT = 380;
+const FLOOR_HEIGHT = 180;
+const WINDOW_STRIP_HEIGHT = 80;
+const TEXTURE_DOT_COUNT = 20;
+const KNOT_POSITIONS_CR = [
+  { plank: 1, left: '30%', top: '40%' },
+  { plank: 3, left: '55%', top: '50%' },
+  { plank: 5, left: '20%', top: '35%' },
+];
+const FRINGE_COUNT_CR = 16;
 const FACT_AURA_REWARD = 5;
 const QUIZ_AURA_PER_CORRECT = 25;
+
+const FURNITURE_MAP = new Map(FURNITURE_CATALOG.map(f => [f.id, f]));
+
+const BreathingPulse: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.04, { duration: 1500 }),
+        withTiming(1.0, { duration: 1500 }),
+      ),
+      -1,
+      true,
+    );
+  }, []);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+};
 
 type CountryRoomScreenProps = {
   navigation: NativeStackNavigationProp<ExploreStackParamList, 'CountryRoom'>;
@@ -59,7 +109,43 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const { countryId, friendUserId } = route.params;
   const country = COUNTRIES.find((c) => c.id === countryId);
   const houseData = COUNTRY_HOUSES[countryId];
-  const { visby, user, friends, stamps, addAura, getStreakMultiplier, userHouses, ownedFurniture, buyFurniture, placeFurniture, removePlacedFurniture, updateRoomColors, feedVisby, restVisby, playWithVisby, studyWithVisby, markFactRead, markQuizCompleted, getCountryProgress, chargeSocialBattery, getPlaceChatMessages, addPlaceChatMessage, storyBeatsShown, markStoryBeatShown, recordSeasonalCountryEntry, addDiscovery, recordRoomVisit, tryRoomMicroEvent, addSkillPoints } = useStore();
+
+  const visby = useStore(s => s.visby);
+  const user = useStore(s => s.user);
+  const friends = useStore(s => s.friends);
+  const stamps = useStore(s => s.stamps);
+  const userHouses = useStore(s => s.userHouses);
+  const ownedFurniture = useStore(s => s.ownedFurniture);
+  const storyBeatsShown = useStore(s => s.storyBeatsShown);
+  const chatMode = useStore(s => s.settings.chatMode);
+
+  const addAura = useStore(s => s.addAura);
+  const getStreakMultiplier = useStore(s => s.getStreakMultiplier);
+  const buyFurniture = useStore(s => s.buyFurniture);
+  const placeFurniture = useStore(s => s.placeFurniture);
+  const removePlacedFurniture = useStore(s => s.removePlacedFurniture);
+  const updateRoomColors = useStore(s => s.updateRoomColors);
+  const feedVisby = useStore(s => s.feedVisby);
+  const restVisby = useStore(s => s.restVisby);
+  const playWithVisby = useStore(s => s.playWithVisby);
+  const studyWithVisby = useStore(s => s.studyWithVisby);
+  const markFactRead = useStore(s => s.markFactRead);
+  const markQuizCompleted = useStore(s => s.markQuizCompleted);
+  const getCountryProgress = useStore(s => s.getCountryProgress);
+  const chargeSocialBattery = useStore(s => s.chargeSocialBattery);
+  const getPlaceChatMessages = useStore(s => s.getPlaceChatMessages);
+  const addPlaceChatMessage = useStore(s => s.addPlaceChatMessage);
+  const markStoryBeatShown = useStore(s => s.markStoryBeatShown);
+  const recordSeasonalCountryEntry = useStore(s => s.recordSeasonalCountryEntry);
+  const addDiscovery = useStore(s => s.addDiscovery);
+  const recordRoomVisit = useStore(s => s.recordRoomVisit);
+  const tryRoomMicroEvent = useStore(s => s.tryRoomMicroEvent);
+  const addSkillPoints = useStore(s => s.addSkillPoints);
+  const unlockRoom = useStore(s => s.unlockRoom);
+  const getUnlockedRooms = useStore(s => s.getUnlockedRooms);
+  const enterRoom = useStore(s => s.enterRoom);
+  const leaveRoom = useStore(s => s.leaveRoom);
+  const syncPresenceInRoom = useStore(s => s.syncPresenceInRoom);
 
   const friend = friendUserId ? friends.find((f) => f.userId === friendUserId) : null;
   const isViewingFriendHouse = !!friendUserId && !!friend;
@@ -67,90 +153,136 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const roomTitle = isViewingFriendHouse ? `${friend?.displayName}'s Home` : (country?.name ?? 'Room');
   const rooms = houseData?.rooms ?? [];
 
-  // Room navigation
+  const [friendHouseData, setFriendHouseData] = useState<{ roomCustomizations?: Record<string, any>; visbyAppearance?: any } | null>(null);
+
+  useEffect(() => {
+    if (!isViewingFriendHouse || !friendUserId) return;
+    import('../../services/socialSync').then(({ fetchUserHouse }) => {
+      fetchUserHouse(friendUserId).then(data => {
+        if (data) setFriendHouseData(data);
+      }).catch(() => {});
+    });
+  }, [isViewingFriendHouse, friendUserId]);
+
   const [currentRoomIdx, setCurrentRoomIdx] = useState(0);
+  const [roomTransitionKey, setRoomTransitionKey] = useState(0);
+  const [roomSlideDir, setRoomSlideDir] = useState<'left' | 'right'>('right');
   const currentRoom: HouseRoom | undefined = rooms[currentRoomIdx];
   const [roomDialogueLine, setRoomDialogueLine] = useState<string | null>(null);
 
-  // Record seasonal quest progress when entering any country room
-  React.useEffect(() => {
+  useEffect(() => {
     if (!countryId || isViewingFriendHouse) return;
     recordSeasonalCountryEntry();
   }, [countryId, isViewingFriendHouse, recordSeasonalCountryEntry]);
 
-  // Room visit count and micro-event (3rd visit = "Visby found something!")
-  const [showMicroEvent, setShowMicroEvent] = React.useState(false);
-  const [discoveryToast, setDiscoveryToast] = React.useState<string | null>(null);
-  React.useEffect(() => {
+  const [showMicroEvent, setShowMicroEvent] = useState(false);
+  const [microEventAura, setMicroEventAura] = useState<number>(5);
+  const [microEventIsRare, setMicroEventIsRare] = useState(false);
+  const [discoveryToast, setDiscoveryToast] = useState<string | null>(null);
+
+  useEffect(() => {
     if (!currentRoom?.id || !countryId || isViewingFriendHouse) return;
     recordRoomVisit(countryId, currentRoom.id);
-    if (tryRoomMicroEvent(countryId, currentRoom.id)) setShowMicroEvent(true);
+    const result = tryRoomMicroEvent(countryId, currentRoom.id);
+    if (result.triggered) {
+      setMicroEventAura(result.aura ?? 5);
+      setMicroEventIsRare(result.isRare ?? false);
+      setShowMicroEvent(true);
+    }
   }, [countryId, currentRoom?.id, isViewingFriendHouse, recordRoomVisit, tryRoomMicroEvent]);
 
-  // Reactive room dialogue (one-off when entering a room)
-  React.useEffect(() => {
+  useEffect(() => {
     if (!currentRoom || !countryId || isViewingFriendHouse) return;
     const key = `room_${countryId}_${currentRoom.id}`;
     if (storyBeatsShown.includes(key)) return;
-    const line = getRoomEntryLine(countryId);
+
+    let line = getRoomEntryLine(countryId);
+    const traitId = dominantTrait?.id;
+    const roomNameLower = currentRoom.name.toLowerCase();
+    if (traitId === 'foodie' && (roomNameLower.includes('kitchen') || roomNameLower.includes('dining'))) {
+      line = "Visby can't wait to try the food here! 🍜";
+    } else if (traitId === 'bookworm' && (roomNameLower.includes('study') || roomNameLower.includes('library'))) {
+      line = "Visby is already reaching for a book! 📚";
+    } else if (traitId === 'adventurer') {
+      line = "Visby is excited to explore this place! 🗺️";
+    }
+
     setRoomDialogueLine(line);
     markStoryBeatShown(key);
+    triggerReaction('enter_home');
     const t = setTimeout(() => setRoomDialogueLine(null), 4000);
     return () => clearTimeout(t);
-  }, [countryId, currentRoom?.id, isViewingFriendHouse, storyBeatsShown, markStoryBeatShown]);
+  }, [countryId, currentRoom?.id, isViewingFriendHouse, storyBeatsShown, markStoryBeatShown, dominantTrait, triggerReaction]);
 
-  // Interactive object modal
   const [activeObject, setActiveObject] = useState<RoomObject | null>(null);
   const [interactedObjects, setInteractedObjects] = useState<Set<string>>(new Set());
-
-  // Facts
   const [learningFact, setLearningFact] = useState<CountryFact | null>(null);
   const [factIndex, setFactIndex] = useState(0);
   const [readFacts, setReadFacts] = useState<Set<string>>(new Set());
-
-  // Quiz
-  const [quizActive, setQuizActive] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [quizScore, setQuizScore] = useState(0);
-  const [quizFinished, setQuizFinished] = useState(false);
-  const [quizSelected, setQuizSelected] = useState<number | null>(null);
-
-  // Games modal
+  const [showQuiz, setShowQuiz] = useState(false);
   const [showGamesModal, setShowGamesModal] = useState(false);
-
-  // Locations ("Stops to Visit")
   const [showLocationsModal, setShowLocationsModal] = useState(false);
+  const [showKnowledgeMap, setShowKnowledgeMap] = useState(false);
   const [visitedLocations, setVisitedLocations] = useState<Set<string>>(new Set());
-  const locations = getCountryLocations(countryId);
-
-  // Edit / Decorate mode
+  const locations = useMemo(() => getCountryLocations(countryId), [countryId]);
   const [editMode, setEditMode] = useState(false);
-  const [showFurniturePanel, setShowFurniturePanel] = useState(false);
-  const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
-  const [showFlooringPanel, setShowFlooringPanel] = useState(false);
   const [selectedPlacedItem, setSelectedPlacedItem] = useState<string | null>(null);
   const [activeEditTab, setActiveEditTab] = useState<'furniture' | 'wallpaper' | 'flooring' | null>(null);
-  /** When user taps a placed furniture with interactionType (eat, cook, rest, etc.) */
   const [activeFurnitureInteraction, setActiveFurnitureInteraction] = useState<{
     placed: PlacedFurniture;
     catalogItem: import('../../types').FurnitureItem;
   } | null>(null);
-  /** Show "Not enough Aura" under a furniture item when buy fails */
-  const [notEnoughAuraFor, setNotEnoughAuraFor] = useState<string | null>(null);
-
-  /** Place chat (Club Penguin style) */
   const [showPlaceChatModal, setShowPlaceChatModal] = useState(false);
-  const [placeChatInput, setPlaceChatInput] = useState('');
-  const placeChatScrollRef = useRef<ScrollView>(null);
+  const [presenceFriends, setPresenceFriends] = useState<Array<{ userId: string; username: string }>>([]);
+  const [showCountryIntro, setShowCountryIntro] = useState(false);
+  const [showMasteryCelebration, setShowMasteryCelebration] = useState(false);
+  const introScale = useSharedValue(0.3);
+  const introOpacity = useSharedValue(0);
+  const visbyFlyY = useSharedValue(-200);
+  const visbyFlyScale = useSharedValue(0.4);
+  const introFlagRotate = useSharedValue(-15);
+
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
+  useEffect(() => {
+    return () => timersRef.current.forEach(clearTimeout);
+  }, []);
+
+  const [visbyMood, setVisbyMood] = useState<string>('curious');
+  const [visbyReaction, setVisbyReaction] = useState<string | undefined>(undefined);
+  const [reactionTrigger, setReactionTrigger] = useState<ReactionTrigger | null>(null);
+  const [showRoomCelebration, setShowRoomCelebration] = useState(false);
+  const [completedRoomIds, setCompletedRoomIds] = useState<Set<string>>(new Set());
+
+  const roomEntranceScale = useSharedValue(0.95);
+  const roomEntranceOpacity = useSharedValue(0.7);
+
+  const triggerReaction = useCallback((trigger: ReactionTrigger) => {
+    setReactionTrigger(null);
+    requestAnimationFrame(() => setReactionTrigger(trigger));
+  }, []);
+
+  const setTempMood = useCallback((mood: string, durationMs = 3000) => {
+    setVisbyMood(mood);
+    const t = setTimeout(() => setVisbyMood('curious'), durationMs);
+    timersRef.current.push(t);
+  }, []);
 
   const house = isViewingFriendHouse ? undefined : userHouses.find(h => h.countryId === countryId);
-  const roomCustomization = house?.roomCustomizations?.[currentRoom?.id ?? ''];
-  const placedItems = roomCustomization?.placedFurniture ?? [];
+  const friendRoomCustom = isViewingFriendHouse ? friendHouseData?.roomCustomizations?.[currentRoom?.id ?? ''] : undefined;
+  const roomCustomization = friendRoomCustom || house?.roomCustomizations?.[currentRoom?.id ?? ''];
+  const placedItems = useMemo(() => roomCustomization?.placedFurniture ?? [], [roomCustomization]);
+  const lampInfo = useMemo(() => {
+    for (const p of placedItems) {
+      const cat = FURNITURE_CATALOG.find(f => f.id === p.furnitureId);
+      if (cat && (/lamp|lantern/i.test(cat.id) || cat.interactionType === 'lamp')) {
+        return { hasLamp: true, lampX: p.x, lampY: p.y };
+      }
+    }
+    return { hasLamp: false, lampX: 50, lampY: 50 };
+  }, [placedItems]);
   const effectiveWallColor = roomCustomization?.wallColor || currentRoom?.wallColor || '#FFF8F0';
   const effectiveFloorColor = roomCustomization?.floorColor || currentRoom?.floorColor || '#D4C5A0';
 
-  // Avatar walk
   const avatarX = useSharedValue(SCREEN_WIDTH / 2 - AVATAR_SIZE / 2);
   const avatarDirection = useSharedValue<'left' | 'right'>('right');
 
@@ -158,61 +290,215 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const aura = user?.aura ?? 0;
   const streak = user?.currentStreak ?? 0;
 
-  const defaultAppearance = visby?.appearance ?? {
+  const defaultAppearance = useMemo(() => visby?.appearance ?? {
     skinTone: colors.visby.skin.light,
     hairColor: colors.visby.hair.brown,
     hairStyle: 'default',
     eyeColor: '#4A90D9',
     eyeShape: 'round',
-  };
+  }, [visby?.appearance]);
 
-  // Visiting a friend's house fills Visby's social battery
+  const dominantTrait = useMemo(() => {
+    const traits = calculateTraitLevels({
+      bites: stamps?.length ?? 0,
+      lessonsCompleted: 0,
+      countriesVisited: user?.visitedCountries?.length ?? 0,
+      chatMessages: 0,
+      wordMatchGames: 0,
+      gamesPlayed: 0,
+      stampsCollected: stamps?.length ?? 0,
+      averageNeedLevel: visby ? (visby.hunger + visby.happiness + visby.energy + visby.knowledge) / 4 : 50,
+    });
+    return getDominantTrait(traits);
+  }, [stamps?.length, user?.visitedCountries?.length, visby]);
+
+  const seasonalVisuals = useMemo(() => getActiveSeasonalVisuals(), []);
+
+  useEffect(() => {
+    if (presenceFriends.length > 0) setVisbyMood('happy');
+  }, [presenceFriends.length]);
+
   useEffect(() => {
     if (isViewingFriendHouse) chargeSocialBattery(10);
   }, [isViewingFriendHouse, chargeSocialBattery]);
 
+  useEffect(() => {
+    if (!currentRoom?.id || !countryId || isViewingFriendHouse) return;
+    enterRoom(countryId, currentRoom.id);
+
+    const pollPresence = () => {
+      syncPresenceInRoom(countryId, currentRoom.id).then(setPresenceFriends).catch(() => {});
+    };
+    pollPresence();
+    const interval = setInterval(pollPresence, 15000);
+
+    return () => {
+      clearInterval(interval);
+      leaveRoom();
+    };
+  }, [countryId, currentRoom?.id, isViewingFriendHouse, enterRoom, leaveRoom, syncPresenceInRoom]);
+
+  const introScaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: introScale.value }],
+    opacity: introOpacity.value,
+  }));
+  const visbyFlyStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: visbyFlyY.value }, { scale: visbyFlyScale.value }],
+  }));
+  const flagRotateStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${introFlagRotate.value}deg` }, { scale: introScale.value }],
+  }));
+
+  useEffect(() => {
+    if (!countryId || isViewingFriendHouse || !country) return;
+    const progress = getCountryProgress(countryId);
+    if ((progress?.factsReadCount ?? 0) === 0) {
+      setShowCountryIntro(true);
+      introScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+      introOpacity.value = withTiming(1, { duration: 400 });
+      visbyFlyY.value = withSpring(0, { damping: 10, stiffness: 80 });
+      visbyFlyScale.value = withSpring(1, { damping: 8, stiffness: 90 });
+      introFlagRotate.value = withSpring(0, { damping: 14, stiffness: 120 });
+      const t = setTimeout(() => {
+        introOpacity.value = withTiming(0, { duration: 500 });
+        introScale.value = withTiming(1.2, { duration: 500 });
+        setTimeout(() => setShowCountryIntro(false), 600);
+      }, 2800);
+      return () => clearTimeout(t);
+    }
+  }, [countryId, isViewingFriendHouse, country?.id, getCountryProgress]);
+
+  const countryProgress = useMemo(() => getCountryProgress(countryId), [getCountryProgress, countryId]);
+  const isPlaceComplete = useMemo(() => {
+    const facts = country?.facts ?? [];
+    return countryProgress.factsReadCount >= facts.length && countryProgress.quizCompleted;
+  }, [country?.facts, countryProgress]);
+  const isMastered = useMemo(
+    () => isPlaceComplete && countryProgress.gamesPlayed > 0 && countryProgress.locationsVisited > 0,
+    [isPlaceComplete, countryProgress],
+  );
+
+  const masteryKey = `mastery_${countryId}`;
+  useEffect(() => {
+    if (!isMastered || isViewingFriendHouse || storyBeatsShown.includes(masteryKey)) return;
+    setShowMasteryCelebration(true);
+    markStoryBeatShown(masteryKey);
+    addAura(500);
+  }, [isMastered, isViewingFriendHouse, masteryKey, storyBeatsShown, markStoryBeatShown, addAura]);
+
+  const walkBob = useSharedValue(0);
+  const idleBreathe = useSharedValue(1);
+
+  useEffect(() => {
+    idleBreathe.value = withRepeat(
+      withSequence(
+        withTiming(1.02, { duration: 2000 }),
+        withTiming(1.0, { duration: 2000 }),
+      ),
+      -1, true,
+    );
+  }, []);
+
+  const idleBreatheStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: idleBreathe.value }],
+  }));
+
+  const walkLeftScale = useSharedValue(1);
+  const walkRightScale = useSharedValue(1);
+
+  const walkLeftBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: walkLeftScale.value }],
+  }));
+  const walkRightBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: walkRightScale.value }],
+  }));
+
   const moveLeft = useCallback(() => {
     avatarDirection.value = 'left';
-    avatarX.value = withSpring(
-      Math.max(spacing.lg, avatarX.value - 28),
-      { damping: 14, stiffness: 120 }
+    avatarX.value = withSpring(Math.max(spacing.lg, avatarX.value - 28), { damping: 14, stiffness: 120 });
+    walkBob.value = withSequence(
+      withTiming(-3, { duration: 100 }),
+      withTiming(2, { duration: 100 }),
+      withTiming(-1, { duration: 100 }),
+      withTiming(0, { duration: 100 }),
     );
+    walkLeftScale.value = withSequence(
+      withSpring(0.88, { damping: 6, stiffness: 400 }),
+      withSpring(1, { damping: 10, stiffness: 200 }),
+    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
   const moveRight = useCallback(() => {
     avatarDirection.value = 'right';
-    avatarX.value = withSpring(
-      Math.min(SCREEN_WIDTH - AVATAR_SIZE - spacing.lg, avatarX.value + 28),
-      { damping: 14, stiffness: 120 }
+    avatarX.value = withSpring(Math.min(SCREEN_WIDTH - AVATAR_SIZE - spacing.lg, avatarX.value + 28), { damping: 14, stiffness: 120 });
+    walkBob.value = withSequence(
+      withTiming(-3, { duration: 100 }),
+      withTiming(2, { duration: 100 }),
+      withTiming(-1, { duration: 100 }),
+      withTiming(0, { duration: 100 }),
     );
+    walkRightScale.value = withSequence(
+      withSpring(0.88, { damping: 6, stiffness: 400 }),
+      withSpring(1, { damping: 10, stiffness: 200 }),
+    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
   const avatarStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: avatarX.value },
+      { translateY: walkBob.value },
       { scaleX: avatarDirection.value === 'left' ? -1 : 1 },
     ],
   }));
 
-  // Room navigation
+  const roomEntranceStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: roomEntranceScale.value }],
+    opacity: roomEntranceOpacity.value,
+  }));
+
   const goToRoom = useCallback((idx: number) => {
     if (idx >= 0 && idx < rooms.length) {
+      setRoomSlideDir(idx > currentRoomIdx ? 'right' : 'left');
       setCurrentRoomIdx(idx);
+      setRoomTransitionKey((k) => k + 1);
       avatarX.value = withSpring(SCREEN_WIDTH / 2 - AVATAR_SIZE / 2, { damping: 14, stiffness: 120 });
+      roomEntranceScale.value = 0.95;
+      roomEntranceOpacity.value = 0.7;
+      roomEntranceScale.value = withSpring(1, { damping: 14, stiffness: 140 });
+      roomEntranceOpacity.value = withTiming(1, { duration: 350 });
     }
-  }, [rooms.length]);
+  }, [rooms.length, currentRoomIdx]);
 
-  // Object interaction
   const handleObjectTap = useCallback((obj: RoomObject) => {
     if (!obj.interactive) return;
     setActiveObject(obj);
-    if (!interactedObjects.has(obj.id) && obj.auraReward) {
-      setInteractedObjects((prev) => new Set(prev).add(obj.id));
-      addAura(obj.auraReward);
-    }
-  }, [interactedObjects, addAura]);
+    if (!interactedObjects.has(obj.id)) {
+      const newSet = new Set(interactedObjects);
+      newSet.add(obj.id);
+      setInteractedObjects(newSet);
+      if (obj.auraReward) addAura(obj.auraReward);
+      setTempMood('excited', 3000);
+      setVisbyReaction('excited_jump');
+      setTimeout(() => setVisbyReaction(undefined), 1500);
 
-  // Facts
+      const objects = currentRoom?.objects ?? [];
+      const totalInt = objects.filter(o => o.interactive).length;
+      const nowInteracted = objects.filter(o => o.interactive && newSet.has(o.id)).length;
+      if (nowInteracted >= totalInt && totalInt > 0 && currentRoom && !completedRoomIds.has(currentRoom.id)) {
+        setCompletedRoomIds(prev => new Set(prev).add(currentRoom.id));
+        timersRef.current.push(setTimeout(() => {
+          setShowRoomCelebration(true);
+          addAura(25);
+          setVisbyMood('proud');
+          setVisbyReaction('love');
+          triggerReaction('milestone');
+        }, 800));
+      }
+    }
+  }, [interactedObjects, addAura, currentRoom, completedRoomIds, setTempMood, triggerReaction]);
+
   const openFact = useCallback((fact: CountryFact) => {
     setLearningFact(fact);
     if (!readFacts.has(fact.id)) {
@@ -225,92 +511,91 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
     }
   }, [readFacts, addAura, countryId, markFactRead, addDiscovery]);
 
-  const closeFact = useCallback(() => setLearningFact(null), []);
-
   const nextFact = useCallback(() => {
     if (!country?.facts.length) return;
     const nextIdx = (factIndex + 1) % country.facts.length;
     setFactIndex(nextIdx);
-    const next = country.facts[nextIdx];
-    setLearningFact(next);
-    if (!readFacts.has(next.id)) {
-      setReadFacts((prev) => new Set(prev).add(next.id));
-      addAura(FACT_AURA_REWARD);
-      markFactRead(countryId);
-      addDiscovery(next.title, countryId, 'fact');
-      setDiscoveryToast(next.title);
-      setTimeout(() => setDiscoveryToast(null), 2200);
-    }
-  }, [country?.facts, factIndex, readFacts, addAura, countryId, markFactRead, addDiscovery]);
+    openFact(country.facts[nextIdx]);
+  }, [country?.facts, factIndex, openFact]);
 
-  // Quiz
-  const startQuiz = useCallback(() => {
-    const qs = getCountryQuiz(countryId, 8);
-    if (qs.length === 0) return;
-    setQuizQuestions(qs);
-    setQuizIndex(0);
-    setQuizScore(0);
-    setQuizFinished(false);
-    setQuizSelected(null);
-    setQuizActive(true);
-  }, [countryId]);
+  const handleQuizComplete = useCallback((score: number, totalQuestions: number) => {
+    const reward = score * QUIZ_AURA_PER_CORRECT;
+    if (reward > 0) addAura(reward);
+    markQuizCompleted(countryId);
+    addDiscovery(`${country?.name ?? countryId} quiz`, countryId, 'quiz');
+    setDiscoveryToast('Country quiz');
+    timersRef.current.push(setTimeout(() => setDiscoveryToast(null), 2200));
+  }, [addAura, markQuizCompleted, countryId, country?.name, addDiscovery]);
 
-  const handleQuizAnswer = useCallback((optionIndex: number) => {
-    if (quizSelected !== null) return;
-    setQuizSelected(optionIndex);
-    const correct = quizQuestions[quizIndex].correct === optionIndex;
-    if (correct) setQuizScore((s) => s + 1);
-    setTimeout(() => {
-      if (quizIndex + 1 >= quizQuestions.length) {
-        const finalScore = correct ? quizScore + 1 : quizScore;
-        const reward = finalScore * QUIZ_AURA_PER_CORRECT;
-        if (reward > 0) addAura(reward);
-        markQuizCompleted(countryId);
-        addDiscovery(`${country?.name ?? countryId} quiz`, countryId, 'quiz');
-        setDiscoveryToast('Country quiz');
-        setTimeout(() => setDiscoveryToast(null), 2200);
-        setQuizFinished(true);
-      } else {
-        setQuizIndex((i) => i + 1);
-        setQuizSelected(null);
-      }
-    }, 800);
-  }, [quizSelected, quizIndex, quizQuestions, quizScore, addAura, markQuizCompleted, countryId, country?.name, addDiscovery]);
+  const getQuizQuestions = useCallback(() => getCountryQuiz(countryId, 8), [countryId]);
 
-  const handleVisitLocation = useCallback((location: CountryLocation) => {
+  const handleVisitLocation = useCallback((location: ReturnType<typeof getCountryLocations>[0]) => {
     if (visitedLocations.has(location.id)) return;
     setVisitedLocations(prev => new Set(prev).add(location.id));
     addAura(location.learningPoints);
     const skillMap: Record<string, keyof import('../../types').SkillProgress> = {
-      landmark: 'geography',
-      food: 'cooking',
-      nature: 'exploration',
-      culture: 'culture',
-      hidden_gem: 'exploration',
+      landmark: 'geography', food: 'cooking', nature: 'exploration', culture: 'culture', hidden_gem: 'exploration',
     };
     const skill = skillMap[location.category];
     if (skill) addSkillPoints(skill, 2);
   }, [visitedLocations, addAura, addSkillPoints]);
 
-  const LOCATION_CATEGORY_ICONS: Record<CountryLocation['category'], IconName> = {
-    landmark: 'city',
-    food: 'food',
-    nature: 'nature',
-    culture: 'culture',
-    hidden_gem: 'compass',
-  };
-
-  const handleUseFurniture = useCallback((interactionType: FurnitureInteractionType, aura: number) => {
-    if (interactionType === 'table' || interactionType === 'stove') feedVisby();
-    else if (interactionType === 'bed') restVisby();
-    else if (interactionType === 'toy') playWithVisby();
-    else if (interactionType === 'bookshelf') studyWithVisby();
-    addAura(Math.round(aura * multiplier));
+  const handleUseFurniture = useCallback((interactionType: FurnitureInteractionType, auraAmount: number) => {
+    if (interactionType === 'table' || interactionType === 'stove') {
+      feedVisby();
+      setTempMood('happy', 4000);
+      triggerReaction('feed');
+    } else if (interactionType === 'bed') {
+      restVisby();
+      setTempMood('cozy', 4000);
+      triggerReaction('rest');
+    } else if (interactionType === 'toy') {
+      playWithVisby();
+      setTempMood('excited', 4000);
+      triggerReaction('play');
+    } else if (interactionType === 'bookshelf') {
+      studyWithVisby();
+      setTempMood('proud', 4000);
+      triggerReaction('study');
+    }
+    addAura(Math.round(auraAmount * multiplier));
     setActiveFurnitureInteraction(null);
-  }, [feedVisby, restVisby, playWithVisby, studyWithVisby, addAura, multiplier]);
+  }, [feedVisby, restVisby, playWithVisby, studyWithVisby, addAura, multiplier, setTempMood, triggerReaction]);
 
-  const totalInteractive = currentRoom?.objects.filter((o) => o.interactive).length ?? 0;
-  const roomInteracted = currentRoom?.objects.filter((o) => o.interactive && interactedObjects.has(o.id)).length ?? 0;
+  const handleNavigateToGame = useCallback((gameKey: string) => {
+    (navigation.getParent() as any)?.getParent()?.navigate(gameKey, { countryId });
+  }, [navigation, countryId]);
+
+  const handleSendChatMessage = useCallback((text: string) => {
+    if (!currentRoom) return;
+    addPlaceChatMessage(`room_${countryId}_${currentRoom.id}`, text);
+  }, [addPlaceChatMessage, countryId, currentRoom]);
+
+  const handlePlaceFurniture = useCallback((item: PlacedFurniture) => {
+    if (!currentRoom) return;
+    placeFurniture(countryId, currentRoom.id, item);
+    triggerReaction('decorate_room');
+  }, [placeFurniture, countryId, currentRoom, triggerReaction]);
+
+  const handleUpdateWallColor = useCallback((color: string) => {
+    if (currentRoom) updateRoomColors(countryId, currentRoom.id, color, undefined);
+  }, [updateRoomColors, countryId, currentRoom]);
+
+  const handleUpdateFloorColor = useCallback((color: string) => {
+    if (currentRoom) updateRoomColors(countryId, currentRoom.id, undefined, color);
+  }, [updateRoomColors, countryId, currentRoom]);
+
+  const { totalInteractive, roomInteracted } = useMemo(() => {
+    const objects = currentRoom?.objects ?? [];
+    const total = objects.filter((o) => o.interactive).length;
+    const interacted = objects.filter((o) => o.interactive && interactedObjects.has(o.id)).length;
+    return { totalInteractive: total, roomInteracted: interacted };
+  }, [currentRoom?.objects, interactedObjects]);
+
+  const chatMessages = useMemo(
+    () => currentRoom ? (getPlaceChatMessages(`room_${countryId}_${currentRoom.id}`) || []) : [],
+    [getPlaceChatMessages, countryId, currentRoom],
+  );
 
   if (!country) {
     return (
@@ -323,27 +608,51 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
   const facts = country.facts;
   const atmosphere = getCountryAtmosphere(countryId);
-  const countryProgress = getCountryProgress(countryId);
-  const isPlaceComplete = countryProgress.factsReadCount >= facts.length && countryProgress.quizCompleted;
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[...atmosphere.immersiveBg]}
-        style={StyleSheet.absoluteFill}
-        locations={[0, 0.5, 1]}
-      />
+      <LinearGradient colors={[...atmosphere.immersiveBg]} style={StyleSheet.absoluteFill} locations={[0, 0.5, 1]} />
+      {showCountryIntro && country && (
+        <Animated.View
+          style={[styles.countryIntroOverlay, introScaleStyle, { pointerEvents: 'none' }]}
+        >
+          <LinearGradient
+            colors={[country.accentColor + 'DD', '#1A0F3C', '#0F0826']}
+            style={styles.countryIntroContent}
+          >
+            <FloatingParticles count={12} variant={getCountryParticleVariant(countryId).variant} opacity={0.6} speed="normal" />
+            <Animated.View style={[styles.visbyFlyIn, visbyFlyStyle]}>
+              <Text style={styles.visbyFlyEmoji}>🦊</Text>
+              <Text style={styles.visbyFlyLabel}>Visby is flying to {country.name}!</Text>
+            </Animated.View>
+            <Animated.View style={[styles.countryIntroInner, flagRotateStyle]}>
+              <Text style={styles.countryIntroFlag}>{country.flagEmoji}</Text>
+            </Animated.View>
+            <Animated.View style={introScaleStyle}>
+              <Heading level={1} style={styles.countryIntroTitle}>{country.name}</Heading>
+              <Text style={styles.countryIntroSub}>Welcome to {country.name}!</Text>
+            </Animated.View>
+          </LinearGradient>
+        </Animated.View>
+      )}
       <FloatingParticles
-        count={countryId === 'jp' || countryId === 'fr' ? 14 : 10}
-        variant={atmosphere.particleVariant}
-        customColors={atmosphere.particleColors}
-        opacity={countryId === 'jp' ? 0.35 : 0.22}
-        speed="slow"
+        count={6}
+        variant={getCountryParticleVariant(countryId).variant}
+        opacity={getCountryParticleVariant(countryId).opacity}
+        speed={getCountryParticleVariant(countryId).speed}
+        shape={atmosphere.particleShape}
       />
+      {seasonalVisuals?.particleVariant && (
+        <FloatingParticles
+          count={4}
+          variant={seasonalVisuals.particleVariant as any}
+          opacity={0.4}
+          speed="slow"
+        />
+      )}
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -351,14 +660,18 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </TouchableOpacity>
             <View style={styles.headerCenter}>
               {!isViewingFriendHouse && country && (
-                <NavBreadcrumb
-                  items={[
-                    { label: 'World', onPress: () => navigation.navigate('CountryWorld') },
-                    { label: country.name },
-                  ]}
-                />
+                <NavBreadcrumb items={[
+                  { label: 'World', onPress: () => navigation.navigate('CountryWorld') },
+                  { label: country.name },
+                ]} />
               )}
-              <Text style={styles.flagTitle}>{country.flagEmoji} {roomTitle}</Text>
+              <View style={{ position: 'relative' as const }}>
+                <Text style={styles.flagTitle}>{country.flagEmoji} {roomTitle}</Text>
+                <Tooltip
+                  id="room_tap_objects"
+                  text="Tap objects to discover fun facts!"
+                />
+              </View>
               {isOwner && <Caption style={styles.ownerTag}>Your House</Caption>}
               {isViewingFriendHouse && friend && (
                 <Caption style={styles.ownerTag}>Visiting {friend.displayName}'s home</Caption>
@@ -372,7 +685,6 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </View>
           </View>
 
-          {/* Streak Banner */}
           {streak > 0 && (
             <View style={styles.streakBanner}>
               <Text style={styles.streakText}>{streak}-day streak</Text>
@@ -382,14 +694,12 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </View>
           )}
 
-          {/* Place complete — you've mastered this country, next level */}
           {isPlaceComplete && (
             <View style={styles.placeCompleteBanner}>
               <LinearGradient
                 colors={[colors.success.honeydew, colors.reward.peachLight, colors.primary.wisteriaFaded]}
                 style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               />
               <View style={styles.placeCompleteContent}>
                 <Icon name="trophy" size={32} color={colors.reward.gold} />
@@ -401,32 +711,74 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </View>
           )}
 
-          {/* Room cards (choose room) */}
+          {/* Room cards */}
           {rooms.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roomCardsRow}>
               {rooms.map((room, idx) => {
                 const isActive = idx === currentRoomIdx;
                 const rCustom = house?.roomCustomizations?.[room.id];
                 const roomWall = rCustom?.wallColor || room.wallColor;
+                const roomObjs = room.objects ?? [];
+                const roomTotalInt = roomObjs.filter(o => o.interactive).length;
+                const roomDone = roomObjs.filter(o => o.interactive && interactedObjects.has(o.id)).length;
+                const isRoomComplete = completedRoomIds.has(room.id) || (roomTotalInt > 0 && roomDone >= roomTotalInt);
                 return (
                   <TouchableOpacity
                     key={room.id}
-                    style={[styles.roomCard, isActive && styles.roomCardActive]}
+                    style={[
+                      styles.roomCard,
+                      isActive && styles.roomCardActive,
+                      isRoomComplete && styles.roomCardComplete,
+                    ]}
                     onPress={() => goToRoom(idx)}
                     activeOpacity={0.85}
                   >
-                    <View style={[styles.roomCardSwatch, { backgroundColor: roomWall }]} />
+                    <View style={[styles.roomCardSwatch, { backgroundColor: roomWall }]}>
+                      {isRoomComplete && (
+                        <View style={styles.roomCardTrophy}>
+                          <Icon name="trophy" size={10} color="#FFD700" />
+                        </View>
+                      )}
+                    </View>
                     <View style={styles.roomCardContent}>
                       <Icon name={room.icon as IconName} size={20} color={isActive ? colors.primary.wisteriaDark : colors.text.secondary} />
                       <Text style={[styles.roomCardLabel, isActive && styles.roomCardLabelActive]} numberOfLines={1}>{room.name}</Text>
+                      {roomTotalInt > 0 && (
+                        <Text style={styles.roomCardProgress}>{roomDone}/{roomTotalInt}</Text>
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
               })}
+              {/* Locked room expansion cards */}
+              {isOwner && DEFAULT_ROOM_DEFINITIONS.filter(
+                (r) => !r.isDefault && !getUnlockedRooms(countryId).includes(r.id)
+              ).map((roomDef) => (
+                <TouchableOpacity
+                  key={roomDef.id}
+                  style={[styles.roomCard, styles.roomCardLocked]}
+                  onPress={() => {
+                    const success = unlockRoom(countryId, roomDef.id);
+                    if (!success) {
+                      // Not enough Aura or already unlocked
+                    }
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.roomCardSwatch, { backgroundColor: 'rgba(184,165,224,0.15)' }]} />
+                  <View style={styles.roomCardContent}>
+                    <Icon name="lock" size={16} color={colors.text.muted} />
+                    <Text style={[styles.roomCardLabel, { color: colors.text.muted, fontSize: 11 }]} numberOfLines={1}>{roomDef.name}</Text>
+                    <View style={styles.roomUnlockPrice}>
+                      <Icon name="sparkles" size={9} color={colors.reward.gold} />
+                      <Text style={{ fontSize: 9, fontWeight: '700', color: colors.reward.amber }}>{roomDef.unlockPrice}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           )}
 
-          {/* No rooms yet: welcome card and invite to explore facts & quiz */}
           {!currentRoom && country && (
             <View style={styles.noRoomsWrap}>
               <View style={[styles.noRoomsCard, { borderLeftColor: country.accentColor }]}>
@@ -439,44 +791,103 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </View>
           )}
 
-          {/* Room View — VR-style immersive stage: you're inside with your Visby */}
+          {/* Room Stage */}
           {currentRoom && (
             <View style={styles.roomStageWrap}>
-              <View style={styles.roomStageFrame}>
-                {/* Window to the world (castle / cherry sky / etc.) */}
-                <LinearGradient
-                  colors={[atmosphere.windowSky[0], atmosphere.windowSky[1], atmosphere.windowSky[2] ?? atmosphere.windowSky[1]]}
-                  style={[styles.roomWindowStrip, { height: WINDOW_STRIP_HEIGHT }]}
-                  locations={[0, 0.6, 1]}
-                >
+              <Animated.View
+                key={roomTransitionKey}
+                entering={roomSlideDir === 'right' ? FadeInRight.duration(250) : FadeInLeft.duration(250)}
+                style={[styles.roomStageFrame, roomEntranceStyle]}
+              >
+                {/* Window with dynamic sky, arch and inner shadow */}
+                <View style={[styles.roomWindowStrip, { height: WINDOW_STRIP_HEIGHT }]}>
+                  <DynamicWindow
+                    width={SCREEN_WIDTH - spacing.md * 2}
+                    height={WINDOW_STRIP_HEIGHT}
+                    overrideSky={atmosphere.windowSky}
+                  />
+                  <View style={styles.windowCurtainLeft} />
+                  <View style={styles.windowCurtainRight} />
                   <View style={styles.roomWindowArch} />
-                </LinearGradient>
-                {/* Wall with depth gradient */}
+                  <View style={styles.windowReflection} />
+                  <View style={styles.windowInnerShadow} />
+                </View>
+
+                {/* Light spill from window */}
+                <View style={[styles.windowLightSpill, { pointerEvents: 'none' }]}>
+                  <LinearGradient
+                    colors={[colors.room.lightSpill, 'transparent']}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </View>
+
+                {/* Wall */}
                 <LinearGradient
-                  colors={[
-                    effectiveWallColor,
-                    effectiveWallColor,
-                    (country?.accentColor ?? colors.primary.wisteria) + '18',
-                  ]}
+                  colors={[effectiveWallColor, effectiveWallColor, (country?.accentColor ?? colors.primary.wisteria) + '18']}
                   style={[styles.roomWall, { height: WALL_HEIGHT - WINDOW_STRIP_HEIGHT }]}
                   locations={[0, 0.7, 1]}
                 >
-                  {/* Room title + edit (top) */}
+                  {/* Wallpaper texture dots */}
+                  <View style={[styles.wallTextureOverlay, { pointerEvents: 'none' }]}>
+                    {Array.from({ length: TEXTURE_DOT_COUNT }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.wallTextureDot,
+                          {
+                            left: `${8 + ((i * 37) % 84)}%` as any,
+                            top: `${10 + ((i * 53) % 80)}%` as any,
+                            width: 2 + (i % 3),
+                            height: 2 + (i % 3),
+                            borderRadius: (2 + (i % 3)) / 2,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+
+                  {/* Corner shadow vignettes */}
+                  <View style={[styles.wallCornerLeft, { pointerEvents: 'none' }]}>
+                    <LinearGradient
+                      colors={[colors.room.cornerShadow, 'transparent']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </View>
+                  <View style={[styles.wallCornerRight, { pointerEvents: 'none' }]}>
+                    <LinearGradient
+                      colors={[colors.room.cornerShadow, 'transparent']}
+                      start={{ x: 1, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </View>
+
+                  {/* Wainscoting panels */}
+                  <View style={styles.wainscotingWrap}>
+                    {[0, 1, 2, 3, 4].map(i => (
+                      <View key={i} style={styles.wainscotPanel}>
+                        <View style={styles.wainscotPanelInner} />
+                      </View>
+                    ))}
+                  </View>
+                  {/* Chair rail */}
+                  <View style={styles.wainscotChairRail} />
+
                   <View style={styles.roomNameRow}>
                     <View style={styles.roomNameInner}>
                       <Text style={styles.roomNameText}>{currentRoom.name}</Text>
                       {isOwner && (
                         <TouchableOpacity
                           style={[styles.editToggleBtn, editMode && styles.editToggleBtnActive]}
-                          onPress={() => {
-                            setEditMode((v) => !v);
-                            setSelectedPlacedItem(null);
-                            setActiveEditTab(null);
-                          }}
+                          onPress={() => { setEditMode(v => !v); setSelectedPlacedItem(null); setActiveEditTab(null); }}
                           activeOpacity={0.8}
                         >
                           <Icon name="edit" size={12} color={editMode ? '#FFFFFF' : colors.primary.wisteriaDark} />
-                          <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>{editMode ? 'Done' : 'Edit'}</Text>
+                          <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
+                            {editMode ? 'Done' : 'Edit'}
+                          </Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -486,22 +897,41 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                       </View>
                     )}
                   </View>
+
                   {roomDialogueLine && (
-                    <View style={styles.roomDialogueBubble}>
+                    <Animated.View
+                      entering={FadeInDown.springify().damping(14)}
+                      exiting={FadeOut.duration(200)}
+                      style={styles.roomDialogueBubble}
+                    >
                       <Text style={styles.roomDialogueText}>Visby: "{roomDialogueLine}"</Text>
-                    </View>
+                      <View style={styles.dialogueBubbleTail} />
+                    </Animated.View>
                   )}
 
-                  {/* Co-op lite: who else is here (placeholder for presence) */}
                   {!isViewingFriendHouse && (
                     <View style={styles.othersHereBar}>
-                      <Icon name="people" size={14} color={colors.text.muted} />
-                      <Caption style={styles.othersHereText}>No friends in this room right now</Caption>
+                      <Icon name="people" size={14} color={presenceFriends.length > 0 ? colors.primary.wisteriaDark : colors.text.muted} />
+                      <Caption style={[styles.othersHereText, presenceFriends.length > 0 && { color: colors.primary.wisteriaDark }]}>
+                        {presenceFriends.length > 0
+                          ? `${presenceFriends.map(f => f.username).join(', ')} here!`
+                          : 'No friends in this room right now'}
+                      </Caption>
                     </View>
                   )}
 
-                  {/* Interactive objects — in-world style */}
-                  <View style={[styles.objectsLayer, { height: (WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 48 }]}>
+                  {/* Room tint overlay for time-of-day ambiance */}
+                  <RoomTintOverlay hasLamp={lampInfo.hasLamp} lampX={lampInfo.lampX} lampY={lampInfo.lampY} />
+
+                  {/* Objects layer */}
+                  <View style={[styles.objectsLayer, { height: (WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40 }]}>
+                    {editMode && (
+                      <GridOverlay
+                        width={SCREEN_WIDTH - spacing.md * 2}
+                        height={(WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40}
+                        visible={editMode}
+                      />
+                    )}
                     {currentRoom.objects.map((obj) => {
                       const wasInteracted = interactedObjects.has(obj.id);
                       const isInteractive = obj.interactive && !editMode;
@@ -512,58 +942,89 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                             styles.roomObject,
                             isInteractive && styles.roomObjectInteractive,
                             wasInteracted && styles.roomObjectDone,
-                            { left: `${obj.x}%` as any, top: `${obj.y}%` as any },
+                            { left: `${obj.x}%` as any, top: `${obj.y}%` as any, zIndex: Math.round(obj.y) },
                           ]}
-                          onPress={() => isInteractive ? handleObjectTap(obj) : undefined}
-                          activeOpacity={isInteractive ? 0.8 : 1}
+                          onPress={() => {
+                            if (!isInteractive) return;
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            handleObjectTap(obj);
+                          }}
+                          activeOpacity={isInteractive ? 0.7 : 1}
                           disabled={!isInteractive}
+                          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                         >
-                          <View style={[styles.roomObjectIconWrap, isInteractive && !wasInteracted && styles.roomObjectIconWrapGlow]}>
-                            <Icon name={obj.icon as IconName} size={28} color={wasInteracted ? colors.success.emerald : colors.text.primary} />
-                          </View>
+                          {isInteractive && !wasInteracted ? (
+                            <BreathingPulse>
+                              <View style={[styles.roomObjectIconWrap, styles.roomObjectIconWrapGlow]}>
+                                <Icon name={obj.icon as IconName} size={34} color={colors.text.primary} />
+                              </View>
+                            </BreathingPulse>
+                          ) : (
+                            <View style={styles.roomObjectIconWrap}>
+                              <Icon name={obj.icon as IconName} size={34} color={wasInteracted ? colors.success.emerald : colors.text.primary} />
+                            </View>
+                          )}
                           <Text style={[styles.objectLabel, wasInteracted && styles.objectLabelDone]} numberOfLines={2}>{obj.label}</Text>
                           {isInteractive && !wasInteracted && <View style={styles.interactiveDot} />}
-                          {isInteractive && wasInteracted && <Icon name="check" size={14} color={colors.success.emerald} style={styles.objectCheck} />}
+                          {isInteractive && wasInteracted && <Icon name="check" size={16} color={colors.success.emerald} style={styles.objectCheck} />}
+                          {isInteractive && !wasInteracted && (
+                            <View style={styles.objectSparkleHint}>
+                              <Icon name="sparkles" size={10} color={colors.reward.gold} />
+                            </View>
+                          )}
                         </TouchableOpacity>
                       );
                     })}
 
-                    {placedItems.map((placed) => {
-                      const catalogItem = FURNITURE_CATALOG.find(f => f.id === placed.furnitureId);
+                    {placedItems.map((placed: PlacedFurniture) => {
+                      const catalogItem = FURNITURE_MAP.get(placed.furnitureId);
                       if (!catalogItem) return null;
                       const canInteract = !editMode && catalogItem.interactionType;
-                      return (
+                      const animType = getAnimTypeForInteraction(catalogItem.interactionType);
+
+                      const furnitureContent = (
                         <TouchableOpacity
                           key={placed.id}
                           style={[
                             styles.placedFurnitureItem,
-                            { left: `${placed.x}%` as any, top: `${placed.y}%` as any },
+                            !editMode && { left: `${placed.x}%` as any, top: `${placed.y}%` as any },
                             selectedPlacedItem === placed.id && styles.placedFurnitureItemSelected,
                             canInteract && styles.placedFurnitureItemInteractive,
+                            { zIndex: Math.round(placed.y) },
                           ]}
                           onPress={() => {
-                            if (editMode) setSelectedPlacedItem(selectedPlacedItem === placed.id ? null : placed.id);
-                            else if (catalogItem.interactionType) setActiveFurnitureInteraction({ placed, catalogItem });
+                            if (editMode) {
+                              setSelectedPlacedItem(selectedPlacedItem === placed.id ? null : placed.id);
+                            } else if (catalogItem.interactionType) {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                              setActiveFurnitureInteraction({ placed, catalogItem });
+                            }
                           }}
-                          activeOpacity={editMode || canInteract ? 0.8 : 1}
-                          disabled={false}
+                          activeOpacity={editMode || canInteract ? 0.7 : 1}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
-                          {catalogItem.interactionType ? (
-                            <FurnitureVisual
-                              interactionType={catalogItem.interactionType}
-                              icon={catalogItem.icon as IconName}
-                              size="medium"
-                              showHint={true}
-                            />
-                          ) : (
-                            <View style={styles.placedFurnitureIconWrap}>
-                              <Icon name={catalogItem.icon as IconName} size={26} color={colors.text.primary} />
+                          <FurnitureVisual
+                            item={catalogItem}
+                            interactionType={catalogItem.interactionType}
+                            icon={catalogItem.icon as IconName}
+                            size={catalogItem.interactionType ? 'large' : 'medium'}
+                            showHint
+                            glow={!!canInteract}
+                            glowColor={country?.accentColor || colors.primary.wisteria}
+                          />
+                          {animType && activeFurnitureInteraction?.placed.id === placed.id && (
+                            <FurnitureMicroAnim type={animType} visible size={100} />
+                          )}
+                          {animType && activeFurnitureInteraction?.placed.id !== placed.id && (
+                            <View style={{ opacity: 0.35 }}>
+                              <FurnitureMicroAnim type={animType} visible size={60} />
                             </View>
                           )}
+                          <View style={styles.placedFurnitureShadow} />
                           <Text style={styles.placedFurnitureLabel} numberOfLines={1}>{catalogItem.name}</Text>
                           {canInteract && (
                             <View style={styles.useFurnitureBadge}>
-                              <Icon name="sparkles" size={10} color={colors.primary.wisteriaDark} />
+                              <Icon name="sparkles" size={11} color={colors.primary.wisteriaDark} />
                               <Text style={styles.useFurnitureBadgeText}>Use</Text>
                             </View>
                           )}
@@ -571,10 +1032,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                             <View style={styles.placedFurniturePopup}>
                               <TouchableOpacity
                                 style={styles.removeBtn}
-                                onPress={() => {
-                                  removePlacedFurniture(countryId, currentRoom.id, placed.id);
-                                  setSelectedPlacedItem(null);
-                                }}
+                                onPress={() => { removePlacedFurniture(countryId, currentRoom.id, placed.id); setSelectedPlacedItem(null); }}
                               >
                                 <Icon name="close" size={12} color="#FFFFFF" />
                                 <Text style={styles.removeBtnText}>Remove</Text>
@@ -583,48 +1041,116 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                           )}
                         </TouchableOpacity>
                       );
+
+                      if (editMode) {
+                        return (
+                          <View key={placed.id} style={{ position: 'absolute', left: `${placed.x}%` as any, top: `${placed.y}%` as any }}>
+                            <DraggableFurniture
+                              initialX={placed.x}
+                              initialY={placed.y}
+                              containerWidth={SCREEN_WIDTH - spacing.md * 2}
+                              containerHeight={(WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40}
+                              isEditMode={editMode}
+                              onPositionChange={(newX, newY) => {
+                                removePlacedFurniture(countryId, currentRoom.id, placed.id);
+                                placeFurniture(countryId, currentRoom.id, { ...placed, x: newX, y: newY });
+                              }}
+                            >
+                              {furnitureContent}
+                            </DraggableFurniture>
+                          </View>
+                        );
+                      }
+                      return furnitureContent;
                     })}
                   </View>
                 </LinearGradient>
 
-                {/* Baseboard */}
+                {/* Baseboard with shadow */}
+                <View style={styles.baseboardShadow} />
                 <View style={[styles.baseboard, { backgroundColor: effectiveFloorColor }]} />
 
-                {/* Floor with subtle gradient */}
+                {/* Floor */}
                 <LinearGradient
                   colors={[effectiveFloorColor, effectiveFloorColor, (country?.accentColor ?? '#000') + '08']}
                   style={styles.roomFloor}
                   locations={[0, 0.6, 1]}
                 >
+                  {/* Floor planks with stagger and knots */}
+                  <View style={styles.floorPlanks}>
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map(i => {
+                      const hasKnot = KNOT_POSITIONS_CR.find(k => k.plank === i);
+                      const isStaggered = i % 2 === 1;
+                      return (
+                        <View key={i} style={styles.floorPlank}>
+                          {isStaggered && <View style={styles.floorPlankStagger} />}
+                          <View style={[styles.floorGrain, { top: '30%' }]} />
+                          <View style={[styles.floorGrain, { top: '65%', opacity: 0.03 }]} />
+                          {hasKnot && (
+                            <View style={[styles.floorKnot, { left: hasKnot.left as any, top: hasKnot.top as any }]} />
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                  {/* Decorative rug with fringe and country accent */}
+                  <View style={styles.areaRugWrap}>
+                    <View style={styles.areaRugFringeLeft}>
+                      {Array.from({ length: FRINGE_COUNT_CR }).map((_, i) => (
+                        <View key={i} style={[styles.areaRugFringe, { height: 4 + (i % 3) }]} />
+                      ))}
+                    </View>
+                    <View style={styles.areaRug}>
+                      <View style={[styles.areaRugBorder, { borderColor: (country?.accentColor ?? colors.room.rugBorder) + '40' }]} />
+                      <View style={styles.areaRugInnerBorder} />
+                      <View style={styles.areaRugCenter}>
+                        <View style={[styles.areaRugDiamond, { backgroundColor: (country?.accentColor ?? colors.room.rugPattern) + '20' }]} />
+                      </View>
+                    </View>
+                    <View style={styles.areaRugFringeRight}>
+                      {Array.from({ length: FRINGE_COUNT_CR }).map((_, i) => (
+                        <View key={i} style={[styles.areaRugFringe, { height: 4 + (i % 3) }]} />
+                      ))}
+                    </View>
+                  </View>
+
                   {!editMode && (
                     <Animated.View style={[styles.avatarContainer, avatarStyle]}>
-                      <View style={styles.visbyShadow} />
-                      <View style={styles.visbyCompanionWrap}>
+                      <View style={styles.visbyShadow}>
+                        <LinearGradient
+                          colors={['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.04)', 'transparent']}
+                          style={StyleSheet.absoluteFill}
+                          start={{ x: 0.5, y: 0 }}
+                          end={{ x: 0.5, y: 1 }}
+                        />
+                      </View>
+                      <Animated.View style={[styles.visbyCompanionWrap, idleBreatheStyle]}>
+                        <VisbyReactions
+                          trigger={reactionTrigger}
+                          onComplete={() => setReactionTrigger(null)}
+                        />
                         <VisbyCharacter
                           appearance={defaultAppearance}
                           equipped={visby?.equipped}
-                          mood="curious"
+                          mood={visbyMood as any}
+                          reaction={visbyReaction as any}
                           size={AVATAR_SIZE}
                           animated
                         />
                         <View style={styles.visbyCompanionLabel}>
                           <Text style={styles.visbyCompanionText}>Your Visby</Text>
                         </View>
-                      </View>
+                      </Animated.View>
                     </Animated.View>
                   )}
+
                   {editMode ? (
                     <View style={styles.editToolbar}>
                       {(['furniture', 'wallpaper', 'flooring'] as const).map((tab) => (
                         <TouchableOpacity
                           key={tab}
                           style={[styles.editToolbarBtn, activeEditTab === tab && styles.editToolbarBtnActive]}
-                          onPress={() => {
-                            setActiveEditTab(tab);
-                            if (tab === 'furniture') setShowFurniturePanel(true);
-                            else if (tab === 'wallpaper') setShowWallpaperPanel(true);
-                            else setShowFlooringPanel(true);
-                          }}
+                          onPress={() => setActiveEditTab(tab)}
                           activeOpacity={0.8}
                         >
                           <Icon
@@ -640,18 +1166,21 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     </View>
                   ) : (
                     <View style={styles.walkControls}>
-                      <TouchableOpacity style={styles.walkBtn} onPress={moveLeft} activeOpacity={0.8}>
-                        <Icon name="chevronLeft" size={26} color={colors.primary.wisteriaDark} />
+                      <TouchableOpacity onPress={moveLeft} activeOpacity={1}>
+                        <Animated.View style={[styles.walkBtn, walkLeftBtnStyle]}>
+                          <Icon name="chevronLeft" size={26} color={colors.primary.wisteriaDark} />
+                        </Animated.View>
                       </TouchableOpacity>
                       <Text style={styles.walkLabel}>Walk</Text>
-                      <TouchableOpacity style={styles.walkBtn} onPress={moveRight} activeOpacity={0.8}>
-                        <Icon name="chevronRight" size={26} color={colors.primary.wisteriaDark} />
+                      <TouchableOpacity onPress={moveRight} activeOpacity={1}>
+                        <Animated.View style={[styles.walkBtn, walkRightBtnStyle]}>
+                          <Icon name="chevronRight" size={26} color={colors.primary.wisteriaDark} />
+                        </Animated.View>
                       </TouchableOpacity>
                     </View>
                   )}
                 </LinearGradient>
 
-                {/* Room doors */}
                 {currentRoomIdx > 0 && (
                   <TouchableOpacity style={styles.roomNavLeft} onPress={() => goToRoom(currentRoomIdx - 1)}>
                     <View style={styles.doorCard}>
@@ -668,18 +1197,17 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     </View>
                   </TouchableOpacity>
                 )}
-              </View>
+              </Animated.View>
             </View>
           )}
 
-          {/* Quick Actions — hero quiz + compact row */}
+          {/* Quick Actions */}
           <View style={styles.actionsWrap}>
-            <TouchableOpacity style={styles.heroQuizCard} onPress={startQuiz} activeOpacity={0.9}>
+            <TouchableOpacity style={styles.heroQuizCard} onPress={() => setShowQuiz(true)} activeOpacity={0.9}>
               <LinearGradient
                 colors={[colors.primary.wisteriaFaded, colors.surface.lavender, colors.calm.skyLight]}
                 style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               />
               <View style={styles.heroQuizInner}>
                 <View style={styles.heroQuizIconWrap}>
@@ -692,6 +1220,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 <Icon name="chevronRight" size={22} color={colors.primary.wisteriaDark} />
               </View>
             </TouchableOpacity>
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionsChipsRow}>
               <TouchableOpacity style={styles.actionChip} onPress={() => navigation.navigate('CountryMap', { countryId })}>
                 <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
@@ -704,6 +1233,10 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               <TouchableOpacity style={styles.actionChip} onPress={() => { if (facts.length > 0) { setFactIndex(0); openFact(facts[0]); } }}>
                 <Icon name="book" size={18} color={colors.calm.ocean} />
                 <Text style={styles.actionChipLabel}>Facts ({readFacts.size}/{facts.length})</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionChip} onPress={() => setShowKnowledgeMap(true)}>
+                <Icon name="brain" size={18} color={colors.primary.wisteria} />
+                <Text style={styles.actionChipLabel}>What I Know</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionChip}
@@ -729,28 +1262,28 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 </TouchableOpacity>
               )}
             </ScrollView>
-            {/* Collection goal: X more stamps to complete this country's set */}
+
             {!isViewingFriendHouse && country && (() => {
               const progress = getCountryStampProgress(stamps, countryId);
               if (!progress || progress.completed) return null;
               return (
                 <TouchableOpacity
                   style={[styles.collectionGoalCard, { borderLeftColor: country.accentColor }]}
-                  onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('CollectStamp', { locationId: 'quick' })}
+                  onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('Learn')}
                   activeOpacity={0.85}
                 >
-                  <Icon name="stamp" size={20} color={country.accentColor} />
+                  <Icon name="book" size={20} color={country.accentColor} />
                   <View style={styles.collectionGoalText}>
                     <Text variant="bodySmall" style={styles.collectionGoalTitle}>
-                      {progress.remaining} more place{progress.remaining !== 1 ? 's' : ''} and you&apos;ve completed your dreamy {country.name} set
+                      Keep learning about {country.name} to earn more stamps!
                     </Text>
-                    <Caption style={styles.collectionGoalSub}>{progress.current}/{progress.target} in your passport</Caption>
+                    <Caption style={styles.collectionGoalSub}>{progress.current}/{progress.target} stamps earned</Caption>
                   </View>
                   <Icon name="chevronRight" size={18} color={colors.text.muted} />
                 </TouchableOpacity>
               );
             })()}
-            {/* Who's here + Chat (Club Penguin style) */}
+
             <View style={styles.liveStrip}>
               <View style={styles.whosHereRow}>
                 <Icon name="people" size={14} color={colors.primary.wisteriaDark} />
@@ -758,16 +1291,21 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 <View style={styles.whosHereYouChip}>
                   <Text style={styles.whosHereYouText}>{user?.username || 'You'}</Text>
                 </View>
-                <Caption style={styles.liveStripText}> · When friends are in this room, they'll appear here</Caption>
+                {presenceFriends.map(f => (
+                  <View key={f.userId} style={styles.whosHereYouChip}>
+                    <Text style={styles.whosHereYouText}>{f.username}</Text>
+                  </View>
+                ))}
+                {presenceFriends.length === 0 && (
+                  <Caption style={styles.liveStripText}> · When friends are in this room, they'll appear here</Caption>
+                )}
               </View>
-              <TouchableOpacity
-                style={styles.chatInRoomBtn}
-                onPress={() => setShowPlaceChatModal(true)}
-                activeOpacity={0.8}
-              >
-                <Icon name="chat" size={16} color={colors.primary.wisteriaDark} />
-                <Text style={styles.chatInRoomBtnText}>Chat</Text>
-              </TouchableOpacity>
+              {chatMode !== 'off' && (
+                <TouchableOpacity style={styles.chatInRoomBtn} onPress={() => setShowPlaceChatModal(true)} activeOpacity={0.8}>
+                  <Icon name="chat" size={16} color={colors.primary.wisteriaDark} />
+                  <Text style={styles.chatInRoomBtnText}>Chat</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -792,218 +1330,214 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </ScrollView>
           </View>
 
-          {/* Earning guide — compact */}
-          <View style={styles.guideSection}>
-            <Text style={styles.sectionTitle}>Earn Aura here</Text>
-            <View style={styles.guideGrid}>
-              <View style={styles.guideItem}>
-                <Icon name="food" size={22} color={colors.reward.peachDark} />
-                <Text style={styles.guideLabel}>Use furniture</Text>
-                <Text style={styles.guideAmount}>Eat, cook, rest + Aura</Text>
+          {/* Story Arc + Journey Tracker */}
+          {currentRoom && (
+            <View style={styles.journeySection}>
+              <View style={styles.storyArcRow}>
+                <Icon name="compass" size={18} color={country.accentColor} />
+                <Text style={styles.storyArcText}>
+                  Discovering {country.name} — Room {currentRoomIdx + 1}/{rooms.length}
+                </Text>
               </View>
-              <View style={styles.guideItem}>
-                <Icon name="home" size={22} color={colors.primary.wisteriaDark} />
-                <Text style={styles.guideLabel}>Explore objects</Text>
-                <Text style={styles.guideAmount}>+8 each</Text>
+              <View style={styles.storyArcBar}>
+                <View style={[styles.storyArcFill, { width: `${((currentRoomIdx + 1) / Math.max(rooms.length, 1)) * 100}%`, backgroundColor: country.accentColor }]} />
               </View>
-              <View style={styles.guideItem}>
-                <Icon name="quiz" size={22} color={colors.primary.wisteriaDark} />
-                <Text style={styles.guideLabel}>Quiz</Text>
-                <Text style={styles.guideAmount}>+{QUIZ_AURA_PER_CORRECT}/correct</Text>
-              </View>
-              <View style={styles.guideItem}>
-                <Icon name="book" size={22} color={colors.primary.wisteriaDark} />
-                <Text style={styles.guideLabel}>Facts</Text>
-                <Text style={styles.guideAmount}>+{FACT_AURA_REWARD} each</Text>
-              </View>
-              <View style={styles.guideItem}>
-                <Icon name="flame" size={22} color={colors.status.streak} />
-                <Text style={styles.guideLabel}>Streak</Text>
-                <Text style={styles.guideAmount}>{multiplier.toFixed(1)}x</Text>
+
+              <Text style={styles.journeyTitle}>
+                {completedRoomIds.has(currentRoom.id) || (totalInteractive > 0 && roomInteracted >= totalInteractive)
+                  ? `All discoveries made! Try the quiz next.`
+                  : `Explore ${currentRoom.name} — ${roomInteracted}/${totalInteractive} discoveries`}
+              </Text>
+              <View style={styles.journeyHints}>
+                {(() => {
+                  const hints: { icon: IconName; text: string; action?: () => void }[] = [];
+                  const undiscovered = currentRoom.objects.filter(o => o.interactive && !interactedObjects.has(o.id));
+                  if (undiscovered.length > 0) {
+                    hints.push({
+                      icon: 'sparkles',
+                      text: `Tap ${undiscovered[0].label} to discover something new`,
+                      action: () => handleObjectTap(undiscovered[0]),
+                    });
+                  }
+                  if (undiscovered.length > 1) {
+                    hints.push({ icon: 'compass', text: `${undiscovered.length} more objects to discover in this room` });
+                  }
+                  if (hints.length === 0) {
+                    hints.push({ icon: 'trophy', text: 'Amazing! You\'ve explored everything here.' });
+                  }
+                  return hints.slice(0, 3).map((hint, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={styles.journeyHintRow}
+                      onPress={hint.action}
+                      activeOpacity={hint.action ? 0.7 : 1}
+                      disabled={!hint.action}
+                    >
+                      <Icon name={hint.icon} size={16} color={colors.reward.gold} />
+                      <Text style={styles.journeyHintText}>{hint.text}</Text>
+                      {hint.action && <Icon name="chevronRight" size={14} color={colors.text.muted} />}
+                    </TouchableOpacity>
+                  ));
+                })()}
               </View>
             </View>
-          </View>
+          )}
         </ScrollView>
       </SafeAreaView>
 
-      {/* Place chat modal (Club Penguin style) */}
-      {currentRoom && (
-        <Modal visible={showPlaceChatModal} animationType="slide" transparent>
-          <KeyboardAvoidingView style={styles.placeChatModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
-            <Pressable style={styles.placeChatModalBackdrop} onPress={() => setShowPlaceChatModal(false)} />
-            <View style={styles.placeChatModalCard}>
-              <View style={styles.placeChatModalHeader}>
-                <Text style={styles.placeChatModalTitle}>Chat in {currentRoom.name}</Text>
-                <TouchableOpacity onPress={() => setShowPlaceChatModal(false)} hitSlop={12}>
-                  <Icon name="close" size={22} color={colors.text.muted} />
-                </TouchableOpacity>
+      {/* Conditionally rendered modals */}
+      {showPlaceChatModal && currentRoom && (
+        <PlaceChatModal
+          visible={showPlaceChatModal}
+          onClose={() => setShowPlaceChatModal(false)}
+          roomName={currentRoom.name}
+          channelKey={`room_${countryId}_${currentRoom.id}`}
+          messages={chatMessages}
+          userId={user?.id ?? ''}
+          onSendMessage={handleSendChatMessage}
+          countryId={countryId}
+        />
+      )}
+
+      {activeObject && (
+        <ObjectDetailModal
+          object={activeObject}
+          multiplier={multiplier}
+          onClose={() => setActiveObject(null)}
+        />
+      )}
+
+      {activeFurnitureInteraction && (
+        <FurnitureInteractionModal
+          interaction={activeFurnitureInteraction}
+          multiplier={multiplier}
+          streak={streak}
+          onUse={handleUseFurniture}
+          onClose={() => setActiveFurnitureInteraction(null)}
+        />
+      )}
+
+      {learningFact && (
+        <RoomFactModal
+          visible={!!learningFact}
+          fact={learningFact}
+          countryId={countryId}
+          auraReward={FACT_AURA_REWARD}
+          hasMultipleFacts={facts.length > 1}
+          onNextFact={nextFact}
+          onClose={() => setLearningFact(null)}
+        />
+      )}
+
+      {showQuiz && (
+        <RoomQuizModal
+          visible={showQuiz}
+          onClose={() => setShowQuiz(false)}
+          countryId={countryId}
+          countryName={country.name}
+          streakMultiplier={multiplier}
+          streak={streak}
+          isPlaceComplete={isPlaceComplete}
+          getQuestions={getQuizQuestions}
+          onComplete={handleQuizComplete}
+        />
+      )}
+
+      {showGamesModal && (
+        <GamesModal
+          visible={showGamesModal}
+          onClose={() => setShowGamesModal(false)}
+          countryId={countryId}
+          onNavigateToGame={handleNavigateToGame}
+        />
+      )}
+
+      {showMicroEvent && (
+        <MicroEventModal
+          visible={showMicroEvent}
+          aura={microEventAura}
+          isRare={microEventIsRare}
+          onClose={() => setShowMicroEvent(false)}
+        />
+      )}
+
+      {activeEditTab && currentRoom && (
+        <FurniturePanel
+          visible={!!activeEditTab}
+          panelType={activeEditTab}
+          onClose={() => setActiveEditTab(null)}
+          visitedCountries={user?.visitedCountries ?? []}
+          ownedFurniture={ownedFurniture}
+          onBuyFurniture={buyFurniture}
+          onPlaceFurniture={handlePlaceFurniture}
+          onUpdateWallColor={handleUpdateWallColor}
+          onUpdateFloorColor={handleUpdateFloorColor}
+          currentWallColor={effectiveWallColor}
+          currentFloorColor={effectiveFloorColor}
+          roomId={currentRoom.id}
+        />
+      )}
+
+      {showLocationsModal && (
+        <LocationsModal
+          visible={showLocationsModal}
+          onClose={() => setShowLocationsModal(false)}
+          locations={locations}
+          visitedLocations={visitedLocations}
+          onVisitLocation={handleVisitLocation}
+        />
+      )}
+
+      {showKnowledgeMap && (
+        <Modal visible={showKnowledgeMap} transparent animationType="slide">
+          <Pressable style={styles.knowledgeOverlay} onPress={() => setShowKnowledgeMap(false)}>
+            <Pressable style={styles.knowledgeCard} onPress={(e) => e.stopPropagation()}>
+              <LinearGradient colors={[colors.surface.lavender, colors.base.cream]} style={StyleSheet.absoluteFill} />
+              <View style={styles.knowledgeHeader}>
+                <Heading level={2}>What I Know</Heading>
+                <Caption>{country?.name}</Caption>
               </View>
-              <ScrollView
-                ref={placeChatScrollRef}
-                style={styles.placeChatMessageList}
-                contentContainerStyle={styles.placeChatMessageListContent}
-                onContentSizeChange={() => placeChatScrollRef.current?.scrollToEnd({ animated: true })}
-                keyboardShouldPersistTaps="handled"
-              >
-                {(getPlaceChatMessages(`room_${countryId}_${currentRoom.id}`) || []).map((msg) => {
-                  const isYou = msg.userId === user?.id;
-                  const createdAt = typeof msg.createdAt === 'string' ? new Date(msg.createdAt) : msg.createdAt;
+              <ScrollView style={styles.knowledgeScroll} showsVerticalScrollIndicator={false}>
+                {[
+                  { label: 'Facts', icon: 'book' as const, color: colors.calm.ocean, count: readFacts.size, total: facts.length },
+                  { label: 'Quiz', icon: 'quiz' as const, color: colors.primary.wisteriaDark, count: countryProgress.quizCompleted ? 1 : 0, total: 1 },
+                  { label: 'Locations', icon: 'compass' as const, color: colors.success.emerald, count: visitedLocations.size, total: locations.length },
+                  { label: 'Myths', icon: 'sparkles' as const, color: colors.primary.wisteria, count: 0, total: getMythsForCountry(countryId).length },
+                  { label: 'Nature', icon: 'nature' as const, color: '#4CAF50', count: 0, total: getNatureForCountry(countryId).length },
+                  { label: 'History', icon: 'globe' as const, color: '#FF9800', count: 0, total: getHistoryForCountry(countryId).length },
+                  { label: 'Phrases', icon: 'language' as const, color: '#42A5F5', count: 0, total: getPhrasesForCountry(countryId).length },
+                ].map((cat) => {
+                  const pct = cat.total > 0 ? Math.round((cat.count / cat.total) * 100) : 0;
                   return (
-                    <View key={msg.id} style={[styles.placeChatBubbleRow, isYou && styles.placeChatBubbleRowYou]}>
-                      <View style={[styles.placeChatBubble, isYou ? styles.placeChatBubbleYou : styles.placeChatBubbleOther]}>
-                        {!isYou && <Caption style={styles.placeChatBubbleUsername}>{msg.username}</Caption>}
-                        <Text style={[styles.placeChatBubbleText, isYou && styles.placeChatBubbleTextYou]}>{msg.message}</Text>
-                        <Caption style={styles.placeChatBubbleTime}>
-                          {createdAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                        </Caption>
+                    <View key={cat.label} style={styles.knowledgeRow}>
+                      <View style={[styles.knowledgeIconWrap, { backgroundColor: cat.color + '15' }]}>
+                        <Icon name={cat.icon} size={20} color={cat.color} />
                       </View>
+                      <View style={styles.knowledgeInfo}>
+                        <Text style={styles.knowledgeLabel}>{cat.label}</Text>
+                        <View style={styles.knowledgeBarTrack}>
+                          <View style={[styles.knowledgeBarFill, { width: `${pct}%`, backgroundColor: cat.color }]} />
+                        </View>
+                      </View>
+                      <Text style={[styles.knowledgePct, { color: cat.color }]}>{pct}%</Text>
                     </View>
                   );
                 })}
+                {getMythsForCountry(countryId).length === 0 && getNatureForCountry(countryId).length === 0 && (
+                  <View style={styles.knowledgeEmpty}>
+                    <Icon name="sparkles" size={24} color={colors.text.muted} />
+                    <Caption>More content is being added for this country!</Caption>
+                  </View>
+                )}
               </ScrollView>
-              <View style={styles.placeChatInputRow}>
-                <TextInput
-                  style={styles.placeChatInput}
-                  placeholder="Say something..."
-                  placeholderTextColor={colors.text.light}
-                  value={placeChatInput}
-                  onChangeText={setPlaceChatInput}
-                  onSubmitEditing={() => {
-                    if (placeChatInput.trim()) {
-                      addPlaceChatMessage(`room_${countryId}_${currentRoom.id}`, placeChatInput.trim());
-                      setPlaceChatInput('');
-                    }
-                  }}
-                  returnKeyType="send"
-                  maxLength={300}
-                />
-                <TouchableOpacity
-                  style={[styles.placeChatSendBtn, !placeChatInput.trim() && styles.placeChatSendBtnDisabled]}
-                  onPress={() => {
-                    if (placeChatInput.trim()) {
-                      addPlaceChatMessage(`room_${countryId}_${currentRoom.id}`, placeChatInput.trim());
-                      setPlaceChatInput('');
-                    }
-                  }}
-                  disabled={!placeChatInput.trim()}
-                >
-                  <Icon name="send" size={20} color={placeChatInput.trim() ? colors.primary.wisteriaDark : colors.text.light} />
-                </TouchableOpacity>
-              </View>
-              <Caption style={styles.placeChatHint}>Chatting here fills your Visby's social battery!</Caption>
-            </View>
-          </KeyboardAvoidingView>
+              <TouchableOpacity style={styles.knowledgeCloseBtn} onPress={() => setShowKnowledgeMap(false)} accessibilityRole="button" accessibilityLabel="Close">
+                <Text style={styles.knowledgeCloseText}>Close</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
         </Modal>
       )}
 
-      {/* Object detail modal */}
-      <Modal visible={!!activeObject} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setActiveObject(null)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            {activeObject && (
-              <>
-                <View style={styles.modalIconRow}>
-                  <Icon name={activeObject.icon as IconName} size={48} color={colors.text.primary} />
-                </View>
-                <Heading level={3}>{activeObject.learnTitle ?? activeObject.label}</Heading>
-                <Text variant="body" style={styles.modalBody}>
-                  {activeObject.learnContent ?? `This is a ${activeObject.label}.`}
-                </Text>
-                {activeObject.auraReward && (
-                  <View style={styles.auraEarnedRow}>
-                    <Text style={styles.auraEarnedText}>
-                      +{Math.round(activeObject.auraReward * multiplier)} Aura earned!
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.modalActions}>
-                  <Button size="sm" variant="primary" title="Cool!" onPress={() => setActiveObject(null)} />
-                </View>
-              </>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Furniture use modal — eat at table, cook, rest, study, play */}
-      <Modal visible={!!activeFurnitureInteraction} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setActiveFurnitureInteraction(null)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            {activeFurnitureInteraction && (() => {
-              const { catalogItem } = activeFurnitureInteraction;
-              const type = catalogItem.interactionType!;
-              const needLabel = type === 'table' || type === 'stove' ? 'Hunger' : type === 'bed' ? 'Energy' : type === 'toy' ? 'Happiness' : 'Knowledge';
-              const aura = catalogItem.interactionAura ?? 15;
-              const totalAura = Math.round(aura * multiplier);
-              return (
-                <>
-                  <View style={styles.modalIconRow}>
-                    <FurnitureVisual interactionType={type} icon={catalogItem.icon as IconName} size="large" showHint={true} />
-                  </View>
-                  <Heading level={3}>{catalogItem.interactionLabel ?? `Use ${catalogItem.name}`}</Heading>
-                  <Text variant="body" style={styles.modalBody}>
-                    Your Visby will love this. Fills {needLabel} and earns you Aura.
-                  </Text>
-                  <View style={[styles.auraEarnedRow, { marginBottom: spacing.md }]}>
-                    <Text style={styles.auraEarnedText}>+{totalAura} Aura</Text>
-                    {multiplier > 1 && (
-                      <Text style={styles.auraEarnedSubtext}>{multiplier.toFixed(1)}x streak bonus</Text>
-                    )}
-                  </View>
-                  <View style={styles.modalActions}>
-                    <Button size="sm" variant="secondary" title="Cancel" onPress={() => setActiveFurnitureInteraction(null)} />
-                    <Button size="sm" variant="primary" title="Do it!" onPress={() => handleUseFurniture(type, aura)} />
-                  </View>
-                </>
-              );
-            })()}
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Fact modal — dreamy, with picture of what you're learning */}
-      <Modal visible={!!learningFact} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={closeFact}>
-          <Pressable style={styles.factModalCard} onPress={(e) => e.stopPropagation()}>
-            {learningFact && (
-              <>
-                <LinearGradient
-                  colors={[colors.surface.lavender, colors.base.cream, colors.calm.skyLight]}
-                  style={StyleSheet.absoluteFill}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
-                {learningFact.imageUrl ? (
-                  <View style={styles.factImageWrap}>
-                    <Image source={{ uri: learningFact.imageUrl }} style={styles.factImage} resizeMode="cover" />
-                    <View style={styles.factImageOverlay} />
-                  </View>
-                ) : (
-                  <View style={styles.factIconWrap}>
-                    <Icon name={learningFact.icon as IconName} size={48} color={colors.primary.wisteriaDark} />
-                  </View>
-                )}
-                <View style={styles.factModalBody}>
-                  <Heading level={2} style={styles.factModalTitle}>{learningFact.title}</Heading>
-                  <Text variant="body" style={styles.factModalContent}>{learningFact.content}</Text>
-                  <View style={styles.auraEarnedRow}>
-                    <Icon name="sparkles" size={18} color={colors.reward.gold} />
-                    <Text style={styles.auraEarnedText}>+{FACT_AURA_REWARD} Aura</Text>
-                  </View>
-                  <View style={styles.modalActions}>
-                    {facts.length > 1 && (
-                      <Button size="sm" variant="secondary" title="Next fact" onPress={nextFact} />
-                    )}
-                    <Button size="sm" variant="primary" title="Got it!" onPress={closeFact} />
-                  </View>
-                </View>
-              </>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Discovery toast */}
       {discoveryToast && (
         <View style={[styles.discoveryToast, { pointerEvents: 'none' }]}>
           <View style={styles.discoveryToastInner}>
@@ -1013,329 +1547,63 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
         </View>
       )}
 
-      {/* Micro-event: Visby found something (3rd visit to room) */}
-      <Modal visible={showMicroEvent} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowMicroEvent(false)}>
-          <Pressable style={styles.microEventCard} onPress={(e) => e.stopPropagation()}>
-            <LinearGradient colors={[colors.reward.peachLight, colors.primary.wisteriaFaded]} style={StyleSheet.absoluteFill} />
-            <Icon name="star" size={40} color={colors.reward.gold} />
-            <Heading level={3} style={styles.microEventTitle}>Visby found something!</Heading>
-            <Text variant="body" color={colors.text.secondary} style={styles.microEventSub}>+5 Aura</Text>
-            <Button title="Awesome!" onPress={() => setShowMicroEvent(false)} variant="primary" size="sm" />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {showRoomCelebration && currentRoom && (
+        <AchievementCeremony
+          icon="trophy"
+          title="Room Complete!"
+          subtitle={`${currentRoom.name} fully explored`}
+          auraReward={25}
+          onDismiss={() => setShowRoomCelebration(false)}
+        />
+      )}
 
-      {/* Furniture Panel */}
-      <Modal visible={showFurniturePanel} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => { setShowFurniturePanel(false); setNotEnoughAuraFor(null); }}>
-          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.panelHeader}>
-              <Heading level={3}>Furniture</Heading>
-              <TouchableOpacity onPress={() => { setShowFurniturePanel(false); setNotEnoughAuraFor(null); }}>
-                <Icon name="close" size={20} color={colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.furniturePanelHint}>Place in your room — tap tables, stoves & beds to fill Visby's needs and earn Aura. Traditional furniture unlocks when you visit new places!</Text>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.furnitureGrid}>
-              {[...getAvailableFurniture(user?.visitedCountries ?? [])]
-                .sort((a, b) => (a.interactionType ? 0 : 1) - (b.interactionType ? 0 : 1))
-                .map((item) => {
-                  const owned = ownedFurniture.includes(item.id);
-                  const isFunctional = !!item.interactionType;
-                  const showNotEnoughAura = notEnoughAuraFor === item.id;
-                  return (
-                    <View key={item.id} style={[styles.furnitureCard, isFunctional && styles.furnitureCardFunctional]}>
-                      <View style={styles.furnitureIconWrap}>
-                        {isFunctional ? (
-                          <FurnitureVisual interactionType={item.interactionType!} icon={item.icon as IconName} size="small" showHint />
-                        ) : (
-                          <Icon name={item.icon as IconName} size={32} color={colors.text.primary} />
-                        )}
-                      </View>
-                      <Text style={styles.furnitureName} numberOfLines={1}>{item.name}</Text>
-                      {isFunctional && item.interactionLabel && (
-                        <Text style={styles.furnitureInteractionHint} numberOfLines={2}>{item.interactionLabel}</Text>
-                      )}
-                      <Caption style={styles.furnitureRarity}>{item.rarity}</Caption>
-                      {owned ? (
-                        <TouchableOpacity
-                          style={styles.placeBtn}
-                          onPress={() => {
-                            if (!currentRoom) return;
-                            const placed: PlacedFurniture = {
-                              id: `${item.id}_${Date.now()}`,
-                              furnitureId: item.id,
-                              roomId: currentRoom.id,
-                              x: 50,
-                              y: 50,
-                              rotation: 0,
-                            };
-                            placeFurniture(countryId, currentRoom.id, placed);
-                            setShowFurniturePanel(false);
-                            setNotEnoughAuraFor(null);
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.placeBtnText}>Place</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <>
-                          <TouchableOpacity
-                            style={styles.buyBtn}
-                            onPress={() => {
-                              setNotEnoughAuraFor(null);
-                              const ok = buyFurniture(item.id, item.price);
-                              if (!ok) setNotEnoughAuraFor(item.id);
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={styles.buyBtnText}>{item.price} Aura</Text>
-                          </TouchableOpacity>
-                          {showNotEnoughAura && (
-                            <Text style={styles.furnitureNotEnoughAura}>Need {item.price} Aura</Text>
-                          )}
-                        </>
-                      )}
-                    </View>
-                  );
-                })}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Wallpaper Panel */}
-      <Modal visible={showWallpaperPanel} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowWallpaperPanel(false)}>
-          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.panelHeader}>
-              <Heading level={3}>Wallpaper</Heading>
-              <TouchableOpacity onPress={() => setShowWallpaperPanel(false)}>
-                <Icon name="close" size={20} color={colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.colorSwatchGrid}>
-              {WALLPAPER_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[
-                    styles.colorSwatch,
-                    { backgroundColor: opt.color },
-                    effectiveWallColor === opt.color && styles.colorSwatchActive,
-                  ]}
-                  onPress={() => {
-                    if (currentRoom) updateRoomColors(countryId, currentRoom.id, opt.color, undefined);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.swatchLabel}>{opt.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Flooring Panel */}
-      <Modal visible={showFlooringPanel} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowFlooringPanel(false)}>
-          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.panelHeader}>
-              <Heading level={3}>Flooring</Heading>
-              <TouchableOpacity onPress={() => setShowFlooringPanel(false)}>
-                <Icon name="close" size={20} color={colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.colorSwatchGrid}>
-              {FLOORING_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[
-                    styles.colorSwatch,
-                    { backgroundColor: opt.color },
-                    effectiveFloorColor === opt.color && styles.colorSwatchActive,
-                  ]}
-                  onPress={() => {
-                    if (currentRoom) updateRoomColors(countryId, currentRoom.id, undefined, opt.color);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.swatchLabel}>{opt.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Games Modal */}
-      <Modal visible={showGamesModal} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowGamesModal(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Heading level={3} style={{ textAlign: 'center', marginBottom: spacing.md }}>Mini-Games</Heading>
-            <View style={styles.gamesGrid}>
-              {[
-                { key: 'WordMatch', name: 'Word Match', icon: 'language', desc: 'Match foreign words', color: colors.primary.wisteriaDark },
-                { key: 'MemoryCards', name: 'Memory', icon: 'flashcard', desc: 'Flip and match pairs', color: colors.calm.ocean },
-                { key: 'CookingGame', name: 'Cooking', icon: 'food', desc: 'Cook world recipes', color: colors.reward.peachDark },
-                { key: 'TreasureHunt', name: 'Treasure Hunt', icon: 'compass', desc: 'Find hidden items', color: colors.success.emerald },
-              ].map((game) => (
-                <TouchableOpacity
-                  key={game.key}
-                  style={styles.gamePickCard}
-                  onPress={() => {
-                    setShowGamesModal(false);
-                    (navigation.getParent() as any)?.getParent()?.navigate(game.key as any, { countryId });
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.gamePickIcon, { backgroundColor: game.color + '20' }]}>
-                    <Icon name={game.icon as any} size={24} color={game.color} />
-                  </View>
-                  <Text style={styles.gamePickName}>{game.name}</Text>
-                  <Caption>{game.desc}</Caption>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Button title="Close" variant="secondary" onPress={() => setShowGamesModal(false)} style={{ marginTop: spacing.md }} />
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Quiz modal */}
-      <Modal visible={quizActive} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay}>
-          <View style={styles.quizModal}>
-            {!quizFinished ? (
-              quizQuestions.length > 0 ? (
-                <>
-                  <View style={styles.quizProgress}>
-                    <Text style={styles.quizProgressText}>Q {quizIndex + 1}/{quizQuestions.length}</Text>
-                    <Text style={styles.quizScoreText}>Score: {quizScore}</Text>
-                  </View>
-                  {quizQuestions[quizIndex].imageUrl ? (
-                    <View style={styles.quizQuestionImageWrap}>
-                      <Image source={{ uri: quizQuestions[quizIndex].imageUrl }} style={styles.quizQuestionImage} resizeMode="cover" />
-                    </View>
-                  ) : null}
-                  <Heading level={3} style={styles.quizQuestion}>{quizQuestions[quizIndex].question}</Heading>
-                  <View style={styles.quizOptions}>
-                    {quizQuestions[quizIndex].options.map((opt, i) => {
-                      const isCorrect = quizQuestions[quizIndex].correct === i;
-                      const isSelected = quizSelected === i;
-                      return (
-                        <TouchableOpacity
-                          key={i}
-                          style={{
-                            ...styles.quizOption,
-                            ...(quizSelected !== null && isCorrect ? styles.quizOptionCorrect : {}),
-                            ...(quizSelected !== null && isSelected && !isCorrect ? styles.quizOptionWrong : {}),
-                          }}
-                          onPress={() => handleQuizAnswer(i)}
-                          disabled={quizSelected !== null}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={{
-                            ...styles.quizOptionText,
-                            ...(quizSelected !== null && isCorrect ? styles.quizOptionTextCorrect : {}),
-                            ...(quizSelected !== null && isSelected && !isCorrect ? styles.quizOptionTextWrong : {}),
-                          }}>
-                            {opt}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </>
-              ) : (
-                <Text>No quiz available for this country yet.</Text>
-              )
-            ) : (
-              <View style={styles.quizResults}>
-                <Icon
-                  name={quizScore >= quizQuestions.length * 0.8 ? 'trophy' : quizScore >= quizQuestions.length * 0.5 ? 'star' : 'book'}
-                  size={56}
-                  color={colors.reward.gold}
-                />
-                <Heading level={2}>Quiz Complete!</Heading>
-                <Text style={styles.quizResultScore}>{quizScore}/{quizQuestions.length} correct</Text>
-                <View style={styles.quizRewardRow}>
-                  <Text style={styles.quizRewardText}>+{Math.round(quizScore * QUIZ_AURA_PER_CORRECT * multiplier)} Aura</Text>
-                  {streak > 0 && <Text style={styles.quizRewardMultiplier}>({multiplier.toFixed(1)}x streak!)</Text>}
+      {showMasteryCelebration && (
+        <Modal visible={showMasteryCelebration} transparent animationType="fade">
+          <View style={styles.masteryOverlay}>
+            <LinearGradient
+              colors={['#FFD700CC', '#FFA000CC', '#FF6F00CC']}
+              style={styles.masteryGradient}
+            >
+              <FloatingParticles count={20} variant="sparkle" opacity={0.6} speed="normal" />
+              <Animated.View entering={ZoomIn.duration(600).springify()} style={styles.masteryContent}>
+                <View style={styles.masteryBadge}>
+                  <Icon name="trophy" size={56} color="#FFD700" />
                 </View>
-                {isPlaceComplete && (
-                  <View style={styles.quizPlaceCompleteRow}>
-                    <Icon name="trophy" size={20} color={colors.reward.gold} />
-                    <Text style={styles.quizPlaceCompleteText}>You've mastered {country?.name}! Explore the next place.</Text>
+                <Text style={styles.masteryFlag}>{country.flagEmoji}</Text>
+                <Heading level={1} style={styles.masteryTitle}>Country Master!</Heading>
+                <Text style={styles.masterySub}>
+                  You've mastered {country.name}! Every fact read, quiz conquered, game played, and location explored.
+                </Text>
+                <View style={styles.masteryReward}>
+                  <Icon name="sparkles" size={20} color="#FFD700" />
+                  <Text style={styles.masteryRewardText}>+500 Aura Bonus</Text>
+                </View>
+                <View style={styles.masteryStats}>
+                  <View style={styles.masteryStat}>
+                    <Icon name="book" size={16} color="#FFF" />
+                    <Text style={styles.masteryStatText}>{facts.length} Facts</Text>
                   </View>
-                )}
-                <View style={styles.quizResultActions}>
-                  <Button title="Try Again" variant="secondary" onPress={startQuiz} style={styles.quizResultBtn} />
-                  <Button title="Done" variant="primary" onPress={() => setQuizActive(false)} style={styles.quizResultBtn} />
+                  <View style={styles.masteryStat}>
+                    <Icon name="quiz" size={16} color="#FFF" />
+                    <Text style={styles.masteryStatText}>Quiz Done</Text>
+                  </View>
+                  <View style={styles.masteryStat}>
+                    <Icon name="game" size={16} color="#FFF" />
+                    <Text style={styles.masteryStatText}>Games Played</Text>
+                  </View>
+                  <View style={styles.masteryStat}>
+                    <Icon name="compass" size={16} color="#FFF" />
+                    <Text style={styles.masteryStatText}>Places Visited</Text>
+                  </View>
                 </View>
-              </View>
-            )}
-            {!quizFinished && (
-              <TouchableOpacity style={styles.quizClose} onPress={() => setQuizActive(false)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Icon name="close" size={16} color={colors.text.secondary} />
-                  <Text style={styles.quizCloseText}>Close</Text>
-                </View>
-              </TouchableOpacity>
-            )}
+                <TouchableOpacity style={styles.masteryContinueBtn} onPress={() => setShowMasteryCelebration(false)}>
+                  <Text style={styles.masteryContinueText}>Continue Exploring</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </LinearGradient>
           </View>
-        </Pressable>
-      </Modal>
-      {/* Locations Modal */}
-      <Modal visible={showLocationsModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLocationsModal(false)}>
-          <Pressable style={styles.panelContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.panelHeader}>
-              <Heading level={3}>Stops to Visit</Heading>
-              <TouchableOpacity onPress={() => setShowLocationsModal(false)}>
-                <Icon name="close" size={20} color={colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.locationsGrid}>
-              {locations.map((loc) => {
-                const visited = visitedLocations.has(loc.id);
-                const catIcon = LOCATION_CATEGORY_ICONS[loc.category];
-                return (
-                  <TouchableOpacity
-                    key={loc.id}
-                    style={[styles.locationCard, visited && styles.locationCardVisited]}
-                    onPress={() => handleVisitLocation(loc)}
-                    activeOpacity={visited ? 1 : 0.8}
-                  >
-                    <View style={styles.locationIconWrap}>
-                      <Icon name={catIcon} size={36} color={visited ? '#4CAF50' : colors.text.primary} />
-                    </View>
-                    <View style={styles.locationInfo}>
-                      <View style={styles.locationNameRow}>
-                        <Text style={styles.locationName} numberOfLines={1}>{loc.name}</Text>
-                        {visited && <Icon name="check" size={16} color="#4CAF50" />}
-                      </View>
-                      <Text style={styles.locationDesc} numberOfLines={2}>{loc.description}</Text>
-                      <View style={styles.locationMeta}>
-                        <View style={styles.locationCategoryChip}>
-                          <Icon name={catIcon} size={12} color={colors.text.secondary} />
-                          <Text style={styles.locationCategoryText}>{loc.category.replace('_', ' ')}</Text>
-                        </View>
-                        <View style={[styles.locationLpBadge, visited && styles.locationLpBadgeVisited]}>
-                          <Text style={[styles.locationLpText, visited && styles.locationLpTextVisited]}>
-                            {visited ? 'Visited' : `+${loc.learningPoints} LP`}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -1343,6 +1611,50 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
+  countryIntroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  countryIntroContent: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  visbyFlyIn: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  visbyFlyEmoji: {
+    fontSize: 48,
+  },
+  visbyFlyLabel: {
+    fontSize: 14,
+    fontFamily: 'Nunito-SemiBold',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: spacing.xs,
+  },
+  countryIntroInner: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  countryIntroFlag: {
+    fontSize: 100,
+  },
+  countryIntroTitle: {
+    fontSize: 32,
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  countryIntroSub: {
+    fontSize: 18,
+    fontFamily: 'Nunito-SemiBold',
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
   scrollContent: { paddingBottom: spacing.xxl * 3 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
 
@@ -1354,143 +1666,212 @@ const styles = StyleSheet.create({
   headerCenter: { alignItems: 'center', flex: 1 },
   flagTitle: { fontSize: 20, fontFamily: 'Baloo2-SemiBold', color: colors.text.primary },
   ownerTag: { color: colors.success.emerald, fontFamily: 'Nunito-Bold', fontSize: 12, marginTop: 2 },
-  vibeCaption: {
-    fontFamily: 'Nunito-Medium',
-    fontSize: 11,
-    color: colors.text.muted,
-    marginTop: 2,
-  },
+  vibeCaption: { fontFamily: 'Nunito-Medium', fontSize: 11, color: colors.text.muted, marginTop: 2 },
   auraChip: {
-    backgroundColor: colors.reward.peachLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.reward.peachDark + '40',
+    backgroundColor: colors.reward.peachLight, paddingHorizontal: spacing.sm,
+    paddingVertical: 6, borderRadius: 18, borderWidth: 1, borderColor: colors.reward.peachDark + '40',
   },
   auraChipText: { fontFamily: 'Baloo2-SemiBold', fontSize: 14, color: colors.reward.gold },
 
   streakBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    marginHorizontal: spacing.lg, marginBottom: spacing.xs,
-    paddingVertical: 6, paddingHorizontal: spacing.md,
-    backgroundColor: colors.status.streakBg, borderRadius: 14,
-    borderWidth: 1, borderColor: colors.status.streak + '40',
+    marginHorizontal: spacing.lg, marginBottom: spacing.xs, paddingVertical: 6, paddingHorizontal: spacing.md,
+    backgroundColor: colors.status.streakBg, borderRadius: 14, borderWidth: 1, borderColor: colors.status.streak + '40',
   },
   streakText: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.status.streak },
   multiplierBadge: { backgroundColor: colors.reward.gold, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   multiplierText: { fontFamily: 'Baloo2-Bold', fontSize: 12, color: colors.text.primary },
+
   placeCompleteBanner: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.success.emerald + '40',
-    minHeight: 64,
-    justifyContent: 'center',
+    marginHorizontal: spacing.lg, marginBottom: spacing.sm, borderRadius: 20,
+    overflow: 'hidden', borderWidth: 1, borderColor: colors.success.emerald + '40', minHeight: 64, justifyContent: 'center',
   },
-  placeCompleteContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
+  placeCompleteContent: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm },
   placeCompleteText: { flex: 1 },
   placeCompleteTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary },
   placeCompleteSub: { fontFamily: 'Nunito-Medium', fontSize: 12, color: colors.text.secondary, marginTop: 2 },
 
-  // Room cards (choose room)
   roomCardsRow: { paddingHorizontal: spacing.md, gap: spacing.sm, paddingVertical: spacing.sm },
   roomCard: {
-    width: 96,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: colors.surface.card,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    width: 96, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface.card,
+    borderWidth: 2, borderColor: 'transparent',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 6px rgba(0,0,0,0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 }),
   },
   roomCardActive: {
     borderColor: colors.primary.wisteria,
-    shadowColor: colors.primary.wisteria,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 8px rgba(184,165,224,0.4)' }
+      : { shadowColor: colors.primary.wisteria, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 }),
   },
-  roomCardSwatch: {
-    height: 36,
-    width: '100%',
-  },
-  roomCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
+  roomCardSwatch: { height: 36, width: '100%' },
+  roomCardContent: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 8 },
   roomCardLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, flex: 1 },
   roomCardLabelActive: { color: colors.primary.wisteriaDark, fontFamily: 'Nunito-Bold' },
+  roomCardComplete: {
+    borderColor: '#FFD700',
+    borderWidth: 1.5,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 0px 8px rgba(255,215,0,0.25)' }
+      : { shadowColor: '#FFD700', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8 }),
+  },
+  roomCardTrophy: {
+    position: 'absolute', top: 2, right: 2,
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: 'rgba(255,215,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  roomCardProgress: {
+    fontSize: 9, fontFamily: 'Nunito-SemiBold',
+    color: colors.text.muted, marginTop: 1,
+  },
+  roomCardLocked: { opacity: 0.7, borderStyle: 'dashed' as any, borderWidth: 1.5, borderColor: 'rgba(184,165,224,0.3)' },
+  roomUnlockPrice: { flexDirection: 'row', alignItems: 'center', gap: 2 },
 
   noRoomsWrap: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   noRoomsCard: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderRadius: 20,
-    backgroundColor: colors.surface.card,
-    borderLeftWidth: 6,
-    gap: spacing.sm,
+    flexDirection: 'column', alignItems: 'center', padding: spacing.lg,
+    borderRadius: 20, backgroundColor: colors.surface.card, borderLeftWidth: 6, gap: spacing.sm,
   },
   noRoomsTitle: { textAlign: 'center' },
   noRoomsText: { textAlign: 'center', paddingHorizontal: spacing.sm },
 
-  // Room stage (immersive)
   roomStageWrap: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   roomStageFrame: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    minHeight: ROOM_HEIGHT,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+    borderRadius: 24, overflow: 'hidden', minHeight: ROOM_HEIGHT, position: 'relative',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 16px rgba(0,0,0,0.14)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 16, elevation: 8 }),
   },
-  roomWall: {
-    paddingTop: spacing.xs,
-  },
+  roomWall: { paddingTop: spacing.xs },
   roomWindowStrip: {
-    width: '100%',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    width: '100%', borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
+    overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'center',
+    position: 'relative',
+  },
+  windowCurtainLeft: {
+    position: 'absolute', left: 0, top: 0, bottom: 0, width: 20,
+    backgroundColor: colors.room.curtain, borderTopRightRadius: 8, zIndex: 2,
+  },
+  windowCurtainRight: {
+    position: 'absolute', right: 0, top: 0, bottom: 0, width: 20,
+    backgroundColor: colors.room.curtain, borderTopLeftRadius: 8, zIndex: 2,
   },
   roomWindowArch: {
-    width: '70%',
-    height: 12,
-    borderTopLeftRadius: 999,
-    borderTopRightRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    width: '65%', height: 14, borderTopLeftRadius: 999, borderTopRightRadius: 999,
+    backgroundColor: colors.overlay.softBlack,
   },
-  baseboard: {
-    height: 6,
-    width: '100%',
+  windowReflection: {
+    position: 'absolute', top: 10, left: '20%', width: '25%', height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', borderRadius: 1,
+    transform: [{ rotate: '-6deg' }], zIndex: 1,
   },
+  windowInnerShadow: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 8,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  windowLightSpill: {
+    position: 'absolute', top: WINDOW_STRIP_HEIGHT, left: '18%', right: '18%', height: 36,
+    borderRadius: 18, opacity: 0.6, zIndex: 1,
+  },
+  wallTextureOverlay: {
+    ...StyleSheet.absoluteFillObject, zIndex: 1,
+  },
+  wallTextureDot: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0, 0, 0, 0.035)',
+  },
+  wallCornerLeft: {
+    position: 'absolute', top: 0, left: 0, width: 44, height: 50, zIndex: 1,
+  },
+  wallCornerRight: {
+    position: 'absolute', top: 0, right: 0, width: 44, height: 50, zIndex: 1,
+  },
+  wainscotingWrap: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: '35%',
+    flexDirection: 'row', paddingHorizontal: 8, gap: 5,
+  },
+  wainscotPanel: {
+    flex: 1, borderRadius: 3, borderWidth: 1,
+    borderColor: colors.room.wainscot, backgroundColor: 'rgba(255,255,255,0.08)', padding: 3,
+  },
+  wainscotPanelInner: {
+    flex: 1, borderRadius: 2, borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.04)', backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  wainscotChairRail: {
+    position: 'absolute', bottom: '35%', left: 0, right: 0, height: 4,
+    backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 1,
+  },
+  baseboardShadow: {
+    height: 3, width: '100%', backgroundColor: colors.room.molding,
+  },
+  baseboard: { height: 8, width: '100%' },
   roomFloor: {
-    height: FLOOR_HEIGHT,
-    width: '100%',
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: FLOOR_HEIGHT, width: '100%', position: 'relative',
+    justifyContent: 'center', alignItems: 'center',
+    ...(Platform.OS === 'web' ? { perspective: '600px' } : {}),
   },
+  floorPlanks: {
+    ...StyleSheet.absoluteFillObject, flexDirection: 'column',
+  },
+  floorPlank: {
+    flex: 1, borderBottomWidth: 1, borderBottomColor: colors.room.plankGap,
+    position: 'relative', overflow: 'hidden',
+  },
+  floorPlankStagger: {
+    position: 'absolute', left: 0, top: 0, bottom: 0, width: '28%',
+    backgroundColor: 'rgba(0, 0, 0, 0.012)',
+    borderRightWidth: 1, borderRightColor: colors.room.plankGap,
+  },
+  floorGrain: {
+    position: 'absolute', left: '8%', right: '8%', height: 1,
+    backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 1,
+  },
+  floorKnot: {
+    position: 'absolute', width: 5, height: 5, borderRadius: 2.5,
+    backgroundColor: 'rgba(0, 0, 0, 0.055)',
+    borderWidth: 0.5, borderColor: 'rgba(0, 0, 0, 0.035)',
+  },
+  areaRugWrap: {
+    position: 'absolute', alignSelf: 'center', top: '25%',
+    flexDirection: 'row', alignItems: 'center',
+  },
+  areaRugFringeLeft: {
+    flexDirection: 'column', gap: 1, marginRight: -1,
+  },
+  areaRugFringeRight: {
+    flexDirection: 'column', gap: 1, marginLeft: -1,
+  },
+  areaRugFringe: {
+    width: 5, backgroundColor: 'rgba(140, 95, 65, 0.2)', borderRadius: 1,
+  },
+  areaRug: {
+    width: 150, height: 68, borderRadius: 4,
+    backgroundColor: colors.room.rugPrimary, position: 'relative',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.06)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }),
+  },
+  areaRugBorder: {
+    ...StyleSheet.absoluteFillObject, borderRadius: 4,
+    borderWidth: 3,
+  },
+  areaRugInnerBorder: {
+    position: 'absolute', top: 7, left: 7, right: 7, bottom: 7,
+    borderRadius: 2, borderWidth: 1, borderColor: 'rgba(160, 120, 80, 0.12)',
+  },
+  areaRugCenter: {
+    position: 'absolute', alignSelf: 'center', top: 14, width: 110, height: 40,
+    borderRadius: 2, backgroundColor: colors.room.rugCenter,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  areaRugDiamond: {
+    width: 14, height: 14, borderRadius: 2,
+    transform: [{ rotate: '45deg' }],
+  },
+
   roomNameRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
@@ -1498,730 +1879,366 @@ const styles = StyleSheet.create({
   roomNameInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   roomNameText: { fontFamily: 'Baloo2-SemiBold', fontSize: 17, color: colors.text.primary },
   roomProgressChip: {
-    backgroundColor: colors.success.honeydew,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.success.emerald + '40',
+    backgroundColor: colors.success.honeydew, paddingHorizontal: 10,
+    paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.success.emerald + '40',
   },
   roomProgressText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.success.emerald },
-  editToggleText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
-  editToggleTextActive: { color: '#FFFFFF' },
-
-  // Objects (in-world style)
-  objectsLayer: {
-    position: 'relative',
-    marginTop: spacing.xs,
-  },
-  roomObject: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -28 }, { translateY: -20 }],
-    minWidth: 56,
-  },
-  roomObjectInteractive: {
-    // tap target + visual emphasis
-  },
-  roomObjectDone: {},
-  roomObjectIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: colors.shadow.light,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  roomObjectIconWrapGlow: {
-    borderColor: colors.primary.wisteria + '60',
-    shadowColor: colors.primary.wisteria,
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  objectLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.text.secondary, textAlign: 'center', maxWidth: 68 },
-  objectLabelDone: { color: colors.success.emerald },
-  objectCheck: { position: 'absolute', top: -4, right: -4 },
-  interactiveDot: {
-    position: 'absolute', top: -2, right: -2,
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: colors.reward.gold,
-    borderWidth: 2, borderColor: '#FFFFFF',
-  },
-  avatarContainer: {
-    position: 'absolute', left: spacing.lg, bottom: 4,
-    width: AVATAR_SIZE, height: AVATAR_SIZE + 24,
-    alignItems: 'center',
-  },
-  visbyShadow: {
-    position: 'absolute',
-    bottom: 20,
-    left: (AVATAR_SIZE - 40) / 2,
-    width: 40,
-    height: 12,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-  },
-  visbyCompanionWrap: {
-    alignItems: 'center',
-  },
-  visbyCompanionLabel: {
-    marginTop: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary.wisteriaFaded,
-  },
-  visbyCompanionText: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 11,
-    color: colors.primary.wisteriaDark,
-  },
-  walkControls: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md,
-  },
-  walkBtn: {
-    padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primary.wisteriaFaded,
-  },
-  walkLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.muted },
-
-  // Door navigation
-  roomNavLeft: { position: 'absolute', left: 6, top: '38%' as any, zIndex: 10 },
-  roomNavRight: { position: 'absolute', right: 6, top: '38%' as any, zIndex: 10 },
-  doorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary.wisteriaFaded,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  doorLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, maxWidth: 64 },
-
-  // Quick actions (hero + chips)
-  actionsWrap: { paddingHorizontal: spacing.lg, marginTop: spacing.lg, gap: spacing.sm },
-  heroQuizCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.primary.wisteriaFaded,
-    minHeight: 72,
-    justifyContent: 'center',
-  },
-  heroQuizInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  heroQuizIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroQuizText: { flex: 1 },
-  heroQuizLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 17, color: colors.text.primary },
-  heroQuizSub: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.text.secondary, marginTop: 2 },
-  actionsChipsRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
-  collectionGoalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface.card,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-  },
-  collectionGoalText: { flex: 1 },
-  collectionGoalTitle: { fontFamily: 'Nunito-SemiBold', color: colors.text.primary },
-  collectionGoalSub: { marginTop: 2, color: colors.text.muted },
-  roomDialogueBubble: {
-    alignSelf: 'center',
-    maxWidth: '90%',
-    marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary.wisteria + '40',
-  },
-  roomDialogueText: {
-    fontFamily: 'Nunito-Regular',
-    fontSize: 13,
-    color: colors.text.primary,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  othersHereBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: spacing.xs,
-    paddingVertical: 4,
-  },
-  othersHereText: {
-    color: colors.text.muted,
-    fontSize: 12,
-  },
-  liveStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  whosHereRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    flexWrap: 'wrap',
-  },
-  whosHereLabel: { color: colors.text.muted },
-  whosHereYouChip: {
-    backgroundColor: colors.primary.wisteriaFaded,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-  },
-  whosHereYouText: {
-    fontSize: 12,
-    fontFamily: 'Nunito-SemiBold',
-    color: colors.primary.wisteriaDark,
-  },
-  liveStripText: { color: colors.text.muted, flex: 1 },
-  chatInRoomBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: colors.primary.wisteriaFaded,
-    borderRadius: 14,
-  },
-  chatInRoomBtnText: {
-    fontSize: 13,
-    fontFamily: 'Nunito-SemiBold',
-    color: colors.primary.wisteriaDark,
-  },
-  placeChatModalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  placeChatModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  placeChatModalCard: {
-    backgroundColor: colors.base.cream,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl + 20,
-    maxHeight: '75%',
-  },
-  placeChatModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  placeChatModalTitle: {
-    fontSize: 18,
-    fontFamily: 'Nunito-Bold',
-    color: colors.text.primary,
-  },
-  placeChatMessageList: { maxHeight: 280 },
-  placeChatMessageListContent: { paddingVertical: spacing.xs },
-  placeChatBubbleRow: { marginBottom: spacing.sm, alignItems: 'flex-start' },
-  placeChatBubbleRowYou: { alignItems: 'flex-end' },
-  placeChatBubble: {
-    maxWidth: '85%',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: colors.primary.wisteriaFaded,
-  },
-  placeChatBubbleYou: { backgroundColor: colors.primary.wisteria },
-  placeChatBubbleUsername: { marginBottom: 2, color: colors.primary.wisteriaDark },
-  placeChatBubbleText: { fontSize: 14, color: colors.text.primary },
-  placeChatBubbleTextYou: { color: colors.text.inverse },
-  placeChatBubbleTime: { marginTop: 2, fontSize: 10, color: colors.text.muted },
-  placeChatInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.base.parchment,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: spacing.sm,
-  },
-  placeChatInput: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text.primary,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  placeChatSendBtn: { padding: 8 },
-  placeChatSendBtnDisabled: { opacity: 0.5 },
-  placeChatHint: { textAlign: 'center', marginTop: spacing.xs, color: colors.text.muted },
-  actionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: colors.surface.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary.wisteriaFaded,
-  },
-  actionChipLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.primary },
-
-  // Games grid (modal)
-  gamesGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
-  },
-  gamePickCard: {
-    width: '47%' as any, alignItems: 'center', padding: spacing.md,
-    backgroundColor: colors.base.cream, borderRadius: 16,
-    borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.15)',
-  },
-  gamePickIcon: {
-    width: 48, height: 48, borderRadius: 24,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
-  },
-  gamePickName: {
-    fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.text.primary,
-  },
-
-  factsSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
-  sectionTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary, marginBottom: 8 },
-  factsScroll: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
-  factChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: 10, paddingHorizontal: 14,
-    borderRadius: 20, borderWidth: 2, backgroundColor: colors.surface.cardWarm,
-  },
-  factChipRead: { backgroundColor: colors.success.honeydew, borderColor: colors.success.emerald + '50', borderStyle: 'dashed' as any },
-  factTextRead: { color: colors.text.muted },
-  guideSection: {
-    marginHorizontal: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.xl,
-    padding: spacing.lg, backgroundColor: colors.surface.lavender,
-    borderRadius: 20, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
-  },
-  guideGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
-  guideItem: {
-    width: '46%' as any, alignItems: 'center', padding: spacing.sm,
-    backgroundColor: colors.surface.card, borderRadius: 14,
-    borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
-  },
-  guideLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.text.primary, textAlign: 'center' },
-  guideAmount: { fontFamily: 'Nunito-Medium', fontSize: 11, color: colors.text.secondary, textAlign: 'center' },
-
-  // Modals
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF', borderRadius: 24,
-    padding: spacing.xl, maxWidth: 340, width: '100%',
-  },
-  factModalCard: {
-    maxWidth: 360, width: '100%', borderRadius: 28, overflow: 'hidden',
-    borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 8,
-  },
-  factImageWrap: { width: '100%', height: 180, position: 'relative' },
-  factImage: { width: '100%', height: '100%' },
-  factImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  factIconWrap: {
-    paddingVertical: spacing.lg, alignItems: 'center',
-    backgroundColor: colors.primary.wisteriaFaded,
-  },
-  factModalBody: { padding: spacing.xl },
-  factModalTitle: { marginBottom: spacing.sm, textAlign: 'center' },
-  factModalContent: { marginBottom: spacing.md, textAlign: 'center', lineHeight: 22 },
-  modalIconRow: { alignItems: 'center', marginBottom: spacing.sm },
-  modalIcon: { fontSize: 48 },
-  modalBody: { marginTop: spacing.sm, marginBottom: spacing.sm },
-  auraEarnedRow: {
-    alignItems: 'center', paddingVertical: 8, marginBottom: spacing.sm,
-    backgroundColor: colors.status.streakBg, borderRadius: 12,
-    borderWidth: 1, borderColor: colors.reward.gold + '30',
-  },
-  auraEarnedText: { fontFamily: 'Baloo2-SemiBold', fontSize: 16, color: colors.status.streak },
-  auraEarnedSubtext: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.reward.gold, marginTop: 2 },
-  modalActions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
-
-  discoveryToast: {
-    position: 'absolute',
-    top: spacing.xl + 50,
-    left: spacing.lg,
-    right: spacing.lg,
-    alignItems: 'center',
-    zIndex: 100,
-  },
-  discoveryToastInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.base.cream,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  discoveryToastText: {
-    fontFamily: 'Nunito-Bold',
-    color: colors.primary.wisteriaDark,
-  },
-  microEventCard: {
-    padding: spacing.xl,
-    borderRadius: 24,
-    alignItems: 'center',
-    maxWidth: 280,
-    overflow: 'hidden',
-  },
-  microEventTitle: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  microEventSub: {
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
-  },
-
-  // Quiz modal
-  quizModal: {
-    backgroundColor: '#FFFFFF', borderRadius: 28,
-    padding: spacing.xl, maxWidth: 400, width: '100%', maxHeight: '85%',
-  },
-  quizProgress: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md },
-  quizProgressText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.secondary },
-  quizScoreText: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.primary.wisteriaDark },
-  quizQuestionImageWrap: {
-    width: '100%', height: 140, borderRadius: 16, overflow: 'hidden', marginBottom: spacing.md,
-    backgroundColor: colors.base.skyLight, borderWidth: 1, borderColor: colors.primary.wisteriaLight + '60',
-  },
-  quizQuestionImage: { width: '100%', height: '100%' },
-  quizQuestion: { marginBottom: spacing.lg },
-  quizOptions: { gap: spacing.sm },
-  quizOption: {
-    padding: spacing.md, borderRadius: 16, borderWidth: 2,
-    borderColor: colors.primary.wisteriaFaded, backgroundColor: '#FAFAFE',
-  },
-  quizOptionCorrect: { borderColor: '#4CAF50', backgroundColor: 'rgba(76, 175, 80, 0.1)' },
-  quizOptionWrong: { borderColor: '#F44336', backgroundColor: 'rgba(244, 67, 54, 0.1)' },
-  quizOptionText: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.text.primary },
-  quizOptionTextCorrect: { color: '#2E7D32' },
-  quizOptionTextWrong: { color: '#C62828' },
-  quizClose: { alignSelf: 'center', paddingVertical: spacing.md },
-  quizCloseText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.muted },
-  quizResults: { alignItems: 'center', paddingVertical: spacing.md },
-  quizResultScore: { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.text.primary, marginVertical: spacing.sm },
-  quizRewardRow: { alignItems: 'center', marginVertical: spacing.md },
-  quizRewardText: { fontFamily: 'Baloo2-Bold', fontSize: 18, color: '#D4760A' },
-  quizRewardMultiplier: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.reward.gold, marginTop: 4 },
-  quizPlaceCompleteRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    marginBottom: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: colors.success.honeydew, borderRadius: 14, borderWidth: 1, borderColor: colors.success.emerald + '40',
-  },
-  quizPlaceCompleteText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.primary, flex: 1 },
-  quizResultActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
-  quizResultBtn: { minWidth: 100 },
-
-  // Edit mode toggle
   editToggleBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     marginLeft: spacing.sm, paddingVertical: 4, paddingHorizontal: 10,
     borderRadius: 14, borderWidth: 1.5,
     borderColor: colors.primary.wisteria, backgroundColor: 'rgba(184, 165, 224, 0.1)',
   },
-  editToggleBtnActive: {
-    backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark,
+  editToggleBtnActive: { backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark },
+  editToggleText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
+  editToggleTextActive: { color: '#FFFFFF' },
+  roomDialogueBubble: {
+    alignSelf: 'center', maxWidth: '90%', marginTop: spacing.xs,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 16,
+    borderWidth: 1, borderColor: colors.primary.wisteria + '40',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 }),
+  },
+  dialogueBubbleTail: {
+    position: 'absolute', bottom: -6, alignSelf: 'center',
+    width: 12, height: 12, backgroundColor: 'rgba(255,255,255,0.95)',
+    transform: [{ rotate: '45deg' }], borderRadius: 2,
+    borderRightWidth: 1, borderBottomWidth: 1,
+    borderColor: colors.primary.wisteria + '40',
+  },
+  roomDialogueText: {
+    fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.text.primary,
+    textAlign: 'center', fontStyle: 'italic',
+  },
+  othersHereBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, marginTop: spacing.xs, paddingVertical: 4,
+  },
+  othersHereText: { color: colors.text.muted, fontSize: 12 },
+
+  objectsLayer: { position: 'relative', marginTop: spacing.xs },
+  roomObject: {
+    position: 'absolute', alignItems: 'center',
+    transform: [{ translateX: -36 }, { translateY: -24 }], minWidth: 72,
+  },
+  roomObjectInteractive: {},
+  roomObjectDone: {},
+  roomObjectIconWrap: {
+    width: 66, height: 66, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.95)', justifyContent: 'center', alignItems: 'center',
+    marginBottom: 4, borderWidth: 1.5, borderColor: colors.shadow.light,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 12px rgba(0,0,0,0.12)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }),
+  },
+  roomObjectIconWrapGlow: {
+    borderColor: colors.primary.wisteria + '70',
+    borderWidth: 2.5,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 0px 16px rgba(184,165,224,0.5)' }
+      : { shadowColor: colors.primary.wisteria, shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }),
+  },
+  objectLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.text.secondary, textAlign: 'center', maxWidth: 88 },
+  objectLabelDone: { color: colors.success.emerald },
+  objectCheck: { position: 'absolute', top: -4, right: -4 },
+  interactiveDot: {
+    position: 'absolute', top: -2, right: -2, width: 12, height: 12, borderRadius: 6,
+    backgroundColor: colors.reward.gold, borderWidth: 2, borderColor: '#FFFFFF',
+  },
+  objectSparkleHint: {
+    position: 'absolute', bottom: -2, left: -2,
   },
 
-  // Edit toolbar (replaces walk controls)
-  editToolbar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
+  avatarContainer: {
+    position: 'absolute', left: spacing.lg, bottom: 4,
+    width: AVATAR_SIZE, height: AVATAR_SIZE + 24, alignItems: 'center',
   },
+  visbyShadow: {
+    position: 'absolute', bottom: 18, left: (AVATAR_SIZE - 52) / 2,
+    width: 52, height: 16, borderRadius: 26, overflow: 'hidden',
+  },
+  visbyCompanionWrap: { alignItems: 'center' },
+  visbyCompanionLabel: {
+    marginTop: 4, paddingHorizontal: 10, paddingVertical: 3,
+    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 12,
+    borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+  },
+  visbyCompanionText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
+
+  walkControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  walkBtn: {
+    padding: 10, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20,
+    borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+  },
+  walkLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.muted },
+
+  editToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
   editToolbarBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 6, paddingHorizontal: 12,
-    borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.8)',
-    borderWidth: 1.5, borderColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12,
+    borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.8)', borderWidth: 1.5, borderColor: 'transparent',
   },
-  editToolbarBtnActive: {
-    backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark,
-  },
-  editToolbarLabel: {
-    fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark,
-  },
-  editToolbarLabelActive: {
-    color: '#FFFFFF',
-  },
+  editToolbarBtnActive: { backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark },
+  editToolbarLabel: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
+  editToolbarLabelActive: { color: '#FFFFFF' },
 
-  // Placed furniture
+  roomNavLeft: { position: 'absolute', left: 6, top: '38%' as any, zIndex: 10 },
+  roomNavRight: { position: 'absolute', right: 6, top: '38%' as any, zIndex: 10 },
+  doorCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.95)', paddingVertical: 8, paddingHorizontal: 10,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 3 }),
+  },
+  doorLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, maxWidth: 64 },
+
   placedFurnitureItem: {
     position: 'absolute', alignItems: 'center',
-    transform: [{ translateX: -38 }, { translateY: -22 }],
-    padding: 4, borderRadius: 12,
+    transform: [{ translateX: -50 }, { translateY: -30 }], padding: 4, borderRadius: 14,
   },
   placedFurnitureItemSelected: {
     backgroundColor: 'rgba(184, 165, 224, 0.25)',
-    borderWidth: 1.5, borderColor: colors.primary.wisteria, borderStyle: 'dashed' as any,
+    borderWidth: 2, borderColor: colors.primary.wisteria, borderStyle: 'dashed' as any,
   },
-  placedFurnitureItemInteractive: {
-    padding: 4,
+  placedFurnitureItemInteractive: { padding: 4 },
+  placedFurnitureShadow: {
+    width: 60, height: 8, borderRadius: 30,
+    backgroundColor: 'rgba(0,0,0,0.08)', marginTop: -2,
   },
   useFurnitureBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: colors.primary.wisteriaFaded,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.primary.wisteria + '50',
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4,
+    paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.primary.wisteriaFaded,
+    borderRadius: 12, borderWidth: 1, borderColor: colors.primary.wisteria + '50',
   },
-  useFurnitureBadgeText: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 10,
-    color: colors.primary.wisteriaDark,
-  },
-  placedFurnitureIconWrap: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 2,
-  },
-  placedFurnitureLabel: {
-    fontFamily: 'Nunito-Medium', fontSize: 8, color: colors.text.secondary,
-    textAlign: 'center', maxWidth: 56,
-  },
-  placedFurniturePopup: {
-    position: 'absolute', top: -32, alignSelf: 'center',
-    zIndex: 20,
-  },
+  useFurnitureBadgeText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
+  placedFurnitureLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, textAlign: 'center', maxWidth: 90 },
+  placedFurniturePopup: { position: 'absolute', top: -32, alignSelf: 'center', zIndex: 20 },
   removeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#E53935', paddingVertical: 4, paddingHorizontal: 10,
-    borderRadius: 12, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3,
+    backgroundColor: '#E53935', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.2)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3 }),
   },
   removeBtnText: { fontFamily: 'Nunito-Bold', fontSize: 10, color: '#FFFFFF' },
 
-  // Panel (shared by furniture / wallpaper / flooring)
-  panelContent: {
-    backgroundColor: '#FFFFFF', borderRadius: 28,
-    padding: spacing.xl, maxWidth: 400, width: '100%', maxHeight: '75%',
+  actionsWrap: { paddingHorizontal: spacing.lg, marginTop: spacing.lg, gap: spacing.sm },
+  heroQuizCard: {
+    borderRadius: 20, overflow: 'hidden', borderWidth: 1,
+    borderColor: colors.primary.wisteriaFaded, minHeight: 72, justifyContent: 'center',
   },
-  panelHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  heroQuizInner: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg, gap: spacing.md,
+  },
+  heroQuizIconWrap: {
+    width: 48, height: 48, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center',
+  },
+  heroQuizText: { flex: 1 },
+  heroQuizLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 17, color: colors.text.primary },
+  heroQuizSub: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.text.secondary, marginTop: 2 },
+  actionsChipsRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
+  actionChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: colors.surface.card, borderRadius: 16, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+  },
+  actionChipLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.primary },
+  collectionGoalCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface.card, borderRadius: 12, borderLeftWidth: 4,
+  },
+  collectionGoalText: { flex: 1 },
+  collectionGoalTitle: { fontFamily: 'Nunito-SemiBold', color: colors.text.primary },
+  collectionGoalSub: { marginTop: 2, color: colors.text.muted },
+  liveStrip: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: spacing.sm, marginTop: spacing.xs, paddingHorizontal: spacing.lg, flexWrap: 'wrap',
+  },
+  whosHereRow: { flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap' },
+  whosHereLabel: { color: colors.text.muted },
+  whosHereYouChip: { backgroundColor: colors.primary.wisteriaFaded, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 10 },
+  whosHereYouText: { fontSize: 12, fontFamily: 'Nunito-SemiBold', color: colors.primary.wisteriaDark },
+  liveStripText: { color: colors.text.muted, flex: 1 },
+  chatInRoomBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12,
+    backgroundColor: colors.primary.wisteriaFaded, borderRadius: 14,
+  },
+  chatInRoomBtnText: { fontSize: 13, fontFamily: 'Nunito-SemiBold', color: colors.primary.wisteriaDark },
+
+  factsSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  sectionTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary, marginBottom: 8 },
+  factsScroll: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  factChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 2, backgroundColor: colors.surface.cardWarm,
+  },
+  factChipRead: { backgroundColor: colors.success.honeydew, borderColor: colors.success.emerald + '50', borderStyle: 'dashed' as any },
+  factTextRead: { color: colors.text.muted },
+  journeySection: {
+    marginHorizontal: spacing.lg, marginTop: spacing.sm, marginBottom: spacing.xl,
+    padding: spacing.lg, backgroundColor: colors.surface.lavender, borderRadius: 20,
+    borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+  },
+  storyArcRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs,
+  },
+  storyArcText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.secondary },
+  storyArcBar: {
+    height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: spacing.md,
+  },
+  storyArcFill: { height: '100%', borderRadius: 2, minWidth: 4 },
+  journeyTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary, marginBottom: spacing.sm },
+  journeyHints: { gap: spacing.xs },
+  journeyHintRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface.card, borderRadius: 14, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+  },
+  journeyHintText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.primary, flex: 1 },
+
+  discoveryToast: {
+    position: 'absolute', top: spacing.xl + 50, left: spacing.lg, right: spacing.lg,
+    alignItems: 'center', zIndex: 100,
+  },
+  discoveryToastInner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.base.cream, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: 16,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 8px rgba(0,0,0,0.15)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }),
+  },
+  discoveryToastText: { fontFamily: 'Nunito-Bold', color: colors.primary.wisteriaDark },
+
+  knowledgeOverlay: {
+    flex: 1, backgroundColor: colors.overlay.modal,
+    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
+  },
+  knowledgeCard: {
+    maxWidth: 380, width: '100%', borderRadius: 24, overflow: 'hidden',
+    maxHeight: '80%',
+  },
+  knowledgeHeader: {
+    alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.md,
+  },
+  knowledgeScroll: { paddingHorizontal: spacing.xl },
+  knowledgeRow: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm,
+  },
+  knowledgeIconWrap: {
+    width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+  },
+  knowledgeInfo: { flex: 1 },
+  knowledgeLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.primary, marginBottom: 4 },
+  knowledgeBarTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.06)', overflow: 'hidden' },
+  knowledgeBarFill: { height: '100%', borderRadius: 3, minWidth: 2 },
+  knowledgePct: { fontFamily: 'Nunito-Bold', fontSize: 14, minWidth: 40, textAlign: 'right' },
+  knowledgeEmpty: {
+    alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.sm,
+  },
+  knowledgeCloseBtn: {
+    alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
     marginBottom: spacing.md,
   },
+  knowledgeCloseText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.secondary },
 
-  // Furniture grid
-  furnitureGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
-    paddingBottom: spacing.lg,
-  },
-  furnitureCard: {
-    width: '30%' as any, alignItems: 'center', padding: spacing.sm,
-    backgroundColor: colors.base.cream, borderRadius: 16,
-    borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.15)',
-  },
-  furnitureCardFunctional: {
-    borderColor: colors.primary.wisteria + '40',
-    backgroundColor: colors.surface.lavender,
-  },
-  furnitureInteractionHint: {
-    fontFamily: 'Nunito-Medium',
-    fontSize: 9,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: 2,
-    maxWidth: '100%',
-  },
-  furniturePanelHint: {
-    fontFamily: 'Nunito-Medium',
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-    paddingHorizontal: 2,
-  },
-  furnitureNotEnoughAura: {
-    fontFamily: 'Nunito-SemiBold',
-    fontSize: 10,
-    color: colors.status.error,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  furnitureIconWrap: {
-    width: 52, height: 52, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center', alignItems: 'center', marginBottom: 4,
-  },
-  furnitureName: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.text.primary, textAlign: 'center' },
-  furnitureRarity: { fontSize: 9, color: colors.text.muted, textTransform: 'capitalize' as any, marginBottom: 4 },
-  placeBtn: {
-    paddingVertical: 4, paddingHorizontal: 14,
-    backgroundColor: colors.primary.wisteria, borderRadius: 12,
-  },
-  placeBtnText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: '#FFFFFF' },
-  buyBtn: {
-    paddingVertical: 4, paddingHorizontal: 10,
-    backgroundColor: colors.reward.peach, borderRadius: 12,
-  },
-  buyBtnText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.reward.gold },
-
-  // Color swatch grid
-  colorSwatchGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
-    justifyContent: 'center', paddingBottom: spacing.md,
-  },
-  colorSwatch: {
-    width: 68, height: 68, borderRadius: 16,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: 'transparent',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 2, elevation: 1,
-  },
-  colorSwatchActive: {
-    borderColor: colors.primary.wisteria, borderWidth: 3,
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
-  },
-  swatchLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 9, color: colors.text.secondary, textAlign: 'center' },
-
-  // Locations
-  locationsGrid: {
-    gap: spacing.sm,
-    paddingBottom: spacing.lg,
-  },
-  locationCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.base.cream,
-    borderRadius: 16,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.15)',
-    gap: spacing.sm,
-  },
-  locationCardVisited: {
-    backgroundColor: 'rgba(200, 230, 200, 0.3)',
-    borderColor: 'rgba(76, 175, 80, 0.3)',
-  },
-  locationIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+  masteryOverlay: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  locationInfo: {
+  masteryGradient: {
     flex: 1,
-    gap: 2,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  locationNameRow: {
+  masteryContent: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  masteryBadge: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+  },
+  masteryFlag: {
+    fontSize: 64,
+    marginBottom: spacing.sm,
+  },
+  masteryTitle: {
+    fontSize: 34,
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  masterySub: {
+    fontSize: 16,
+    fontFamily: 'Nunito-Regular',
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: spacing.lg,
+    maxWidth: 300,
+  },
+  masteryReward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: spacing.lg,
+  },
+  masteryRewardText: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 18,
+    color: '#FFD700',
+  },
+  masteryStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  masteryStat: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  locationName: {
-    fontFamily: 'Baloo2-SemiBold',
-    fontSize: 14,
-    color: colors.text.primary,
-    flex: 1,
-  },
-  locationDesc: {
-    fontFamily: 'Nunito-Medium',
-    fontSize: 11,
-    color: colors.text.secondary,
-    lineHeight: 15,
-  },
-  locationMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  locationCategoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(184, 165, 224, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  locationCategoryText: {
+  masteryStatText: {
     fontFamily: 'Nunito-SemiBold',
-    fontSize: 10,
-    color: colors.text.secondary,
-    textTransform: 'capitalize' as any,
+    fontSize: 12,
+    color: '#FFF',
   },
-  locationLpBadge: {
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+  masteryContinueBtn: {
+    backgroundColor: '#FFF',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: 24,
   },
-  locationLpBadgeVisited: {
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
-  },
-  locationLpText: {
+  masteryContinueText: {
     fontFamily: 'Nunito-Bold',
-    fontSize: 11,
-    color: '#D4760A',
-  },
-  locationLpTextVisited: {
-    color: '#4CAF50',
+    fontSize: 16,
+    color: '#FF8F00',
   },
 });
+
+export default CountryRoomScreen;

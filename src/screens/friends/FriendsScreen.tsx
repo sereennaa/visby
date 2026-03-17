@@ -26,7 +26,12 @@ type FriendsScreenProps = {
 };
 
 export const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
-  const { user, friends, friendRequests, acceptFriendRequest, rejectFriendRequest, getWeeklyAura } = useStore();
+  const user = useStore(s => s.user);
+  const friends = useStore(s => s.friends);
+  const friendRequests = useStore(s => s.friendRequests);
+  const acceptFriendRequest = useStore(s => s.acceptFriendRequest);
+  const rejectFriendRequest = useStore(s => s.rejectFriendRequest);
+  const getWeeklyAura = useStore(s => s.getWeeklyAura);
   const incoming = friendRequests.filter((r) => r.toUserId === user?.id && r.status === 'pending');
   const weeklyAura = getWeeklyAura();
   const leaderboardEntries = [

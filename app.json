@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.visby.app",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Visby needs your location to collect stamps and discover nearby places.",
         "NSPhotoLibraryUsageDescription": "Visby needs access to your photos to add pictures to stamps and food logs.",
         "NSCameraUsageDescription": "Visby needs camera access to take photos for your collection."
@@ -29,11 +30,13 @@
       },
       "package": "com.visby.app",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -51,6 +54,12 @@
         }
       ],
       "expo-audio"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "38b552ec-1377-4799-ae78-b611c005d42a"
+      }
+    },
+    "owner": "sisterser"
   }
 }

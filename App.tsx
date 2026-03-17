@@ -1,7 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withSpring,
+  cancelAnimation,
+  Easing,
+  interpolate,
+  FadeIn,
+} from 'react-native-reanimated';
 import * as Font from 'expo-font';
 import {
   Ionicons,
@@ -34,10 +46,12 @@ import { useStore } from './src/store/useStore';
 import { supabase, isSupabaseConfigured } from './src/config/supabase';
 import { authService } from './src/services/auth';
 import { setupNotifications } from './src/services/notifications';
+import { getActiveEvent } from './src/config/seasonalEvents';
 import { stampsService } from './src/services/stamps';
 import { bitesService } from './src/services/bites';
 import { useWidgetSync } from './src/hooks/useWidgetSync';
 import { colors } from './src/theme/colors';
+import { analyticsService } from './src/services/analytics';
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -49,6 +63,15 @@ class ErrorBoundary extends React.Component<
   }
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    try {
+      analyticsService.logError('app_crash', {
+        message: error.message,
+        stack: error.stack?.slice(0, 500),
+        componentStack: errorInfo.componentStack?.slice(0, 500),
+      });
+    } catch (_) {}
   }
   render() {
     if (this.state.hasError) {
@@ -182,25 +205,48 @@ export default function App() {
     };
   }, []);
 
+  // Session tracking: log session length when app goes to background
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background') {
+        const durationSeconds = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+        if (durationSeconds > 0) analyticsService.trackSessionLength(durationSeconds);
+      } else if (nextState === 'active') {
+        sessionStartTimeRef.current = Date.now();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   // Schedule local notifications when app is ready (respects settings.notifications)
   useEffect(() => {
     if (fontsLoaded && !isLoading) {
       const state = useStore.getState();
-      const enabled = (state.settings as { notifications?: boolean }).notifications !== false;
-      setupNotifications(enabled, state.user?.currentStreak ?? 0).catch(() => {});
+      const settings = state.settings as { notifications?: boolean; reminderTime?: string };
+      const enabled = settings.notifications !== false;
+      const activeEvent = getActiveEvent();
+      const nextChapter = state.getNextChapterToShow?.();
+      const dueFlashcards = state.getDueFlashcards?.() ?? [];
+      setupNotifications({
+        notificationsEnabled: enabled,
+        reminderTime: settings.reminderTime ?? '19:00',
+        streakDays: state.user?.currentStreak ?? 0,
+        visbyMood: state.getVisbyMood?.(),
+        dueFlashcards: dueFlashcards.length,
+        nextChapterTitle: nextChapter?.title,
+        activeEventName: activeEvent?.name,
+        activeEventEndDate: activeEvent?.endDate,
+      }).catch(() => {});
+      const uid = state.user?.id;
+      if (uid && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(uid)) {
+        state.syncFriends?.().catch(() => {});
+      }
     }
   }, [fontsLoaded, isLoading]);
 
   if (!fontsLoaded || isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <View style={styles.loadingLogoContainer}>
-          <View style={styles.loadingGlow} />
-          <Text style={styles.loadingText}>Visby</Text>
-        </View>
-        <Text style={styles.loadingSubtext}>Loading adventure...</Text>
-      </View>
-    );
+    return <BrandedLoading />;
   }
 
   return (
@@ -217,6 +263,73 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+const BrandedLoading = () => {
+  const wobble = useSharedValue(0);
+  const glowPulse = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    wobble.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 600, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+        withTiming(-1, { duration: 600, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+      ),
+      -1, true,
+    );
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+        withTiming(0, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+      ),
+      -1, true,
+    );
+    textOpacity.value = withTiming(1, { duration: 800 });
+    return () => {
+      cancelAnimation(wobble);
+      cancelAnimation(glowPulse);
+    };
+  }, []);
+
+  const wobbleStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: `${interpolate(wobble.value, [-1, 1], [-3, 3])}deg` },
+      { translateY: interpolate(wobble.value, [-1, 0, 1], [2, -2, 2]) },
+    ],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glowPulse.value, [0, 1], [0.1, 0.3]),
+    transform: [{ scale: interpolate(glowPulse.value, [0, 1], [0.8, 1.2]) }],
+  }));
+
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+  }));
+
+  return (
+    <View style={styles.loadingContainer}>
+      <View style={styles.loadingLogoContainer}>
+        <Animated.View style={[styles.loadingGlow, glowStyle]} />
+        <Animated.View style={wobbleStyle}>
+          <Text style={styles.loadingEgg}>{'\u{1F95A}'}</Text>
+        </Animated.View>
+        <Text style={styles.loadingText}>Visby</Text>
+      </View>
+      <Animated.View style={textStyle}>
+        <Text style={styles.loadingSubtext}>Loading adventure...</Text>
+      </Animated.View>
+      <View style={styles.loadingParticles}>
+        {[...Array(6)].map((_, i) => (
+          <View key={i} style={[styles.loadingDot, {
+            left: `${15 + i * 14}%`,
+            opacity: 0.15 + i * 0.05,
+          } as any]} />
+        ))}
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -235,10 +348,14 @@ const styles = StyleSheet.create({
   },
   loadingGlow: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(184, 165, 224, 0.15)',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(184, 165, 224, 0.2)',
+  },
+  loadingEgg: {
+    fontSize: 56,
+    marginBottom: 8,
   },
   loadingText: {
     fontSize: 52,
@@ -250,5 +367,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text.muted,
     letterSpacing: 0.5,
+  },
+  loadingParticles: {
+    position: 'absolute',
+    bottom: '20%',
+    left: 0,
+    right: 0,
+    height: 40,
+  },
+  loadingDot: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary.wisteriaLight,
   },
 });

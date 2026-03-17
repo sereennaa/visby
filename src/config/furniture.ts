@@ -1,4 +1,4 @@
-import { FurnitureItem } from '../types';
+import { FurnitureItem, FurnitureSet } from '../types';
 
 /** Country-origin IDs to display names for the shop (e.g. "Japan", "France"). */
 export const COUNTRY_ORIGIN_NAMES: Record<string, string> = {
@@ -171,4 +171,46 @@ export const FLOORING_OPTIONS = [
   { id: 'slate_floor', name: 'Slate', color: '#9BA8AB' },
   { id: 'sandstone', name: 'Sandstone', color: '#D2B48C' },
   { id: 'cherry', name: 'Cherry Wood', color: '#C07050' },
+];
+
+export const FURNITURE_SETS: FurnitureSet[] = [
+  {
+    id: 'set_japanese_tea',
+    name: 'Japanese Tea Room',
+    countryOrigin: 'jp',
+    items: ['jp_tatami', 'jp_kotatsu', 'jp_screen', 'jp_zabuton', 'jp_bonsai'],
+    bundlePrice: 300,
+    description: 'Everything for a serene Japanese tea ceremony space',
+  },
+  {
+    id: 'set_french_salon',
+    name: 'French Salon',
+    countryOrigin: 'fr',
+    items: ['fr_chandelier', 'fr_table', 'fr_painting', 'fr_armoire'],
+    bundlePrice: 700,
+    description: 'Elegant Parisian salon with crystal and marble',
+  },
+  {
+    id: 'set_british_study',
+    name: 'British Study',
+    countryOrigin: 'gb',
+    items: ['gb_wingback', 'gb_tea_trolley', 'gb_book_nook', 'gb_tartan_throw', 'gb_bigben_clock'],
+    bundlePrice: 650,
+    description: 'The cosiest reading corner this side of London',
+  },
+  {
+    id: 'set_mexican_fiesta',
+    name: 'Mexican Fiesta',
+    countryOrigin: 'mx',
+    items: ['mx_cactus', 'mx_hammock', 'mx_rug', 'mx_pottery', 'mx_otomi'],
+    bundlePrice: 400,
+    description: 'Bright colors and bold patterns from Mexico',
+  },
+  {
+    id: 'set_starter_home',
+    name: 'Starter Home',
+    items: ['uni_dining_table', 'uni_bed', 'uni_study_desk', 'uni_toy_chest', 'uni_plant'],
+    bundlePrice: 320,
+    description: 'All the essentials for your first Visby home',
+  },
 ];

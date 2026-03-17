@@ -5,13 +5,13 @@
 export const copy = {
   /** Stamps = dreamy travel passport (whimsical, stunning tone) */
   stamps: {
-    definition: "Little pieces of the world you've collected—your dreamy travel passport.",
-    emptyTitle: 'Your passport is waiting',
-    emptySubtitle: "Add your first place from the map, or a spot you've already been—every stamp is a story.",
-    mapHint: 'Find a place that calls to you, tap it, then add it to your passport.',
-    samplePlacesNotice: 'Dreamy places to discover. Tap one to add to your passport, or add where you are now below.',
-    collectScreenTitle: 'Add to your passport',
-    collectScreenSubtitle: 'A new place to remember',
+    definition: "Your journey through the world—stamps earned by learning and exploring.",
+    emptyTitle: 'Start your journey',
+    emptySubtitle: "Learn about countries to earn stamps, or log a place you've visited in real life!",
+    mapHint: 'Find a place you visited and log it to your passport.',
+    samplePlacesNotice: 'Places you can visit. Tap one to log your visit.',
+    collectScreenTitle: 'Log a Visit',
+    collectScreenSubtitle: 'Record a place you visited',
     youAreAdding: 'This place is waiting for you',
     youAreHere: 'You are here',
     giveItAName: 'Give it a name',
@@ -20,24 +20,24 @@ export const copy = {
     captureTheMoment: 'Capture the moment',
     addAPhoto: 'Add a photo',
     notesPlaceholder: 'What makes this place magical?',
-    addToPassportCta: 'Add to passport',
-    addPlaceCta: 'Add this place',
-    successTitle: "It's in your passport!",
-    successFirstStamp: 'Your very first stamp—how magical!',
+    addToPassportCta: 'Log visit',
+    addPlaceCta: 'Log this place',
+    successTitle: "Visit logged!",
+    successFirstStamp: 'Your very first visit—how exciting!',
     successCountrySet: "You've completed the {country} set—stunning!",
-    successKeepDreaming: 'Keep dreaming',
+    successKeepDreaming: 'Keep exploring',
     successAura: '+{aura} Aura',
   },
 
   /** Empty state titles and subtitles */
   empty: {
     noStamps: {
-      title: 'Your passport is waiting',
-      subtitle: "Add your first place from the map, or a spot you've already been—every stamp is a story.",
+      title: 'Start your journey',
+      subtitle: "Learn about countries to earn stamps, or log places you've visited!",
     },
     noBites: {
-      title: 'No bites yet!',
-      subtitle: 'Log something yummy you tried — it helps you remember and share your food adventures.',
+      title: 'Your Taste Atlas is empty',
+      subtitle: 'Discover dishes from around the world to learn food stories, recipes, and culture.',
     },
     noActivityYet: {
       title: 'Your adventure is just beginning',
@@ -98,7 +98,7 @@ export const copy = {
     },
     adventureBegins: {
       title: 'Your Adventure Begins',
-      subtitle: 'Collect stamps, log bites, and explore to see your stats here.',
+      subtitle: 'Collect stamps, discover dishes, and explore to see your stats here.',
     },
   },
 
@@ -140,10 +140,10 @@ export const copy = {
 
   /** Primary action button labels */
   actions: {
-    collectStamp: 'Add to passport',
-    addFirstStamp: 'Add a place I\'ve been',
-    logBite: 'Log a Bite',
-    addFirstBite: 'Log your first bite',
+    collectStamp: 'Log a visit',
+    addFirstStamp: 'Start learning',
+    logBite: 'Discover a Dish',
+    addFirstBite: 'Discover your first dish',
     startLearning: 'Start Learning',
     exploreNearby: 'Explore nearby',
     exploreMap: 'Explore map',
@@ -171,7 +171,7 @@ export const copy = {
   /** Success messages (for toasts) */
   success: {
     stampCollected: 'Another piece of the world, saved.',
-    biteLogged: 'Bite logged!',
+    biteLogged: 'Dish discovered!',
     profileSaved: 'Profile saved!',
     friendRequestSent: 'Friend request sent!',
   },
@@ -203,7 +203,7 @@ export const copy = {
     },
     emptyStats: {
       title: 'Your Adventure Begins',
-      subtitle: 'Your first stamp is waiting out there. Add a place from the map, try a lesson, or log a bite!',
+      subtitle: 'Your first stamp is waiting out there. Add a place from the map, try a lesson, or discover a dish!',
       cta: 'Explore the map',
     },
     nextLevelTease: 'Next: {title} at {aura} Aura',

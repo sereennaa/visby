@@ -33,6 +33,7 @@ import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
+import { analyticsService } from '../../services/analytics';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
@@ -296,8 +297,26 @@ const AuraPopup: React.FC<{ visible: boolean }> = ({ visible }) => {
   );
 };
 
-export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) => {
-  const { addAura, studyWithVisby, addSkillPoints, incrementGameStat, checkDailyMissionCompletion, setAdventureGamePlayed, getVisbyMood, addVisbyChatMessage, storyBeatsShown, markStoryBeatShown } = useStore();
+const GAME_NAME = 'WordMatch';
+
+export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, route }) => {
+  const pathNodeId = route.params?.pathNodeId;
+  const addAura = useStore(s => s.addAura);
+  const studyWithVisby = useStore(s => s.studyWithVisby);
+  const addSkillPoints = useStore(s => s.addSkillPoints);
+  const incrementGameStat = useStore(s => s.incrementGameStat);
+  const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
+  const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
+  const getVisbyMood = useStore(s => s.getVisbyMood);
+  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
+  const storyBeatsShown = useStore(s => s.storyBeatsShown);
+  const markStoryBeatShown = useStore(s => s.markStoryBeatShown);
+  const completePathNode = useStore(s => s.completePathNode);
+
+  React.useEffect(() => {
+    analyticsService.trackGameStart(GAME_NAME);
+  }, []);
+
   const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   React.useEffect(() => {
     if (storyBeatsShown.includes('hint_WordMatch')) return;
@@ -321,6 +340,10 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
   const [startTime] = useState(() => Date.now());
   const [endTime, setEndTime] = useState<number | null>(null);
   const isProcessingRef = useRef(false);
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
+  useEffect(() => {
+    return () => timersRef.current.forEach(clearTimeout);
+  }, []);
 
   const totalAttempts = matchedCount + wrongAttempts;
   const accuracy = totalAttempts > 0 ? Math.round((matchedCount / totalAttempts) * 100) : 100;
@@ -393,7 +416,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
         addAura(AURA_PER_MATCH);
         setSelectedForeign(null);
 
-        setTimeout(() => setShowAuraAt(null), 800);
+        timersRef.current.push(setTimeout(() => setShowAuraAt(null), 800));
 
         if (newMatched === ROUND_SIZE) {
           const finishTime = Date.now();
@@ -403,20 +426,22 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
           studyWithVisby();
           addSkillPoints('language', 5);
           incrementGameStat('gamesPlayed');
+          const finalAccuracy = (newMatched / (newMatched + wrongAttempts)) * 100;
+          analyticsService.trackGameComplete(GAME_NAME, newMatched, finalAccuracy >= 100);
           checkDailyMissionCompletion('play_minigame', 1);
           setAdventureGamePlayed();
-          const finalAccuracy = (newMatched / (newMatched + wrongAttempts)) * 100;
+          if (pathNodeId) completePathNode(pathNodeId);
           if (finalAccuracy >= 100) {
             incrementGameStat('perfectWordMatches');
           }
           const outcome = finalAccuracy >= 100 ? 'perfect' : 'won';
           const line = getPostGameLine('WordMatch', outcome, getVisbyMood());
           addVisbyChatMessage('visby', line);
-          setTimeout(() => setIsFinished(true), 600);
+          timersRef.current.push(setTimeout(() => setIsFinished(true), 600));
         }
-        setTimeout(() => {
+        timersRef.current.push(setTimeout(() => {
           isProcessingRef.current = false;
-        }, 300);
+        }, 300));
       } else {
         haptic(Haptics.ImpactFeedbackStyle.Heavy);
         setWrongAttempts((prev) => prev + 1);
@@ -427,7 +452,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
           prev.map((s, i) => (i === englishIndex ? 'wrong' : s)),
         );
 
-        setTimeout(() => {
+        timersRef.current.push(setTimeout(() => {
           setForeignStates((prev) =>
             prev.map((s) => (s === 'wrong' ? 'idle' : s)),
           );
@@ -436,7 +461,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
           );
           setSelectedForeign(null);
           isProcessingRef.current = false;
-        }, 600);
+        }, 600));
       }
     },
     [selectedForeign, englishStates, round, matchedCount, wrongAttempts, haptic, addAura, studyWithVisby, addSkillPoints, incrementGameStat],
@@ -555,6 +580,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -635,6 +661,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation }) 
             </View>
           </View>
         </ScrollView>
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );
