@@ -152,7 +152,8 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
     completeTreasureHuntRoom,
     completeTreasureHuntLocation,
     getVisbyMood,
-
+    markGamePlayed,
+    addDiscovery,
     completePathNode,
   } = useStore();
 
@@ -305,12 +306,16 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
       incrementGameStat('treasureHuntsCompleted');
       addSkillPoints('exploration', 3);
       if (pathNodeId) completePathNode(pathNodeId);
-      if (countryId) completeTreasureHuntRoom(countryId, roomHuntData.room.id);
+      if (countryId) {
+        completeTreasureHuntRoom(countryId, roomHuntData.room.id);
+        markGamePlayed(countryId);
+        addDiscovery(`Treasure Hunt: ${roomHuntData.room.name ?? 'Room'}`, countryId, 'treasure');
+      }
     } else {
       setClueIndex((i) => i + 1);
       setPhase('room_hunt');
     }
-  }, [roomHuntData, clueIndex, countryId, addAura, playWithVisby, incrementGameStat, addSkillPoints, completeTreasureHuntRoom, checkDailyMissionCompletion, setAdventureGamePlayed]);
+  }, [roomHuntData, clueIndex, countryId, addAura, playWithVisby, incrementGameStat, addSkillPoints, completeTreasureHuntRoom, markGamePlayed, checkDailyMissionCompletion, setAdventureGamePlayed]);
 
   const handleLocationCardTap = useCallback(
     (locationId: string) => {
@@ -352,11 +357,15 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
       incrementGameStat('treasureHuntsCompleted');
       addSkillPoints('exploration', 3);
       if (pathNodeId) completePathNode(pathNodeId);
+      if (countryId) {
+        markGamePlayed(countryId);
+        addDiscovery('Location Treasure Hunt', countryId, 'treasure');
+      }
     } else {
       setLocationRoundIndex((i) => i + 1);
       setPhase('location_hunt');
     }
-  }, [locationRoundIndex, locationRounds.length, playWithVisby, incrementGameStat, addSkillPoints, checkDailyMissionCompletion, setAdventureGamePlayed]);
+  }, [locationRoundIndex, locationRounds.length, countryId, playWithVisby, incrementGameStat, addSkillPoints, markGamePlayed, checkDailyMissionCompletion, setAdventureGamePlayed]);
 
   const handleExploreAnotherRoom = useCallback(() => {
     if (!countryId) {

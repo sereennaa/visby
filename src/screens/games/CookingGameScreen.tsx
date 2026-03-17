@@ -37,7 +37,7 @@ import { analyticsService } from '../../services/analytics';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
-import { getDiscoveryCookingRecipes } from '../../config/worldFoods';
+import { getDiscoveryCookingRecipes, getDishesByCountry } from '../../config/worldFoods';
 import { SpeakerButton } from '../../components/ui/SpeakerButton';
 import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
 import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
@@ -214,6 +214,7 @@ const GAME_NAME = 'CookingGame';
 
 export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
   const addAura = useStore(s => s.addAura);
   const bites = useStore(s => s.bites);
   const feedVisby = useStore(s => s.feedVisby);
@@ -231,15 +232,33 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
       ...r,
       icon: 'food' as IconName,
     }));
-    return [...BASE_RECIPES, ...discoveryRecipes];
-  }, [bites]);
+    const countryRecipes = countryId
+      ? getDishesByCountry(countryId).slice(0, 4).map((dish) => ({
+          name: dish.name,
+          country: dish.countryName,
+          correctIngredients: dish.keyIngredients.slice(0, 5).map((item) => item.replace(/\b\w/g, (c) => c.toUpperCase())),
+          wrongIngredients: ['Sugar', 'Ketchup', 'Chocolate'].filter(
+            (item) => !dish.keyIngredients.some((key) => key.toLowerCase() === item.toLowerCase()),
+          ),
+          icon: 'food' as IconName,
+          imageUrl: dish.imageUrl,
+        }))
+      : [];
+    const merged = [...countryRecipes, ...BASE_RECIPES, ...discoveryRecipes];
+    return merged;
+  }, [bites, countryId]);
 
   useEffect(() => {
     analyticsService.trackGameStart(GAME_NAME);
   }, []);
 
-  const [recipeIndex, setRecipeIndex] = useState(() => Math.floor(Math.random() * BASE_RECIPES.length));
+  const [recipeIndex, setRecipeIndex] = useState(0);
   const recipe = RECIPES[recipeIndex % RECIPES.length];
+
+  useEffect(() => {
+    if (RECIPES.length === 0) return;
+    setRecipeIndex(Math.floor(Math.random() * RECIPES.length));
+  }, [RECIPES.length, countryId]);
 
   const shuffledIngredients = useMemo(
     () => shuffleArray([...recipe.correctIngredients, ...recipe.wrongIngredients]),

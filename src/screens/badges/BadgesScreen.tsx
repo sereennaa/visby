@@ -142,7 +142,7 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
 
         {badges.length === 0 && (
           <EmptyState
-            emoji="🏅"
+            icon="medal"
             title="Your badge journey begins!"
             message="Explore countries, play games, and learn new things to earn your first badge."
             ctaLabel="Start exploring"

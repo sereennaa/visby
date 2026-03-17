@@ -154,7 +154,7 @@ export const CountryArrivalCinematic: React.FC<CountryArrivalCinematicProps> = (
 
         {/* Plane */}
         <Animated.View style={planeStyle}>
-          <Text style={{ fontSize: 28 }}>✈️</Text>
+          <Icon name="airplane" size={28} color={colors.text.primary} />
         </Animated.View>
 
         {/* Sparkles around arrival */}

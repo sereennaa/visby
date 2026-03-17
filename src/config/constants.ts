@@ -1,6 +1,7 @@
 // Visby App Constants
 import { IconName } from '../components/ui/Icon';
 import type { Country } from '../types';
+import { getCountryKnowledge } from './countryKnowledge';
 
 // ===================================
 // AURA & PROGRESSION
@@ -767,6 +768,75 @@ export const COUNTRIES: Country[] = [
     ],
   },
 ];
+
+const CORE_COUNTRY_IDS = new Set(['jp', 'fr', 'mx', 'it', 'gb', 'br', 'kr', 'th', 'ma', 'pe', 'ke', 'no', 'tr', 'gr']);
+
+function buildKnowledgeFacts(countryId: string): Country['facts'] {
+  const knowledge = getCountryKnowledge(countryId);
+  if (!knowledge) return [];
+
+  const mapped = [
+    ...knowledge.greetings.slice(0, 2).map((item, idx) => ({
+      id: `${countryId}_greeting_${idx + 1}`,
+      countryId,
+      title: `Greeting: ${item.phrase}`,
+      content: `${item.meaning}. ${item.context}`,
+      icon: 'language',
+      category: 'greetings' as const,
+    })),
+    ...knowledge.manners.slice(0, 2).map((item, idx) => ({
+      id: `${countryId}_manners_${idx + 1}`,
+      countryId,
+      title: item.title,
+      content: item.description,
+      icon: item.icon,
+      category: 'manners' as const,
+    })),
+    ...knowledge.sustainability.slice(0, 2).map((item, idx) => ({
+      id: `${countryId}_sustainability_${idx + 1}`,
+      countryId,
+      title: item.title,
+      content: item.description,
+      icon: item.icon,
+      category: 'sustainability' as const,
+    })),
+    ...knowledge.myths.slice(0, 2).map((item, idx) => ({
+      id: `${countryId}_myths_${idx + 1}`,
+      countryId,
+      title: item.title,
+      content: item.story,
+      icon: item.icon,
+      category: 'myths' as const,
+    })),
+    ...knowledge.landmarks.slice(0, 2).map((item, idx) => ({
+      id: `${countryId}_landmarks_${idx + 1}`,
+      countryId,
+      title: item.name,
+      content: `${item.description} ${item.funFact}`,
+      icon: 'landmark',
+      category: 'landmarks' as const,
+      imageUrl: item.imageUrl,
+    })),
+    ...knowledge.history.slice(0, 2).map((item, idx) => ({
+      id: `${countryId}_history_${idx + 1}`,
+      countryId,
+      title: item.title,
+      content: `${item.year ? `${item.year}: ` : ''}${item.description}`,
+      icon: item.icon,
+      category: 'history' as const,
+    })),
+  ];
+
+  return mapped;
+}
+
+for (const country of COUNTRIES) {
+  if (!CORE_COUNTRY_IDS.has(country.id)) continue;
+  const existing = country.facts ?? [];
+  const existingIds = new Set(existing.map((fact) => fact.id));
+  const additions = buildKnowledgeFacts(country.id).filter((fact) => !existingIds.has(fact.id));
+  country.facts = [...existing, ...additions];
+}
 
 // ===================================
 // UI CONSTANTS

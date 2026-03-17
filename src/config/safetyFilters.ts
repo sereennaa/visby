@@ -35,26 +35,26 @@ const LOW_INAPPROPRIATE = /\b(sex|porn|naked|drugs?|weed|alcohol|beer|wine|vodka
 const PERSONAL_INFO_REQUEST = /\b(my\s*(?:address|phone|number|password|school\s*name)|i\s*live\s*(?:at|on)\s*\d|here'?s?\s*my\s*(?:number|address|email))\b/i;
 
 const HIGH_RESPONSES: string[] = [
-  "I hear you, and I'm really glad you told me. You're not alone. Please talk to a grown-up you trust right away — like a parent, teacher, or school counselor. You deserve help. 💜",
-  "Thank you for telling me that. It takes a lot of courage. Please find a grown-up you trust and tell them what you told me. You matter so much. 💜",
-  "That sounds really hard, and it's not your fault. Please talk to a grown-up you trust about this — they can help. I'm glad you're here. 💜",
+  "I hear you, and I'm really glad you told me. You're not alone. Please talk to a grown-up you trust right away — like a parent, teacher, or school counselor. You deserve help.",
+  "Thank you for telling me that. It takes a lot of courage. Please find a grown-up you trust and tell them what you told me. You matter so much.",
+  "That sounds really hard, and it's not your fault. Please talk to a grown-up you trust about this — they can help. I'm glad you're here.",
 ];
 
 const LOW_DISTRESS_RESPONSES: string[] = [
-  "It sounds like you're going through something tough. Those feelings are real, and it's okay to have them. If they stick around, talking to a grown-up you trust can really help. 💜",
+  "It sounds like you're going through something tough. Those feelings are real, and it's okay to have them. If they stick around, talking to a grown-up you trust can really help.",
   "I hear you. Sometimes things feel really heavy. You're braver than you think for sharing that. Would it help to talk to someone you trust about it?",
-  "That sounds hard. Your feelings matter. If you keep feeling this way, a grown-up you trust — like a parent or teacher — would want to know so they can help. 💜",
+  "That sounds hard. Your feelings matter. If you keep feeling this way, a grown-up you trust — like a parent or teacher — would want to know so they can help.",
 ];
 
 const INAPPROPRIATE_RESPONSES: string[] = [
-  "Hmm, that's not really something I know about! Let's talk about something fun instead. Want to explore a new country? 🌍",
+  "Hmm, that's not really something I know about! Let's talk about something fun instead. Want to explore a new country?",
   "I think that's a topic for grown-ups! Want to check out something cool together instead?",
-  "Let's talk about something else! Any countries you've been curious about? ✨",
+  "Let's talk about something else! Any countries you've been curious about?",
 ];
 
 const PERSONAL_INFO_RESPONSES: string[] = [
   "Whoa, let's keep that kind of stuff private! It's really important not to share personal info online. What else is on your mind?",
-  "Hey, it's best to keep things like that between you and your family. Let's talk about something fun instead! 🌍",
+  "Hey, it's best to keep things like that between you and your family. Let's talk about something fun instead!",
 ];
 
 function pick(arr: string[]): string {

@@ -39,6 +39,7 @@ import { RootStackParamList } from '../../types';
 import { speechService } from '../../services/audio';
 import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
 import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
+import { getMemoryPairsForCountry } from '../../config/countryGameContent';
 
 type MemoryCardsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'MemoryCards'>;
@@ -100,8 +101,9 @@ interface GameCard {
   imageUrl?: string;
 }
 
-function buildDeck(): GameCard[] {
-  const selected = shuffle(MEMORY_PAIRS).slice(0, PAIRS_PER_GAME);
+function buildDeck(pool: MemoryPair[]): GameCard[] {
+  const source = pool.length > 0 ? pool : MEMORY_PAIRS;
+  const selected = shuffle(source).slice(0, PAIRS_PER_GAME);
   const cards: GameCard[] = [];
   selected.forEach((pair) => {
     cards.push({ uid: `${pair.id}-a`, pairId: pair.id, content: pair.text, icon: pair.icon, side: 'a', imageUrl: pair.imageUrl });
@@ -226,6 +228,20 @@ const GAME_NAME = 'MemoryCards';
 
 export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
+  const countryPairs = useMemo<MemoryPair[]>(
+    () =>
+      countryId
+        ? getMemoryPairsForCountry(countryId).map((pair) => ({
+            id: pair.id,
+            text: pair.text,
+            match: pair.match,
+            icon: pair.icon as IconName,
+            imageUrl: pair.imageUrl,
+          }))
+        : [],
+    [countryId],
+  );
   const addAura = useStore(s => s.addAura);
   const studyWithVisby = useStore(s => s.studyWithVisby);
   const playWithVisby = useStore(s => s.playWithVisby);
@@ -234,13 +250,18 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
   const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
   const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
   const getVisbyMood = useStore(s => s.getVisbyMood);
+  const markGamePlayed = useStore(s => s.markGamePlayed);
 
   const completePathNode = useStore(s => s.completePathNode);
 
   React.useEffect(() => {
     analyticsService.trackGameStart(GAME_NAME);
   }, []);
-  const [deck, setDeck] = useState(() => buildDeck());
+  const [deck, setDeck] = useState(() => buildDeck(countryPairs));
+  useEffect(() => {
+    setDeck(buildDeck(countryPairs));
+  }, [countryPairs]);
+
   const [cardStates, setCardStates] = useState<FlipState[]>(
     () => Array(PAIRS_PER_GAME * 2).fill('down'),
   );
@@ -342,6 +363,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
           checkDailyMissionCompletion('play_minigame', 1);
           setAdventureGamePlayed();
           if (pathNodeId) completePathNode(pathNodeId);
+          if (countryId) markGamePlayed(countryId);
           addSkillPoints('culture', 3);
           setTimeout(() => {
             setIsFinished(true);
@@ -364,7 +386,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
   );
 
   const handlePlayAgain = useCallback(() => {
-    const newDeck = buildDeck();
+    const newDeck = buildDeck(countryPairs);
     setDeck(newDeck);
     setCardStates(Array(PAIRS_PER_GAME * 2).fill('down'));
     setFirstFlip(null);
@@ -375,7 +397,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
     setEndTime(null);
     isProcessingRef.current = false;
     setIsLaunching(true);
-  }, []);
+  }, [countryPairs]);
 
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {

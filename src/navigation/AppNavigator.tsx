@@ -9,6 +9,7 @@ import { RootStackParamList, MainTabParamList, ExploreStackParamList } from '../
 import { useStore } from '../store/useStore';
 import { PersistentBottomNav } from '../components/navigation/PersistentBottomNav';
 import { VisbyLoader } from '../components/ui/VisbyLoader';
+import { Icon } from '../components/ui/Icon';
 
 import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -46,6 +47,7 @@ const LazyAddFriendScreen = React.lazy(() => import('../screens/friends/AddFrien
 const LazyFriendProfileScreen = React.lazy(() => import('../screens/friends/FriendProfileScreen'));
 const LazyAvatarScreen = React.lazy(() => import('../screens/avatar/AvatarScreen'));
 const LazyBadgesScreen = React.lazy(() => import('../screens/badges/BadgesScreen'));
+const LazyWeeklyChallengeScreen = React.lazy(() => import('../screens/home/WeeklyChallengeScreen'));
 const LazySettingsScreen = React.lazy(() => import('../screens/settings/SettingsScreen'));
 const LazyCosmeticShopScreen = React.lazy(() => import('../screens/shop/CosmeticShopScreen'));
 const LazyMembershipScreen = React.lazy(() => import('../screens/shop/MembershipScreen'));
@@ -91,7 +93,7 @@ class ScreenErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <View style={styles.errorWrap}>
-          <Text style={styles.errorEmoji}>{'🧭'}</Text>
+          <Icon name="compass" size={48} color={colors.primary.wisteriaDark} />
           <Text style={styles.errorTitle}>Visby tripped over a rock!</Text>
           <Text style={styles.errorMsg}>Don't worry, let's dust off and try that again.</Text>
           <TouchableOpacity
@@ -143,6 +145,7 @@ const AddFriendScreen = SuspenseScreen(LazyAddFriendScreen);
 const FriendProfileScreen = SuspenseScreen(LazyFriendProfileScreen);
 const AvatarScreen = SuspenseScreen(LazyAvatarScreen);
 const BadgesScreen = SuspenseScreen(LazyBadgesScreen);
+const WeeklyChallengeScreen = SuspenseScreen(LazyWeeklyChallengeScreen);
 const SettingsScreen = SuspenseScreen(LazySettingsScreen);
 const CosmeticShopScreen = SuspenseScreen(LazyCosmeticShopScreen);
 const MembershipScreen = SuspenseScreen(LazyMembershipScreen);
@@ -252,6 +255,7 @@ export const AppNavigator = () => {
             <Stack.Screen name="AddBite" component={AddBiteScreen} />
             <Stack.Screen name="Avatar" component={AvatarScreen} options={{ animation: 'fade' }} />
             <Stack.Screen name="Badges" component={BadgesScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="WeeklyChallenge" component={WeeklyChallengeScreen} options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />

@@ -511,7 +511,7 @@ export const ALL_FLASHCARDS: FlashcardItem[] = [
 export const FLASHCARD_DECKS = [
   { id: 'greetings', title: 'World Greetings', icon: '', count: 10 },
   { id: 'food', title: 'World Foods', icon: '', count: 10 },
-  { id: 'food_discovery', title: 'My Discoveries', icon: '🍽️', count: 0 },
+  { id: 'food_discovery', title: 'My Discoveries', icon: 'food', count: 0 },
   { id: 'landmarks', title: 'Famous Landmarks', icon: '', count: 8 },
   { id: 'expressions', title: 'Fun Expressions', icon: '', count: 8 },
   { id: 'phrases', title: 'World Phrases', icon: '', count: 32 },
@@ -1337,6 +1337,91 @@ export const MYTHS_AND_LEGENDS: Myth[] = [
     flashcard: { front: 'What is the Kraken?', back: 'A massive Norwegian sea monster with huge tentacles — likely inspired by real giant squid' },
   },
   {
+    id: 'myth_tarasque', title: 'The Tarasque of Provence', countryId: 'fr',
+    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600',
+    story: [
+      'In southern France, people told stories of the Tarasque, a dragon-like river monster with a spiky shell and a powerful tail.',
+      'The creature frightened travelers near the Rhone River until Saint Martha calmed it with courage, kindness, and song.',
+      'Today, the town of Tarascon celebrates the legend with giant parade creatures and festivals that keep the story alive.',
+    ],
+    moral: 'Kindness and courage can tame fear better than force.',
+    modernConnection: 'French towns still parade dragon figures inspired by the Tarasque legend.',
+    quiz: [
+      { question: 'Where was the Tarasque legend told?', options: ['Northern France', 'Southern France', 'Norway', 'Egypt'], correct: 1 },
+      { question: 'How was the monster calmed?', options: ['By fire', 'By kindness and courage', 'By an army', 'By a storm'], correct: 1 },
+      { question: 'What keeps the legend alive today?', options: ['Parades and festivals', 'TV only', 'No one remembers it', 'Space museums'], correct: 0 },
+    ],
+    flashcard: { front: 'What is the Tarasque?', back: 'A famous French river monster from Provence that was calmed by Saint Martha.' },
+  },
+  {
+    id: 'myth_ait_hdidou', title: 'Ait Haddidou Mountain Spirit Tales', countryId: 'ma',
+    imageUrl: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=600',
+    story: [
+      'In Amazigh mountain stories from Morocco, travelers speak of guardian spirits that protect valleys, springs, and high passes.',
+      'The spirits reward respectful visitors who protect water, share food, and help elders cross rough trails.',
+      'Families pass these stories from generation to generation to teach care for land, neighbors, and animals.',
+    ],
+    moral: 'Respect for people and nature brings protection and trust.',
+    modernConnection: 'Many Moroccan folktales are still shared during family gatherings and festivals.',
+    quiz: [
+      { question: 'Where do these stories come from?', options: ['Amazigh mountain regions', 'Arctic seas', 'Roman arenas', 'Rainforests'], correct: 0 },
+      { question: 'What do guardian spirits reward?', options: ['Greed', 'Respectful behavior', 'Loud voices', 'Racing'], correct: 1 },
+      { question: 'Why are these tales told?', options: ['To teach care and respect', 'Only to scare kids', 'To sell maps', 'To count sheep'], correct: 0 },
+    ],
+    flashcard: { front: 'What do Moroccan mountain spirit tales teach?', back: 'They teach respect for nature, elders, and community.' },
+  },
+  {
+    id: 'myth_amaru', title: 'Amaru - The Serpent of the Andes', countryId: 'pe',
+    imageUrl: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=600',
+    story: [
+      'In Andean stories from Peru, Amaru is a powerful serpent spirit connected to mountains, rivers, and storms.',
+      'Amaru can move between sky, earth, and underground worlds, linking nature\'s different realms.',
+      'People tell this myth to remember that mountain water and weather are sacred and must be respected.',
+    ],
+    moral: 'Nature is connected, and every part deserves care.',
+    modernConnection: 'Amaru symbols appear in Andean textiles, art, and stories today.',
+    quiz: [
+      { question: 'What kind of being is Amaru?', options: ['A bird', 'A serpent spirit', 'A giant cat', 'A tree'], correct: 1 },
+      { question: 'What does Amaru connect?', options: ['Only cities', 'Sky, earth, and underworld', 'Only oceans', 'Only farms'], correct: 1 },
+      { question: 'What lesson does the myth teach?', options: ['Ignore weather', 'Respect nature', 'Collect gold', 'Travel at night'], correct: 1 },
+    ],
+    flashcard: { front: 'Who is Amaru in Peruvian myth?', back: 'A powerful Andean serpent spirit linked to mountains, rivers, and weather.' },
+  },
+  {
+    id: 'myth_nyamgondho', title: 'Nyamgondho and the Lake Spirit', countryId: 'ke',
+    imageUrl: 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=600',
+    story: [
+      'In Luo storytelling from Kenya, Nyamgondho was a fisherman who met a mysterious spirit from Lake Victoria.',
+      'When he treated the spirit with respect, his family prospered. When people mocked the spirit, they lost that blessing.',
+      'The story teaches gratitude and respect for water, food, and the unseen gifts of nature.',
+    ],
+    moral: 'Gratitude and respect sustain communities.',
+    modernConnection: 'Lake stories are still shared around western Kenya to teach values and history.',
+    quiz: [
+      { question: 'This story is linked to which lake?', options: ['Lake Victoria', 'Lake Baikal', 'Lake Erie', 'Dead Sea'], correct: 0 },
+      { question: 'What brought prosperity?', options: ['Mocking others', 'Respect and gratitude', 'Treasure maps', 'Racing boats'], correct: 1 },
+      { question: 'What does the tale encourage?', options: ['Waste', 'Respect for nature and people', 'Silence forever', 'Fear of fishing'], correct: 1 },
+    ],
+    flashcard: { front: 'What is the lesson of Nyamgondho?', back: 'Respect, gratitude, and care for nature bring long-term wellbeing.' },
+  },
+  {
+    id: 'myth_shahmaran', title: 'Shahmaran - The Wise Serpent Queen', countryId: 'tr',
+    imageUrl: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=600',
+    story: [
+      'In Turkish folklore, Shahmaran is a wise half-woman, half-serpent queen who lives in hidden underground gardens.',
+      'She shares knowledge of healing plants and medicine with humans who prove trustworthy.',
+      'Her story appears in art, jewelry, and stories as a symbol of wisdom, healing, and loyalty.',
+    ],
+    moral: 'Knowledge should be protected and shared with integrity.',
+    modernConnection: 'Shahmaran motifs are common in Turkish crafts and storytelling.',
+    quiz: [
+      { question: 'What is Shahmaran known for?', options: ['Sailing ships', 'Wisdom and healing knowledge', 'Building castles', 'Flying'], correct: 1 },
+      { question: 'Where does she live in stories?', options: ['Desert dunes', 'Underground gardens', 'Snow peaks', 'City towers'], correct: 1 },
+      { question: 'What does she symbolize?', options: ['Chaos only', 'Wisdom and loyalty', 'Speed', 'Luck in games'], correct: 1 },
+    ],
+    flashcard: { front: 'Who is Shahmaran?', back: 'A wise serpent queen from Turkish folklore associated with healing and wisdom.' },
+  },
+  {
     id: 'myth_sphinx', title: 'The Riddle of the Sphinx', countryId: 'eg',
     imageUrl: 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=600',
     story: [
@@ -2125,7 +2210,7 @@ export function getDiscoveryFlashcards(discoveredDishIds: string[]): FlashcardIt
     cards.push({
       id: `fd_${dish.id}`,
       front: `${dish.emoji} ${dish.name} (${dish.countryName})`,
-      back: `${dish.originStory}\n\n💡 ${dish.funFact}`,
+      back: `${dish.originStory}\n\nFun fact: ${dish.funFact}`,
       icon: dish.emoji,
       deck: 'food_discovery',
     });

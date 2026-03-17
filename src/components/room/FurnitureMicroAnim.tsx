@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Icon } from '../ui/Icon';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -249,9 +250,9 @@ const BookFloat: React.FC<{ size: number }> = ({ size }) => {
   }));
 
   return (
-    <Animated.Text style={[style, { fontSize: 18 }]}>
-      {'\u{1F4D6}'}
-    </Animated.Text>
+    <Animated.View style={style}>
+      <Icon name="book" size={18} color="#8B5E3C" />
+    </Animated.View>
   );
 };
 
@@ -427,7 +428,9 @@ const FishSwim: React.FC<{ size: number }> = ({ size }) => {
 
   return (
     <View style={[styles.container, { width: size, height: size, pointerEvents: 'none' }]}>
-      <Animated.Text style={[style, { fontSize: 14 }]}>🐠</Animated.Text>
+      <Animated.View style={style}>
+        <Icon name="fish" size={14} color="#4DB8C7" />
+      </Animated.View>
     </View>
   );
 };
@@ -576,7 +579,9 @@ const CatStretch: React.FC<{ size: number }> = ({ size }) => {
 
   return (
     <View style={[styles.container, { width: size, height: size, pointerEvents: 'none' }]}>
-      <Animated.Text style={[catStyle, { fontSize: 20 }]}>🐱</Animated.Text>
+      <Animated.View style={catStyle}>
+        <Icon name="cat" size={20} color="#D4A05A" />
+      </Animated.View>
     </View>
   );
 };
@@ -606,7 +611,9 @@ const PlantSway: React.FC<{ size: number }> = ({ size }) => {
 
   return (
     <View style={[styles.container, { width: size, height: size, pointerEvents: 'none' }]}>
-      <Animated.Text style={[style, { fontSize: 22 }]}>🌿</Animated.Text>
+      <Animated.View style={style}>
+        <Icon name="plant" size={22} color="#4CAF50" />
+      </Animated.View>
     </View>
   );
 };

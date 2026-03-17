@@ -408,7 +408,7 @@ export const LearnScreen: React.FC<LearnScreenProps> = ({ navigation }) => {
           >
             <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={styles.foodDiscoveryGradient}>
               <View style={styles.foodDiscoveryLeft}>
-                <Text style={styles.foodDiscoveryEmoji}>🍽️</Text>
+                <Icon name="food" size={32} color={colors.reward.peachDark} />
                 <View style={{ flex: 1 }}>
                   <Text variant="h3" style={{ color: colors.reward.peachDark }}>Discover a Dish</Text>
                   <Caption>{discoveredCount} / {totalDishes} dishes discovered</Caption>

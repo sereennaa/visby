@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,11 +7,13 @@ import {
   Modal,
   Pressable,
   TextInput,
+  LayoutChangeEvent,
 } from 'react-native';
 import Animated, { ZoomIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
@@ -39,6 +41,8 @@ type ConfirmModal = {
 };
 
 export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigation }) => {
+  const route = useRoute<RouteProp<ExploreStackParamList, 'CountryWorld'>>();
+  const initialCountryId = route.params?.countryId;
   const user = useStore(s => s.user);
   const userHouses = useStore(s => s.userHouses);
   const spendAura = useStore(s => s.spendAura);
@@ -86,6 +90,10 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     countryEmoji: string;
     countryId: string;
   }>({ visible: false, countryName: '', countryEmoji: '', countryId: '' });
+
+  const scrollRef = useRef<ScrollView>(null);
+  const cardYPositions = useRef<Record<string, number>>({});
+  const autoTriggered = useRef(false);
 
   const unlockedItemCountByCountry = useMemo(() => {
     const map: Record<string, number> = {};
@@ -183,6 +191,20 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     );
   };
 
+  useEffect(() => {
+    if (initialCountryId && !autoTriggered.current) {
+      autoTriggered.current = true;
+      const timer = setTimeout(() => {
+        const y = cardYPositions.current[initialCountryId];
+        if (y != null) {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+        }
+        handleVisit(initialCountryId);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [initialCountryId]);
+
   const handleBuyHouse = (countryId: string) => {
     const country = COUNTRIES.find((c) => c.id === countryId);
     if (!country || hasHouse(countryId)) return;
@@ -256,6 +278,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       <FloatingParticles count={6} variant="mixed" opacity={0.2} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -310,7 +333,13 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
             const visited = visitedCountries.includes(country.id);
             const itemCount = getUnlockedItemCount(country.id);
             return (
-              <Animated.View key={country.id} entering={FadeInDown.delay(idx * 50).duration(350)}>
+              <Animated.View
+                key={country.id}
+                entering={FadeInDown.delay(idx * 50).duration(350)}
+                onLayout={(e: LayoutChangeEvent) => {
+                  cardYPositions.current[country.id] = e.nativeEvent.layout.y;
+                }}
+              >
               <Card
                 variant="elevated"
                 style={{...styles.countryCard, borderLeftColor: country.accentColor, borderLeftWidth: 4 }}
@@ -456,7 +485,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
               colors={[colors.reward.peachLight, colors.accent.blush, colors.primary.wisteriaFaded]}
               style={styles.souvenirGradient}
             >
-              <Text style={styles.souvenirEmoji}>🎁</Text>
+              <Icon name="gift" size={48} color={colors.reward.peachDark} />
               <Heading level={2}>Souvenir Unlocked!</Heading>
               <Text variant="body" align="center" style={styles.souvenirBody}>
                 Welcome to {souvenirModal.countryName}! You received a free{'\n'}

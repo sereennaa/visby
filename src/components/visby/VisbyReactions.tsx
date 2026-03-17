@@ -28,31 +28,31 @@ export type ReactionTrigger =
 
 const REACTION_MESSAGES: Record<ReactionTrigger, string[]> = {
   purchase_cosmetic: [
-    'Wow, I love my new look! ✨',
-    'This is so cool! Thank you! 🎉',
+    'Wow, I love my new look!',
+    'This is so cool! Thank you!',
     "I can't wait to show this off!",
   ],
   purchase_furniture: [
-    'This is perfect for our home! 🏠',
+    'This is perfect for our home!',
     "Ooh, I love where this is going!",
     'Our room is looking amazing!',
   ],
   enter_home: [
-    'Welcome home! 🏡',
+    'Welcome home!',
     "I missed you! Let's hang out!",
     'Home sweet home!',
   ],
   decorate_room: [
-    "Ooh, that looks great there! 🎨",
+    "Ooh, that looks great there!",
     "You're such a good decorator!",
     'I love the vibe!',
   ],
-  feed: ['Yummy! This is delicious! 🍪', 'Nom nom nom... so good!', 'Thank you for the food!'],
-  play: ['Woohoo! So much fun! 🎉', "Let's play more!", 'That was awesome!'],
-  study: ['I learned something new! 📖', 'Knowledge is power!', 'Ooh, fascinating!'],
-  rest: ['Zzz... so comfy 💤', 'A little nap feels nice...', 'Sweet dreams!'],
-  gift: ['You\'re the best! 💖', 'I love presents!', 'This is amazing, thank you!'],
-  milestone: ['We did it together! 🏆', "Look how far we've come!", "I'm so proud of us!"],
+  feed: ['Yummy! This is delicious!', 'Nom nom nom... so good!', 'Thank you for the food!'],
+  play: ['Woohoo! So much fun!', "Let's play more!", 'That was awesome!'],
+  study: ['I learned something new!', 'Knowledge is power!', 'Ooh, fascinating!'],
+  rest: ['Zzz... so comfy...', 'A little nap feels nice...', 'Sweet dreams!'],
+  gift: ['You\'re the best!', 'I love presents!', 'This is amazing, thank you!'],
+  milestone: ['We did it together!', "Look how far we've come!", "I'm so proud of us!"],
 };
 
 interface VisbyReactionsProps {

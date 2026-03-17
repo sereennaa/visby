@@ -407,9 +407,9 @@ export function getEquippedGlowColor(equipped: Record<string, string | undefined
 
 // ===================== VISBY GIFTS =====================
 export const VISBY_GIFTS: VisbyGift[] = [
-  { id: 'gift_snack', name: 'Tasty Snack', icon: 'food', price: 30, bondBonus: 3, needsBoost: { hunger: 30 }, visbyReaction: 'Yummy! This is so good! 🍪' },
-  { id: 'gift_toy', name: 'Fun Toy', icon: 'sparkles', price: 40, bondBonus: 3, needsBoost: { happiness: 25 }, visbyReaction: 'Woohoo! I love playing with this! 🎉' },
-  { id: 'gift_book', name: 'Story Book', icon: 'book', price: 35, bondBonus: 3, needsBoost: { knowledge: 25 }, visbyReaction: 'Ooh, a new story! Let me read it! 📖' },
-  { id: 'gift_blanket', name: 'Cozy Blanket', icon: 'home', price: 25, bondBonus: 2, needsBoost: { energy: 20 }, visbyReaction: 'So warm and snuggly... 💤' },
-  { id: 'gift_special', name: 'Special Treat', icon: 'heart', price: 200, bondBonus: 10, needsBoost: { hunger: 15, happiness: 15, energy: 15, knowledge: 15, socialBattery: 15 }, visbyReaction: 'You\'re the best friend ever! I love you! 💖' },
+  { id: 'gift_snack', name: 'Tasty Snack', icon: 'food', price: 30, bondBonus: 3, needsBoost: { hunger: 30 }, visbyReaction: 'Yummy! This is so good!' },
+  { id: 'gift_toy', name: 'Fun Toy', icon: 'sparkles', price: 40, bondBonus: 3, needsBoost: { happiness: 25 }, visbyReaction: 'Woohoo! I love playing with this!' },
+  { id: 'gift_book', name: 'Story Book', icon: 'book', price: 35, bondBonus: 3, needsBoost: { knowledge: 25 }, visbyReaction: 'Ooh, a new story! Let me read it!' },
+  { id: 'gift_blanket', name: 'Cozy Blanket', icon: 'home', price: 25, bondBonus: 2, needsBoost: { energy: 20 }, visbyReaction: 'So warm and snuggly...' },
+  { id: 'gift_special', name: 'Special Treat', icon: 'heart', price: 200, bondBonus: 10, needsBoost: { hunger: 15, happiness: 15, energy: 15, knowledge: 15, socialBattery: 15 }, visbyReaction: 'You\'re the best friend ever! I love you!' },
 ];

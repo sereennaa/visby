@@ -37,7 +37,7 @@ interface GameCelebrationProps {
 const TIER_CONFIG = {
   good: {
     title: 'Nice work!',
-    emoji: '🎉',
+    icon: 'sparkles' as IconName,
     confettiCount: 12,
     bgColors: ['rgba(45, 45, 58, 0.9)', 'rgba(30, 30, 48, 0.95)'] as [string, string],
     accentColor: colors.calm.sky,
@@ -46,7 +46,7 @@ const TIER_CONFIG = {
   },
   great: {
     title: 'Awesome!',
-    emoji: '🌟',
+    icon: 'star' as IconName,
     confettiCount: 24,
     bgColors: ['rgba(40, 35, 55, 0.92)', 'rgba(25, 20, 40, 0.96)'] as [string, string],
     accentColor: colors.reward.gold,
@@ -55,7 +55,7 @@ const TIER_CONFIG = {
   },
   perfect: {
     title: 'LEGENDARY!',
-    emoji: '👑',
+    icon: 'crown' as IconName,
     confettiCount: 40,
     bgColors: ['rgba(35, 20, 50, 0.95)', 'rgba(15, 10, 30, 0.98)'] as [string, string],
     accentColor: '#FFD700',
@@ -167,7 +167,7 @@ export const GameCelebration: React.FC<GameCelebrationProps> = ({
 
           <Animated.View style={iconStyle}>
             <View style={styles.emojiContainer}>
-              <Text style={styles.emoji}>{config.emoji}</Text>
+              <Icon name={config.icon} size={48} color={config.accentColor} />
             </View>
           </Animated.View>
 

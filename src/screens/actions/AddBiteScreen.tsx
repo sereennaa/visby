@@ -22,6 +22,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Heading, Text, Caption } from '../../components/ui/Text';
@@ -145,17 +146,21 @@ const QuizOptionButton: React.FC<QuizOptionProps> = React.memo(({
 
 type AddBiteScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AddBite'>;
+  route: RouteProp<RootStackParamList, 'AddBite'>;
 };
 
-export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
+export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation, route }) => {
+  const prefilterCountryId = route.params?.countryId ?? null;
   const user = useStore(s => s.user);
   const bites = useStore(s => s.bites);
   const discoverDish = useStore(s => s.discoverDish);
   const getDiscoveredDishesByCountry = useStore(s => s.getDiscoveredDishesByCountry);
+  const markGamePlayed = useStore(s => s.markGamePlayed);
+  const addDiscovery = useStore(s => s.addDiscovery);
 
   const [step, setStep] = useState<'browse' | 'learn' | 'quiz'>('browse');
   const [query, setQuery] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string>(prefilterCountryId ?? 'all');
   const [selectedDish, setSelectedDish] = useState<WorldDish | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
@@ -250,6 +255,11 @@ export const AddBiteScreen: React.FC<AddBiteScreenProps> = ({ navigation }) => {
     };
 
     discoverDish(bite, auraReward);
+    const dishCountryId = selectedDish.country;
+    if (dishCountryId) {
+      markGamePlayed(dishCountryId);
+      addDiscovery(`Discovered: ${selectedDish.name}`, dishCountryId, 'dish');
+    }
     setCreatedBiteId(bite.id);
     setEarnedAura(auraReward);
     setShowSuccess(true);

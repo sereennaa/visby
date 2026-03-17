@@ -166,13 +166,13 @@ export const HousePurchaseCeremony: React.FC<HousePurchaseCeremonyProps> = ({
 
         {/* Wrapper (scales in then fades) */}
         <Animated.View style={[styles.wrapperBox, wrapperStyle]}>
-          <Text style={styles.giftEmoji}>🎁</Text>
+          <Icon name="gift" size={48} color={colors.reward.peachDark} />
         </Animated.View>
 
         {/* Revealed house */}
         <Animated.View style={[styles.houseReveal, houseStyle]}>
           <Text style={styles.houseEmoji}>{countryEmoji}</Text>
-          <Text style={styles.homeIcon}>🏠</Text>
+          <Icon name="home" size={36} color={colors.primary.wisteriaDark} />
         </Animated.View>
 
         <Animated.View style={titleStyle}>

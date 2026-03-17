@@ -25,6 +25,7 @@ import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence'
 import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 import { SpeakerButton } from '../../components/ui/SpeakerButton';
 import type { RootStackParamList } from '../../types';
+import { getAllStoryTemplates, getStoryTemplateForCountry } from '../../config/countryGameContent';
 
 interface StoryTemplate {
   id: string;
@@ -122,6 +123,7 @@ const GAME_NAME = 'StoryBuilder';
 
 export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
   const addAura = useStore(s => s.addAura);
   const addSkillPoints = useStore(s => s.addSkillPoints);
   const incrementGameStat = useStore(s => s.incrementGameStat);
@@ -136,7 +138,22 @@ export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
-  const [storyIndex, setStoryIndex] = useState(0);
+  const templates = useMemo<StoryTemplate[]>(() => {
+    const generated = getAllStoryTemplates() as StoryTemplate[];
+    const byId = new Map<string, StoryTemplate>();
+    [...generated, ...STORY_TEMPLATES].forEach((template) => {
+      if (!byId.has(template.id)) byId.set(template.id, template);
+    });
+    return [...byId.values()];
+  }, []);
+
+  const [storyIndex, setStoryIndex] = useState(() => {
+    if (!countryId) return 0;
+    const target = getStoryTemplateForCountry(countryId);
+    if (!target) return 0;
+    const idx = templates.findIndex((item) => item.id === target.id);
+    return idx >= 0 ? idx : 0;
+  });
   const [phase, setPhase] = useState<'launching' | 'playing' | 'complete' | 'result'>('launching');
   const [showCelebration, setShowCelebration] = useState(false);
   const [blankIndex, setBlankIndex] = useState(0);
@@ -144,7 +161,7 @@ export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
   const [correctCount, setCorrectCount] = useState(0);
   const [totalAura, setTotalAura] = useState(0);
 
-  const story = STORY_TEMPLATES[storyIndex % STORY_TEMPLATES.length];
+  const story = templates[storyIndex % templates.length];
   const blanks = useMemo(
     () => story.segments.filter((s) => s.blank).map((s) => s.blank!),
     [storyIndex],

@@ -50,20 +50,20 @@ func loadWidgetPayload() -> WidgetPayload? {
     return try? JSONDecoder().decode(WidgetPayload.self, from: data)
 }
 
-// MARK: - Mood to emoji/label
+// MARK: - Mood to SF Symbol
 
-func moodDisplay(_ mood: String) -> String {
+func moodSFSymbol(_ mood: String) -> String {
     switch mood {
-    case "happy": return "😊"
-    case "excited": return "🤩"
-    case "sleepy": return "😴"
-    case "hungry": return "🍽️"
-    case "bored": return "😑"
-    case "lonely": return "🥺"
-    case "sick": return "🤒"
-    case "confused": return "🤔"
-    case "curious", "proud", "adventurous", "cozy": return "✨"
-    default: return "😊"
+    case "happy": return "face.smiling"
+    case "excited": return "star.fill"
+    case "sleepy": return "moon.zzz.fill"
+    case "hungry": return "fork.knife"
+    case "bored": return "ellipsis.circle"
+    case "lonely": return "heart"
+    case "sick": return "cross.case"
+    case "confused": return "questionmark.circle"
+    case "curious", "proud", "adventurous", "cozy": return "sparkles"
+    default: return "face.smiling"
     }
 }
 
@@ -135,8 +135,9 @@ struct VisbyWidgetView: View {
     private func content(payload: WidgetPayload) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(moodDisplay(payload.mood))
+                Image(systemName: moodSFSymbol(payload.mood))
                     .font(family == .systemSmall ? .title2 : .title)
+                    .foregroundColor(.purple)
                 Text(payload.visbyName)
                     .font(.headline)
                 Spacer()

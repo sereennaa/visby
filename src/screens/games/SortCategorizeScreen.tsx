@@ -15,7 +15,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
-import { Icon } from '../../components/ui/Icon';
+import { Icon, IconName, iconMap } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { analyticsService } from '../../services/analytics';
@@ -25,6 +25,7 @@ import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence'
 import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 import { speechService } from '../../services/audio';
 import type { RootStackParamList } from '../../types';
+import { getSortChallengesForCountry } from '../../config/countryGameContent';
 
 interface SortItem {
   id: string;
@@ -51,12 +52,12 @@ const CHALLENGES: SortChallenge[] = [
       { id: 's1', text: 'Sushi', category: 'jp', icon: '🍣' },
       { id: 's2', text: 'Croissant', category: 'fr', icon: '🥐' },
       { id: 's3', text: 'Tacos', category: 'mx', icon: '🌮' },
-      { id: 's4', text: 'Kimono', category: 'jp', icon: '👘' },
-      { id: 's5', text: 'Beret', category: 'fr', icon: '🎨' },
-      { id: 's6', text: 'Piñata', category: 'mx', icon: '🎉' },
-      { id: 's7', text: 'Origami', category: 'jp', icon: '🦢' },
-      { id: 's8', text: 'Eiffel Tower', category: 'fr', icon: '🗼' },
-      { id: 's9', text: 'Mariachi', category: 'mx', icon: '🎺' },
+      { id: 's4', text: 'Kimono', category: 'jp', icon: 'kimono' },
+      { id: 's5', text: 'Beret', category: 'fr', icon: 'palette' },
+      { id: 's6', text: 'Piñata', category: 'mx', icon: 'sparkles' },
+      { id: 's7', text: 'Origami', category: 'jp', icon: 'cards' },
+      { id: 's8', text: 'Eiffel Tower', category: 'fr', icon: 'landmark' },
+      { id: 's9', text: 'Mariachi', category: 'mx', icon: 'music' },
     ],
   },
   {
@@ -68,14 +69,14 @@ const CHALLENGES: SortChallenge[] = [
     ],
     items: [
       { id: 't1', text: 'Pizza', category: 'food', icon: '🍕' },
-      { id: 't2', text: 'Big Ben', category: 'landmark', icon: '🕐' },
+      { id: 't2', text: 'Big Ben', category: 'landmark', icon: 'time' },
       { id: 't3', text: 'Tea Ceremony', category: 'tradition', icon: '🍵' },
       { id: 't4', text: 'Pad Thai', category: 'food', icon: '🍜' },
-      { id: 't5', text: 'Great Wall', category: 'landmark', icon: '🏯' },
-      { id: 't6', text: 'Carnival', category: 'tradition', icon: '🎭' },
+      { id: 't5', text: 'Great Wall', category: 'landmark', icon: 'castle' },
+      { id: 't6', text: 'Carnival', category: 'tradition', icon: 'drama' },
       { id: 't7', text: 'Ramen', category: 'food', icon: '🍲' },
-      { id: 't8', text: 'Colosseum', category: 'landmark', icon: '🏛️' },
-      { id: 't9', text: 'Day of Dead', category: 'tradition', icon: '💀' },
+      { id: 't8', text: 'Colosseum', category: 'landmark', icon: 'monument' },
+      { id: 't9', text: 'Day of Dead', category: 'tradition', icon: 'skull' },
     ],
   },
   {
@@ -108,6 +109,7 @@ const GAME_NAME = 'SortCategorize';
 
 export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
   const addAura = useStore(s => s.addAura);
   const addSkillPoints = useStore(s => s.addSkillPoints);
   const incrementGameStat = useStore(s => s.incrementGameStat);
@@ -130,7 +132,11 @@ export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => 
   const [correctCount, setCorrectCount] = useState(0);
   const [totalAura, setTotalAura] = useState(0);
 
-  const challenge = CHALLENGES[challengeIndex % CHALLENGES.length];
+  const activeChallenges = useMemo(
+    () => (countryId ? getSortChallengesForCountry(countryId) : CHALLENGES),
+    [countryId],
+  );
+  const challenge = activeChallenges[challengeIndex % activeChallenges.length];
   const shuffledItems = useMemo(
     () => [...challenge.items].sort(() => Math.random() - 0.5),
     [challengeIndex],
@@ -185,7 +191,7 @@ export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => 
         setPhase('result');
       }, 500));
     }
-  }, [selectedItem, sorted, challenge.items.length]);
+  }, [selectedItem, sorted, challenge.items.length, activeChallenges.length]);
 
   if (phase === 'launching') {
     return (
@@ -286,7 +292,9 @@ export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => 
                 onPress={() => handleSelectItem(item)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.itemIcon}>{item.icon}</Text>
+                {item.icon in iconMap
+                  ? <Icon name={item.icon as IconName} size={20} color={colors.text.primary} />
+                  : <Text style={styles.itemIcon}>{item.icon}</Text>}
                 <Text style={styles.itemText}>{item.text}</Text>
               </TouchableOpacity>
             </Animated.View>

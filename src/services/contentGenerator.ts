@@ -133,7 +133,7 @@ export async function generateFlashcards(
 ): Promise<GeneratedFlashcard[]> {
   const systemPrompt = `You are creating flashcards for a kids travel learning app. Cards should teach words, phrases, or cultural facts about ${countryName}. Respond with valid JSON.`;
 
-  const userPrompt = `Generate ${count} flashcards for the "${deck}" deck about ${countryName}. Return as JSON: {"flashcards":[{"front":"...(question/word)","back":"...(answer/translation)","icon":"🌍","deck":"${deck}"}]}`;
+  const userPrompt = `Generate ${count} flashcards for the "${deck}" deck about ${countryName}. Return as JSON: {"flashcards":[{"front":"...(question/word)","back":"...(answer/translation)","icon":"globe","deck":"${deck}"}]}`;
 
   try {
     const raw = await callAI(systemPrompt, userPrompt);

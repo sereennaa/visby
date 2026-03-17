@@ -1,107 +1,72 @@
-import React, { useEffect, useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, {
-  Path,
-  Defs,
-  RadialGradient,
-  LinearGradient as SvgLinearGradient,
-  Stop,
-  Circle,
-  Text as SvgText,
-  G,
-  Rect,
-  Line,
-  Polygon,
-} from 'react-native-svg';
-import { Text as RNText } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
+import Svg, { Path, Rect } from 'react-native-svg';
 
-// Equirectangular projection: x = (lon+180)/360*100, y = (90-lat)/180*100
-const CONTINENT_PATHS: { d: string; id: string }[] = [
-  {
-    id: 'north_america',
-    d: 'M 4 12 Q 3 14 4 17 Q 8 20 12 23 Q 14 26 16 30 Q 18 34 20 37 Q 22 41 24 42 L 26 39 L 25 35 Q 27 36 28 34 Q 30 31 30 27 L 31 23 Q 32 19 33 17 Q 29 15 27 16 Q 26 14 25 11 Q 19 10 12 11 Q 7 11 4 12 Z',
-  },
-  {
-    id: 'south_america',
-    d: 'M 28 46 Q 31 44 35 45 Q 39 47 40 52 Q 40 58 38 64 Q 36 71 33 77 L 30 81 Q 29 78 28 72 Q 27 65 27 57 Q 27 51 28 46 Z',
-  },
-  {
-    id: 'europe',
-    d: 'M 48 14 Q 51 12 54 13 Q 56 14 57 17 Q 57 20 57 23 Q 57 26 57 29 L 55 30 Q 53 29 51 30 Q 49 29 48 27 Q 47 24 47 20 Q 47 17 48 14 Z',
-  },
-  {
-    id: 'africa',
-    d: 'M 47 31 Q 51 30 55 30 Q 58 31 60 34 Q 62 39 63 45 Q 63 51 61 57 Q 59 63 57 68 Q 55 70 53 68 Q 52 64 51 58 Q 49 52 48 47 Q 46 42 46 37 Q 46 33 47 31 Z',
-  },
-  {
-    id: 'asia',
-    d: 'M 59 27 Q 60 21 62 16 Q 65 12 70 10 Q 77 8 83 10 Q 89 13 92 17 Q 95 20 93 23 L 89 26 Q 87 28 85 31 Q 83 34 81 37 Q 79 41 78 45 Q 76 48 74 46 Q 71 42 68 37 Q 65 34 62 35 Q 60 33 59 27 Z',
-  },
-  {
-    id: 'india',
-    d: 'M 68 34 Q 71 33 74 35 Q 76 39 74 44 Q 72 47 70 46 Q 67 42 67 38 Q 67 36 68 34 Z',
-  },
-  {
-    id: 'japan_isle',
-    d: 'M 87 24 Q 89 23 90 26 Q 91 29 90 32 Q 88 34 87 31 Q 86 28 87 24 Z',
-  },
-  {
-    id: 'australia',
-    d: 'M 82 57 Q 86 55 90 57 Q 93 60 93 65 Q 92 70 89 72 Q 86 73 83 72 Q 81 69 80 65 Q 80 60 82 57 Z',
-  },
-  {
-    id: 'uk_ireland',
-    d: 'M 48 17 Q 49 16 50 17 Q 50 20 49 21 Q 48 21 47 20 Q 47 18 48 17 Z',
-  },
-  {
-    id: 'greenland',
-    d: 'M 37 14 Q 36 10 37 6 Q 39 3 42 4 Q 45 6 44 11 Q 43 14 40 15 Q 38 15 37 14 Z',
-  },
-];
+/**
+ * Simplified equirectangular world map.
+ * ViewBox 0 0 1000 500 maps to lon -180..180, lat 90..-90.
+ * Country pin positions use xPercent/yPercent (0-100) of this space.
+ */
 
-const LANDMARK_ICONS: { x: number; y: number; icon: string; label: string }[] = [
-  { x: 51, y: 23, icon: '🗼', label: 'Paris' },
-  { x: 89, y: 30, icon: '⛩️', label: 'Tokyo' },
-  { x: 59, y: 33, icon: '🏺', label: 'Cairo' },
-  { x: 29, y: 27, icon: '🗽', label: 'NYC' },
-  { x: 71, y: 35, icon: '🕌', label: 'Delhi' },
-  { x: 38, y: 63, icon: '🎭', label: 'Rio' },
-  { x: 91, y: 68, icon: '🦘', label: 'Sydney' },
-  { x: 60, y: 51, icon: '🦁', label: 'Nairobi' },
-  { x: 53, y: 17, icon: '🏔️', label: 'Oslo' },
-  { x: 78, y: 42, icon: '🏯', label: 'Bangkok' },
-];
-
-const OCEAN_LABELS: { x: number; y: number; text: string; rotate: number }[] = [
-  { x: 12, y: 55, text: 'Pacific Ocean', rotate: -12 },
-  { x: 38, y: 36, text: 'Atlantic', rotate: -8 },
-  { x: 70, y: 60, text: 'Indian Ocean', rotate: 5 },
-  { x: 96, y: 40, text: 'Pacific', rotate: -5 },
-];
-
-const CONTINENT_LABELS: { x: number; y: number; text: string; fontSize: number }[] = [
-  { x: 17, y: 28, text: 'North America', fontSize: 2.2 },
-  { x: 33, y: 62, text: 'South America', fontSize: 2 },
-  { x: 52, y: 21, text: 'Europe', fontSize: 1.8 },
-  { x: 54, y: 48, text: 'Africa', fontSize: 2.2 },
-  { x: 75, y: 24, text: 'Asia', fontSize: 2.5 },
-  { x: 88, y: 66, text: 'Oceania', fontSize: 1.8 },
-  { x: 50, y: 96, text: 'Antarctica', fontSize: 1.6 },
-];
-
-const SEA_CREATURES: { x: number; y: number; emoji: string; size: number }[] = [
-  { x: 10, y: 70, emoji: '🐋', size: 3 },
-  { x: 66, y: 75, emoji: '🐙', size: 2.5 },
-  { x: 37, y: 34, emoji: '⛵', size: 2 },
-  { x: 96, y: 50, emoji: '🐠', size: 2 },
+const LAND_PATHS: string[] = [
+  // North America (mainland)
+  'M 60 80 L 65 75 L 80 68 L 100 62 L 115 58 L 130 55 L 140 58 L 148 65 L 155 72 L 158 80 L 155 88 L 148 95 L 142 105 L 138 115 L 142 122 L 150 128 L 160 130 L 168 125 L 175 118 L 185 115 L 195 118 L 200 125 L 195 135 L 185 142 L 178 150 L 175 160 L 178 168 L 185 172 L 195 175 L 205 180 L 210 188 L 208 195 L 200 200 L 190 205 L 182 212 L 180 220 L 175 228 L 168 232 L 160 228 L 155 220 L 148 215 L 140 218 L 135 225 L 128 230 L 120 228 L 115 222 L 108 218 L 100 222 L 95 228 L 88 225 L 82 218 L 78 210 L 75 200 L 72 190 L 68 182 L 62 178 L 55 180 L 50 185 L 45 182 L 42 175 L 45 168 L 50 160 L 48 150 L 42 142 L 38 135 L 40 125 L 45 118 L 48 108 L 50 98 L 52 90 L 55 85 Z',
+  // Greenland
+  'M 195 55 L 205 48 L 218 42 L 232 40 L 245 42 L 255 48 L 258 58 L 252 68 L 242 72 L 230 70 L 218 65 L 208 60 Z',
+  // Central America & Mexico
+  'M 120 228 L 128 230 L 135 238 L 140 248 L 142 258 L 138 265 L 132 268 L 125 265 L 118 258 L 115 250 L 112 242 L 115 235 Z',
+  // Caribbean islands (simplified)
+  'M 155 240 L 162 238 L 170 240 L 175 245 L 172 250 L 165 252 L 158 248 Z',
+  'M 180 242 L 188 240 L 195 245 L 192 250 L 185 250 Z',
+  // South America
+  'M 148 280 L 158 272 L 168 268 L 180 270 L 192 275 L 200 282 L 205 292 L 210 305 L 215 318 L 218 332 L 220 348 L 218 362 L 215 375 L 210 388 L 202 398 L 192 405 L 182 410 L 172 415 L 165 420 L 160 425 L 158 432 L 155 440 L 148 445 L 142 440 L 140 430 L 138 418 L 135 405 L 132 392 L 130 378 L 128 365 L 128 350 L 130 338 L 132 325 L 135 312 L 138 300 L 142 290 Z',
+  // Europe (mainland)
+  'M 468 85 L 475 80 L 485 78 L 495 80 L 502 85 L 508 78 L 515 75 L 525 78 L 530 85 L 535 80 L 542 78 L 548 82 L 552 90 L 555 98 L 558 105 L 562 98 L 568 92 L 575 88 L 582 92 L 585 100 L 582 108 L 578 115 L 575 122 L 578 128 L 582 135 L 578 142 L 572 148 L 565 152 L 558 148 L 552 142 L 548 148 L 542 155 L 535 158 L 528 155 L 522 148 L 518 142 L 512 145 L 505 150 L 498 152 L 492 148 L 488 142 L 482 138 L 478 142 L 472 148 L 468 155 L 462 152 L 458 145 L 455 138 L 452 128 L 450 118 L 452 108 L 455 98 L 458 92 L 462 88 Z',
+  // UK & Ireland
+  'M 462 95 L 468 88 L 475 85 L 478 90 L 475 98 L 468 102 L 462 100 Z',
+  'M 455 92 L 460 88 L 462 92 L 460 98 L 455 98 Z',
+  // Scandinavian peninsula
+  'M 502 42 L 508 38 L 515 35 L 522 38 L 528 42 L 532 48 L 535 55 L 532 62 L 528 68 L 522 72 L 518 78 L 512 82 L 505 78 L 500 72 L 498 65 L 495 58 L 498 50 Z',
+  // Iceland
+  'M 438 60 L 445 55 L 455 55 L 458 60 L 455 65 L 448 68 L 440 65 Z',
+  // Italy boot + Sicily
+  'M 522 148 L 528 155 L 535 162 L 538 170 L 535 178 L 528 182 L 522 178 L 518 170 L 515 162 L 518 155 Z',
+  'M 528 182 L 535 185 L 540 182 L 538 178 L 532 178 Z',
+  // Iberian peninsula
+  'M 452 128 L 458 125 L 468 122 L 478 125 L 482 132 L 480 140 L 475 148 L 468 152 L 458 150 L 452 145 L 448 138 L 448 132 Z',
+  // Greece
+  'M 548 148 L 555 145 L 560 150 L 558 158 L 552 162 L 548 158 L 545 152 Z',
+  // Africa
+  'M 458 178 L 468 172 L 480 168 L 492 165 L 505 162 L 518 165 L 530 170 L 542 175 L 552 180 L 560 188 L 568 198 L 575 210 L 580 222 L 582 235 L 582 250 L 580 265 L 575 278 L 570 292 L 562 305 L 555 318 L 548 328 L 540 338 L 532 345 L 522 350 L 512 352 L 502 348 L 492 342 L 485 335 L 478 325 L 472 312 L 468 298 L 465 285 L 462 270 L 460 255 L 458 240 L 455 225 L 452 210 L 450 195 L 452 185 Z',
+  // Madagascar
+  'M 592 310 L 598 305 L 605 308 L 608 318 L 605 328 L 600 335 L 595 332 L 592 322 Z',
+  // Asia (mainland)
+  'M 582 92 L 592 85 L 605 80 L 618 78 L 632 80 L 645 82 L 658 78 L 672 75 L 685 78 L 698 82 L 710 88 L 722 85 L 735 80 L 748 78 L 760 80 L 772 85 L 782 92 L 790 100 L 795 110 L 798 120 L 800 130 L 798 140 L 792 148 L 785 155 L 778 162 L 770 168 L 762 175 L 755 182 L 748 188 L 740 192 L 732 195 L 722 198 L 712 195 L 705 188 L 698 182 L 690 178 L 682 182 L 675 188 L 668 192 L 658 195 L 648 192 L 640 185 L 632 178 L 625 172 L 618 168 L 610 165 L 602 162 L 595 158 L 588 152 L 582 145 L 578 135 L 575 125 L 575 115 L 578 105 L 580 98 Z',
+  // Indian subcontinent
+  'M 668 192 L 678 195 L 688 200 L 695 208 L 700 218 L 702 230 L 698 242 L 692 252 L 685 258 L 678 255 L 672 248 L 668 238 L 665 228 L 662 218 L 662 208 L 665 200 Z',
+  // Sri Lanka
+  'M 688 262 L 692 258 L 698 260 L 698 268 L 695 272 L 690 268 Z',
+  // Southeast Asia peninsula
+  'M 740 192 L 748 198 L 752 208 L 755 218 L 758 228 L 755 238 L 748 245 L 742 250 L 735 252 L 728 248 L 725 240 L 722 230 L 720 220 L 722 210 L 728 202 L 735 198 Z',
+  // Japanese islands
+  'M 842 108 L 848 102 L 855 98 L 862 102 L 865 110 L 862 118 L 858 125 L 852 130 L 845 128 L 840 122 L 838 115 Z',
+  'M 855 128 L 860 132 L 862 140 L 858 145 L 852 142 L 850 135 Z',
+  // Korean peninsula
+  'M 825 108 L 830 102 L 838 105 L 840 112 L 838 120 L 832 125 L 826 122 L 822 115 Z',
+  // Taiwan
+  'M 818 182 L 822 178 L 828 180 L 828 188 L 825 192 L 820 190 Z',
+  // Indonesia (main islands simplified)
+  'M 758 268 L 768 265 L 778 268 L 788 272 L 798 275 L 808 278 L 815 282 L 810 288 L 800 285 L 790 282 L 778 280 L 768 278 L 760 275 Z',
+  'M 818 278 L 828 275 L 838 278 L 842 285 L 838 290 L 828 288 L 820 285 Z',
+  // Philippines (simplified)
+  'M 815 218 L 820 212 L 828 215 L 830 225 L 825 232 L 818 228 Z',
+  // Australia
+  'M 808 320 L 822 312 L 838 308 L 855 310 L 870 315 L 882 322 L 892 332 L 898 345 L 900 358 L 898 372 L 892 382 L 882 390 L 870 395 L 858 398 L 845 395 L 832 390 L 822 382 L 815 372 L 810 360 L 808 345 L 808 332 Z',
+  // New Zealand
+  'M 918 368 L 922 362 L 928 365 L 930 375 L 928 385 L 922 390 L 918 385 L 916 378 Z',
+  'M 922 390 L 928 392 L 932 400 L 928 408 L 922 405 L 920 398 Z',
+  // Arabian peninsula
+  'M 588 178 L 598 175 L 610 178 L 622 182 L 632 188 L 638 198 L 635 208 L 628 215 L 618 218 L 608 215 L 598 210 L 590 202 L 585 192 L 585 185 Z',
 ];
 
 type WorldMapBackgroundProps = {
@@ -112,213 +77,29 @@ type WorldMapBackgroundProps = {
   landStroke?: string;
 };
 
-const BobbingCreature = React.memo<{ x: number; y: number; emoji: string; fontSize: number; mapWidth: number; mapHeight: number; delay: number }>(
-  ({ x, y, emoji, fontSize, mapWidth, mapHeight, delay }) => {
-    const bob = useSharedValue(0);
-    useEffect(() => {
-      bob.value = withRepeat(
-        withTiming(1, { duration: 2400 + delay * 800, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true,
-      );
-    }, []);
-    const style = useAnimatedStyle(() => ({
-      transform: [{ translateY: interpolate(bob.value, [0, 1], [-2, 2]) }],
-    }));
-    return (
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            left: (x / 100) * mapWidth - fontSize * 2,
-            top: (y / 100) * mapHeight - fontSize * 2,
-          },
-          style,
-        ]}
-        pointerEvents="none"
-      >
-        <RNText style={{ fontSize: fontSize * 4, opacity: 0.35 }}>{emoji}</RNText>
-      </Animated.View>
-    );
-  },
-);
-
-const DriftingCloud = React.memo<{ startX: number; y: number; size: number; delay: number; mapWidth: number }>(
-  ({ startX, y, size, delay, mapWidth }) => {
-    const progress = useSharedValue(0);
-
-    useEffect(() => {
-      progress.value = withRepeat(
-        withTiming(1, { duration: 30000 + delay * 10000, easing: Easing.linear }),
-        -1,
-        false,
-      );
-    }, []);
-
-    const style = useAnimatedStyle(() => ({
-      transform: [{ translateX: interpolate(progress.value, [0, 1], [-20, mapWidth + 20]) }],
-      opacity: interpolate(progress.value, [0, 0.1, 0.9, 1], [0, 0.25, 0.25, 0]),
-    }));
-
-    return (
-      <Animated.View style={[{ position: 'absolute', top: y, left: startX }, style]}>
-        <View style={{
-          width: size,
-          height: size * 0.4,
-          borderRadius: size * 0.2,
-          backgroundColor: 'rgba(255,255,255,0.35)',
-        }} />
-      </Animated.View>
-    );
-  },
-);
-
 export const WorldMapBackground: React.FC<WorldMapBackgroundProps> = ({
   width,
   height,
-  oceanColor = '#C8D9E6',
-  landColor = '#E8DCC8',
-  landStroke = 'rgba(160,140,110,0.5)',
-}) => {
-  const clouds = useMemo(() => [
-    { startX: -40, y: height * 0.12, size: 60, delay: 0 },
-    { startX: -80, y: height * 0.35, size: 45, delay: 1.2 },
-    { startX: -60, y: height * 0.65, size: 55, delay: 0.6 },
-    { startX: -100, y: height * 0.85, size: 50, delay: 1.8 },
-  ], [height]);
-
-  return (
-    <View style={[styles.wrap, { width, height }]}>
-      <Svg width={width} height={height} viewBox="0 0 100 100" preserveAspectRatio="none">
-        <Defs>
-          <SvgLinearGradient id="oceanGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#B5CBE0" />
-            <Stop offset="0.5" stopColor={oceanColor} />
-            <Stop offset="1" stopColor="#A8C4D8" />
-          </SvgLinearGradient>
-          <SvgLinearGradient id="landGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#F0E6D4" />
-            <Stop offset="0.5" stopColor={landColor} />
-            <Stop offset="1" stopColor="#DDD0BC" />
-          </SvgLinearGradient>
-          <RadialGradient id="parchmentGlow" cx="50%" cy="50%" r="60%">
-            <Stop offset="0" stopColor="rgba(255,248,230,0.15)" />
-            <Stop offset="1" stopColor="rgba(0,0,0,0)" />
-          </RadialGradient>
-        </Defs>
-
-        {/* Ocean with parchment gradient */}
-        <Rect x="0" y="0" width="100" height="100" fill="url(#oceanGrad)" />
-        <Rect x="0" y="0" width="100" height="100" fill="url(#parchmentGlow)" />
-
-        {/* Subtle wave pattern lines */}
-        {[20, 40, 60, 80].map((y) => (
-          <Path
-            key={`wave_${y}`}
-            d={`M 0 ${y} Q 12 ${y - 1.5} 25 ${y} Q 38 ${y + 1.5} 50 ${y} Q 62 ${y - 1.5} 75 ${y} Q 88 ${y + 1.5} 100 ${y}`}
-            stroke="rgba(130,160,190,0.12)"
-            strokeWidth={0.3}
-            fill="none"
-          />
-        ))}
-
-        {/* Land: organic continent shapes with gradient fill */}
-        {CONTINENT_PATHS.map((path) => (
-          <Path
-            key={path.id}
-            d={path.d}
-            fill="url(#landGrad)"
-            stroke={landStroke}
-            strokeWidth={0.6}
-            strokeLinejoin="round"
-          />
-        ))}
-
-        {/* Equator line */}
-        <Line x1="0" y1="50" x2="100" y2="50" stroke="rgba(180,100,80,0.15)" strokeWidth={0.25} strokeDasharray="2,1.5" />
-        <SvgText x="96" y="49" textAnchor="end" fontSize="1.3" fill="rgba(180,100,80,0.25)">Equator</SvgText>
-
-        {/* Continent labels */}
-        {CONTINENT_LABELS.map((label) => (
-          <SvgText
-            key={label.text}
-            x={label.x}
-            y={label.y}
-            textAnchor="middle"
-            fontSize={label.fontSize}
-            fill="rgba(120,100,70,0.3)"
-            fontWeight="bold"
-            letterSpacing={0.5}
-          >
-            {label.text}
-          </SvgText>
-        ))}
-
-        {/* Compass rose (bottom-left corner, absolute coords to avoid G transform NaN on web) */}
-        <Circle cx={8} cy={88} r={5} fill="rgba(180,160,130,0.2)" stroke="rgba(160,140,110,0.4)" strokeWidth={0.3} />
-        <Polygon points="8,83.5 8.8,88 8,89 7.2,88" fill="#B8956A" />
-        <Polygon points="8,92.5 8.8,88 8,87 7.2,88" fill="#D4B896" />
-        <Polygon points="3.5,88 8,88.8 9,88 8,87.2" fill="#D4B896" />
-        <Polygon points="12.5,88 8,88.8 7,88 8,87.2" fill="#B8956A" />
-        <SvgText x={8} y={82.2} textAnchor="middle" fontSize="2" fill="#8B7355" fontWeight="bold">N</SvgText>
-        <SvgText x={8} y={95.2} textAnchor="middle" fontSize="1.5" fill="#8B7355">S</SvgText>
-        <SvgText x={2} y={88.5} textAnchor="middle" fontSize="1.5" fill="#8B7355">W</SvgText>
-        <SvgText x={14} y={88.5} textAnchor="middle" fontSize="1.5" fill="#8B7355">E</SvgText>
-
-        {/* Ocean labels in italic style */}
-        {OCEAN_LABELS.map((label) => (
-          <SvgText
-            key={label.text}
-            x={label.x}
-            y={label.y}
-            textAnchor="middle"
-            fontSize="2.2"
-            fill="rgba(80,110,140,0.3)"
-            fontStyle="italic"
-            rotation={label.rotate}
-            origin={`${label.x}, ${label.y}`}
-          >
-            {label.text}
-          </SvgText>
-        ))}
-
-        {/* Sea creatures rendered as bobbing overlay outside SVG */}
-
-        {/* Landmark icons on countries */}
-        {LANDMARK_ICONS.map((lm, i) => (
-          <G key={`lm_${i}`}>
-            <SvgText x={lm.x} y={lm.y} fontSize="3.5" textAnchor="middle" opacity={0.5}>
-              {lm.icon}
-            </SvgText>
-          </G>
-        ))}
-
-        {/* Dotted ship routes between some countries */}
-        <Line x1="34" y1="32" x2="46" y2="31" stroke="rgba(160,140,110,0.2)" strokeWidth={0.3} strokeDasharray="1,1" />
-        <Line x1="50" y1="30" x2="58" y2="33" stroke="rgba(160,140,110,0.2)" strokeWidth={0.3} strokeDasharray="1,1" />
-        <Line x1="64" y1="48" x2="78" y2="50" stroke="rgba(160,140,110,0.2)" strokeWidth={0.3} strokeDasharray="1,1" />
-
-        {/* Parchment border vignette */}
-        <Rect
-          x="0" y="0" width="100" height="100"
-          fill="none"
-          stroke="rgba(140,120,90,0.15)"
-          strokeWidth={2}
+  oceanColor = '#DCEAF7',
+  landColor = '#E8E4DC',
+  landStroke = 'rgba(180,175,165,0.6)',
+}) => (
+  <View style={[styles.wrap, { width, height }]} pointerEvents="none">
+    <Svg width={width} height={height} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+      <Rect x="0" y="0" width="1000" height="500" fill={oceanColor} />
+      {LAND_PATHS.map((d, i) => (
+        <Path
+          key={i}
+          d={d}
+          fill={landColor}
+          stroke={landStroke}
+          strokeWidth={1}
+          strokeLinejoin="round"
         />
-      </Svg>
-
-      {/* Drifting cloud overlays */}
-      {clouds.map((c, i) => (
-        <DriftingCloud key={i} {...c} mapWidth={width} />
       ))}
-
-      {/* Bobbing sea creatures */}
-      {SEA_CREATURES.map((c, i) => (
-        <BobbingCreature key={`bob_${i}`} x={c.x} y={c.y} emoji={c.emoji} fontSize={c.size} mapWidth={width} mapHeight={height} delay={i} />
-      ))}
-    </View>
-  );
-};
+    </Svg>
+  </View>
+);
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, top: 0, overflow: 'hidden' },

@@ -441,7 +441,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
           <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
             {buyModalError ? (
               <>
-                <Text style={styles.modalEmoji}>😢</Text>
+                <Icon name="heartOutline" size={48} color={colors.text.muted} />
                 <Heading level={3}>Not Enough Aura</Heading>
                 <Text variant="body" style={styles.modalBody}>{buyModalError}</Text>
                 <View style={styles.modalRow}>

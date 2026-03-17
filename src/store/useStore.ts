@@ -2,10 +2,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory, DailyMission, DailyMissionType, TreasureHuntProgress, PlaceChatMessage, Discovery, FlashcardSRData, FlashcardGrade, VisbyBond, SavedLook, EquippedCosmetics, BOND_LEVEL_THRESHOLDS, DEFAULT_ROOM_DEFINITIONS } from '../types';
-import { LEVEL_THRESHOLDS, AURA_REWARDS } from '../config/constants';
+import { User, Visby, Stamp, Bite, UserBadge, LocationData, UserLessonProgress, UserHouse, VisbyNeeds, PlacedFurniture, RoomCustomization, VisbyGrowthStage, SkillProgress, Friend, FriendRequest, VisbyChatMessage, VisbyMemory, DailyMission, DailyMissionType, TreasureHuntProgress, PlaceChatMessage, Discovery, FlashcardSRData, FlashcardGrade, VisbyBond, SavedLook, EquippedCosmetics, BOND_LEVEL_THRESHOLDS, DEFAULT_ROOM_DEFINITIONS, JourneyTier, JourneyAction } from '../types';
+import { LEVEL_THRESHOLDS, AURA_REWARDS, COUNTRIES } from '../config/constants';
+import { getCountryMapPins } from '../config/countryMap';
+import { getRoomsForCountry } from '../config/treasureHunt';
+import { getDishesByCountry } from '../config/worldFoods';
 import { createInitialSRData, gradeCard, getDueCards, simpleGrade } from '../services/spacedRepetition';
-import { getEventAuraMultiplier } from '../config/seasonalEvents';
+import { getEventAuraMultiplier, getCurrentWeeklyChallenge } from '../config/seasonalEvents';
 import { QUEST_DEFINITIONS, getQuestById, getSeasonalExplorerQuest, type QuestDefinition } from '../config/quests';
 import { getCurrentSeasonKey } from '../config/worldCalendar';
 import { STORY_CHAPTERS, getChapterUnlockCurrent, type StoryChapter } from '../config/storyChapters';
@@ -146,7 +149,12 @@ interface AppStore {
   userHouses: UserHouse[];
 
   /** Per-country learning completion: facts read, quiz done, games played (for "place complete" / next level) */
-  countryProgress: Record<string, { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number }>;
+  countryProgress: Record<string, { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number; locationsVisitedCount: number }>;
+
+  /** Per-country explored stops (stop IDs the user has marked explored) */
+  visitedStops: Record<string, string[]>;
+  /** Per-country completed pins (pin IDs where ALL stops have been explored) */
+  visitedPins: Record<string, string[]>;
 
   /** Per-country treasure hunt: completed room IDs (and optionally location IDs) */
   treasureHuntProgress: TreasureHuntProgress;
@@ -264,13 +272,26 @@ interface AppStore {
   addUserHouse: (house: UserHouse) => void;
   /** Record first visit to a country. Returns souvenir cosmetic ID if one was granted. */
   visitCountry: (countryId: string) => string | null;
-  getCountryProgress: (countryId: string) => { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number };
+  getCountryProgress: (countryId: string) => { factsReadCount: number; quizCompleted: boolean; gamesPlayedCount: number; locationsVisitedCount: number };
   markFactRead: (countryId: string) => void;
   markQuizCompleted: (countryId: string) => void;
   markGamePlayed: (countryId: string) => void;
+  markLocationVisited: (countryId: string) => void;
+  /** Mark a stop as explored, grant Aura, and auto-complete pin if all stops done. Returns true if pin was completed. */
+  markStopExplored: (countryId: string, pinId: string, stopId: string, aura: number, pinLocationIds: string[]) => boolean;
+  isStopExplored: (countryId: string, stopId: string) => boolean;
+  isPinComplete: (countryId: string, pinId: string) => boolean;
+  getVisitedStopCount: (countryId: string) => number;
+
+  /** Compute the journey tier for a country based on all activities. */
+  getCountryJourneyTier: (countryId: string) => JourneyTier;
+  /** Compute detailed journey progress for a country. */
+  getCountryJourneyProgress: (countryId: string) => { done: number; total: number; tier: JourneyTier; actions: JourneyAction[] };
+  /** Auto-award a stamp for an exploration milestone (pin complete, tier-up, etc.). De-duplicates. */
+  autoAwardExplorationStamp: (countryId: string, milestoneId: string, locationName: string, stampType: Stamp['type']) => Stamp | null;
 
   /** Add a discovery (fact or quiz) to the log; call when user reads a fact or completes quiz in a room. */
-  addDiscovery: (title: string, countryId: string, type: 'fact' | 'quiz') => void;
+  addDiscovery: (title: string, countryId: string, type: 'fact' | 'quiz' | 'stop' | 'game' | 'dish' | 'treasure') => void;
   getDiscoveryLog: () => Discovery[];
   /** Call when user enters a country room; increments visit count. */
   recordRoomVisit: (countryId: string, roomId: string) => void;
@@ -446,6 +467,14 @@ interface AppStore {
   markWeeklyRecapShown: () => void;
   getWeeklyRecapStats: () => { countriesExplored: number; quizzesCompleted: number; factsLearned: number; auraEarned: number; streakDays: number };
 
+  // Weekly Challenge progress
+  weeklyChallengeId: string;
+  weeklyChallengeProgress: Record<string, number>;
+  weeklyChallengeCompleted: boolean;
+  incrementChallengeProgress: (taskType: string, amount?: number) => void;
+  resetWeeklyChallengeIfNeeded: () => void;
+  getWeeklyChallengeProgress: () => Record<string, number>;
+
   // Daily Deal
   dailyDealItemId: string | null;
   dailyDealDateKey: string;
@@ -473,6 +502,8 @@ export const useStore = create<AppStore>()(
       userHouses: [],
       ownedFurniture: [],
       countryProgress: {},
+      visitedStops: {},
+      visitedPins: {},
       treasureHuntProgress: {},
       discoveryLog: [],
       roomVisitCount: {},
@@ -534,6 +565,9 @@ export const useStore = create<AppStore>()(
       dailyDealItemId: null,
       dailyDealDateKey: '',
       categoryAccuracy: {},
+      weeklyChallengeId: '',
+      weeklyChallengeProgress: {},
+      weeklyChallengeCompleted: false,
 
       // Auth Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -548,6 +582,8 @@ export const useStore = create<AppStore>()(
         lessonProgress: [],
         userHouses: [],
       countryProgress: {},
+      visitedStops: {},
+      visitedPins: {},
       treasureHuntProgress: {},
       discoveryLog: [],
       roomVisitCount: {},
@@ -585,12 +621,12 @@ export const useStore = create<AppStore>()(
       
       getCountryProgress: (countryId) => {
         const progress = get().countryProgress[countryId];
-        return progress || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        return progress || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0, locationsVisitedCount: 0 };
       },
       markFactRead: (countryId) => {
         const { countryProgress, adventureDateKey, adventureFactsCount } = get();
         const today = todayDateKey();
-        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0, locationsVisitedCount: 0 };
         set({
           countryProgress: {
             ...countryProgress,
@@ -610,26 +646,166 @@ export const useStore = create<AppStore>()(
         }
         get().checkDailyMissionCompletion('read_facts', 1);
         get().awardAdventureIfCompleted();
+        get().incrementChallengeProgress('learn_phrases');
+        get().incrementChallengeProgress('read_food_facts');
+        get().incrementChallengeProgress('read_nature');
+        get().incrementChallengeProgress('read_history');
+        get().incrementChallengeProgress('read_myths');
       },
       markQuizCompleted: (countryId) => {
         const { countryProgress } = get();
-        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0, locationsVisitedCount: 0 };
         set({
           countryProgress: {
             ...countryProgress,
             [countryId]: { ...current, quizCompleted: true },
           },
         });
+        get().incrementChallengeProgress('correct_answers');
+        get().incrementChallengeProgress('myth_quiz');
+        get().incrementChallengeProgress('history_quiz');
+        get().incrementChallengeProgress('nature_quiz');
       },
       markGamePlayed: (countryId) => {
         const { countryProgress } = get();
-        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0 };
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0, locationsVisitedCount: 0 };
         set({
           countryProgress: {
             ...countryProgress,
             [countryId]: { ...current, gamesPlayedCount: (current.gamesPlayedCount || 0) + 1 },
           },
         });
+      },
+      markLocationVisited: (countryId) => {
+        const { countryProgress } = get();
+        const current = countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0, locationsVisitedCount: 0 };
+        set({
+          countryProgress: {
+            ...countryProgress,
+            [countryId]: { ...current, locationsVisitedCount: (current.locationsVisitedCount || 0) + 1 },
+          },
+        });
+      },
+
+      markStopExplored: (countryId, pinId, stopId, aura, pinLocationIds) => {
+        const { visitedStops, visitedPins } = get();
+        const countryStops = visitedStops[countryId] ?? [];
+        if (countryStops.includes(stopId)) return false;
+
+        const updatedStops = [...countryStops, stopId];
+        set({ visitedStops: { ...visitedStops, [countryId]: updatedStops } });
+
+        if (aura > 0) get().addAura(aura);
+
+        const allPinStopsDone = pinLocationIds.every((id) => updatedStops.includes(id));
+        if (allPinStopsDone) {
+          const countryPins = visitedPins[countryId] ?? [];
+          if (!countryPins.includes(pinId)) {
+            set({ visitedPins: { ...visitedPins, [countryId]: [...countryPins, pinId] } });
+            get().markLocationVisited(countryId);
+            const pins = getCountryMapPins(countryId);
+            const pinData = pins.find((p) => p.id === pinId);
+            if (pinData) {
+              const country = COUNTRIES.find((c) => c.id === countryId);
+              get().autoAwardExplorationStamp(countryId, `pin_${pinId}`, pinData.name, pinData.type === 'city' ? 'city' : 'landmark');
+            }
+          }
+          return true;
+        }
+        return false;
+      },
+
+      isStopExplored: (countryId, stopId) => {
+        return (get().visitedStops[countryId] ?? []).includes(stopId);
+      },
+
+      isPinComplete: (countryId, pinId) => {
+        return (get().visitedPins[countryId] ?? []).includes(pinId);
+      },
+
+      getVisitedStopCount: (countryId) => {
+        return (get().visitedStops[countryId] ?? []).length;
+      },
+
+      getCountryJourneyProgress: (countryId) => {
+        const state = get();
+        const country = COUNTRIES.find((c) => c.id === countryId);
+        if (!country) return { done: 0, total: 0, tier: 'newcomer' as JourneyTier, actions: [] };
+
+        const cp = state.countryProgress[countryId] || { factsReadCount: 0, quizCompleted: false, gamesPlayedCount: 0, locationsVisitedCount: 0 };
+        const pins = getCountryMapPins(countryId);
+        const completedPins = state.visitedPins[countryId] ?? [];
+        const thp = state.treasureHuntProgress[countryId] ?? { completedRoomIds: [], completedLocationIds: [] };
+        const rooms = getRoomsForCountry(countryId);
+        const dishes = getDishesByCountry(countryId);
+        const discoveredDishIds = state.bites.filter((b) => b.worldDishId && dishes.some((d) => d.id === b.worldDishId)).map((b) => b.worldDishId!);
+
+        const actions: JourneyAction[] = [];
+
+        const allFactsDone = cp.factsReadCount >= (country.facts?.length ?? 0) && (country.facts?.length ?? 0) > 0;
+        actions.push({ id: `${countryId}_facts`, label: `Read all ${country.facts?.length ?? 0} facts`, done: allFactsDone, category: 'facts' });
+        actions.push({ id: `${countryId}_quiz`, label: 'Complete the quiz', done: cp.quizCompleted, category: 'quiz' });
+        actions.push({ id: `${countryId}_game`, label: 'Play a game', done: cp.gamesPlayedCount > 0, category: 'games' });
+
+        for (const pin of pins) {
+          actions.push({ id: `${countryId}_pin_${pin.id}`, label: `Explore ${pin.name}`, done: completedPins.includes(pin.id), category: 'places' });
+        }
+        for (const room of rooms) {
+          actions.push({ id: `${countryId}_room_${room.id}`, label: `Treasure hunt: ${room.name}`, done: (thp.completedRoomIds ?? []).includes(room.id), category: 'treasure' });
+        }
+        for (const dish of dishes) {
+          actions.push({ id: `${countryId}_dish_${dish.id}`, label: `Discover: ${dish.name}`, done: discoveredDishIds.includes(dish.id), category: 'dishes' });
+        }
+
+        const done = actions.filter((a) => a.done).length;
+        const total = actions.length;
+        const pct = total > 0 ? done / total : 0;
+
+        let tier: JourneyTier = 'newcomer';
+        if (pct >= 1) tier = 'master';
+        else if (pct >= 0.75) tier = 'local';
+        else if (pct >= 0.45) tier = 'adventurer';
+        else if (pct >= 0.2) tier = 'explorer';
+
+        return { done, total, tier, actions };
+      },
+
+      getCountryJourneyTier: (countryId) => {
+        return get().getCountryJourneyProgress(countryId).tier;
+      },
+
+      autoAwardExplorationStamp: (countryId, milestoneId, locationName, stampType) => {
+        const state = get();
+        const user = state.user;
+        if (!user) return null;
+        const locationId = `explore_${countryId}_${milestoneId}`;
+        const alreadyHas = state.stamps.some((s) => s.locationId === locationId);
+        if (alreadyHas) return null;
+        const country = COUNTRIES.find((c) => c.id === countryId);
+        if (!country) return null;
+        const stamp: Stamp = {
+          id: `stamp_explore_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          userId: user.id,
+          type: stampType,
+          locationId,
+          locationName,
+          city: '',
+          country: country.name,
+          countryCode: country.countryCode,
+          latitude: 0,
+          longitude: 0,
+          collectedAt: new Date(),
+          source: 'learning',
+          learningCategory: 'exploration',
+          isFastTravel: false,
+          isPublic: true,
+          likes: 0,
+        };
+        set((s) => ({ stamps: [stamp, ...s.stamps] }));
+        get().checkAndAwardBadges();
+        get().checkDailyMissionCompletion('collect_stamp', 1);
+        get().checkQuests();
+        return stamp;
       },
 
       addDiscovery: (title, countryId, type) => {
@@ -1098,6 +1274,36 @@ export const useStore = create<AppStore>()(
         return { countriesExplored, quizzesCompleted, factsLearned, auraEarned, streakDays };
       },
 
+      resetWeeklyChallengeIfNeeded: () => {
+        const challenge = getCurrentWeeklyChallenge();
+        const { weeklyChallengeId } = get();
+        if (weeklyChallengeId !== challenge.id) {
+          set({ weeklyChallengeId: challenge.id, weeklyChallengeProgress: {}, weeklyChallengeCompleted: false });
+        }
+      },
+
+      incrementChallengeProgress: (taskType, amount = 1) => {
+        get().resetWeeklyChallengeIfNeeded();
+        const { weeklyChallengeProgress, weeklyChallengeCompleted } = get();
+        if (weeklyChallengeCompleted) return;
+
+        const updated = { ...weeklyChallengeProgress, [taskType]: (weeklyChallengeProgress[taskType] ?? 0) + amount };
+        set({ weeklyChallengeProgress: updated });
+
+        const challenge = getCurrentWeeklyChallenge();
+        const allDone = challenge.tasks.every((t) => (updated[t.type] ?? 0) >= t.target);
+        if (allDone) {
+          set({ weeklyChallengeCompleted: true });
+          get().addAura(challenge.auraBonus);
+          showToast(`Weekly challenge complete! +${challenge.auraBonus} Aura`, 'success');
+        }
+      },
+
+      getWeeklyChallengeProgress: () => {
+        get().resetWeeklyChallengeIfNeeded();
+        return get().weeklyChallengeProgress;
+      },
+
       markStoryBeatShown: (id) => {
         const { storyBeatsShown } = get();
         if (storyBeatsShown.includes(id)) return;
@@ -1404,6 +1610,7 @@ export const useStore = create<AppStore>()(
             },
             ...(weeklyReset ? { userWeeklyAura: newWeeklyAura, lastWeeklyResetDateKey: weekKey } : { userWeeklyAura: newWeeklyAura }),
           });
+          get().incrementChallengeProgress('earn_aura', boosted);
         }
       },
       spendAura: (amount) => {
@@ -1527,6 +1734,7 @@ export const useStore = create<AppStore>()(
         }
 
         get().checkAndAwardBadges();
+        get().incrementChallengeProgress('daily_streak');
 
         import('../services/analytics').then(m => {
           const user = get().user;
@@ -1568,7 +1776,10 @@ export const useStore = create<AppStore>()(
             ],
           });
         }
-        if (progress.completed) get().checkQuests();
+        if (progress.completed) {
+          get().checkQuests();
+          get().incrementChallengeProgress('complete_lesson');
+        }
       },
       completeLessonToday: () => {
         const { user } = get();
@@ -1615,6 +1826,8 @@ export const useStore = create<AppStore>()(
         });
 
         get().recordSeasonalCountryEntry();
+        get().incrementChallengeProgress('visit_countries');
+        get().incrementChallengeProgress('visit_ancient');
 
         const souvenir = COUNTRY_SOUVENIRS[countryId];
         if (souvenir && !visby.ownedCosmetics.includes(souvenir.cosmeticId)) {
@@ -1811,6 +2024,9 @@ export const useStore = create<AppStore>()(
         if (!user) return;
         set({ user: { ...user, [stat]: (user[stat] || 0) + 1 } });
         get().checkAndAwardBadges();
+        if (stat === 'perfectWordMatches' || stat === 'gamesPlayed') get().incrementChallengeProgress('play_word_match');
+        if (stat === 'perfectCookingGames' || stat === 'gamesPlayed') get().incrementChallengeProgress('play_cooking');
+        if (stat === 'treasureHuntsCompleted') get().incrementChallengeProgress('play_treasure');
       },
 
       getTreasureHuntProgress: (countryId) => {
@@ -1901,6 +2117,7 @@ export const useStore = create<AppStore>()(
         const grade = simpleGrade(knewIt);
         const updated = gradeCard(existing, grade);
         set({ flashcardSRData: flashcardSRData.map((c) => (c.cardId === cardId ? updated : c)) });
+        get().incrementChallengeProgress('review_flashcards');
       },
       getDueFlashcards: () => getDueCards(get().flashcardSRData),
       initFlashcardSR: (cardIds) => {
@@ -2053,6 +2270,8 @@ export const useStore = create<AppStore>()(
         userHouses: state.userHouses,
         ownedFurniture: state.ownedFurniture,
         countryProgress: state.countryProgress,
+        visitedStops: state.visitedStops,
+        visitedPins: state.visitedPins,
         treasureHuntProgress: state.treasureHuntProgress,
         discoveryLog: state.discoveryLog,
         roomVisitCount: state.roomVisitCount,
@@ -2100,6 +2319,9 @@ export const useStore = create<AppStore>()(
         dailyDealItemId: state.dailyDealItemId,
         dailyDealDateKey: state.dailyDealDateKey,
         categoryAccuracy: state.categoryAccuracy,
+        weeklyChallengeId: state.weeklyChallengeId,
+        weeklyChallengeProgress: state.weeklyChallengeProgress,
+        weeklyChallengeCompleted: state.weeklyChallengeCompleted,
       }),
     }
   )

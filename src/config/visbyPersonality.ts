@@ -15,15 +15,15 @@ export const TRAIT_DEFINITIONS: Array<{
   /** How this trait is earned */
   earnedBy: string;
 }> = [
-  { id: 'foodie', name: 'Foodie', description: 'Loves trying new foods from around the world', icon: '🍜', earnedBy: 'Logging bites and playing cooking games' },
-  { id: 'bookworm', name: 'Bookworm', description: 'Can never get enough lessons and facts', icon: '📚', earnedBy: 'Completing lessons and reading facts' },
-  { id: 'adventurer', name: 'Adventurer', description: 'Always ready to explore a new country', icon: '🗺️', earnedBy: 'Visiting countries and collecting stamps' },
-  { id: 'social_butterfly', name: 'Social Butterfly', description: 'Loves chatting and making friends', icon: '🦋', earnedBy: 'Chatting with Visby and friends' },
-  { id: 'linguist', name: 'Linguist', description: 'Picks up new words like a sponge', icon: '🗣️', earnedBy: 'Word Match and language flashcards' },
-  { id: 'gamer', name: 'Gamer', description: 'Unstoppable in mini-games', icon: '🎮', earnedBy: 'Playing and perfecting mini-games' },
-  { id: 'collector', name: 'Collector', description: 'Must catch them all — stamps, bites, badges', icon: '📸', earnedBy: 'Collecting stamps, bites, and badges' },
-  { id: 'caring', name: 'Caring', description: "Always makes sure everyone's happy", icon: '💜', earnedBy: 'Keeping Visby needs high' },
-  { id: 'earth_guardian', name: 'Earth Guardian', description: 'Cares for the planet — sustainability lessons, cleanups, and green choices', icon: '🌍', earnedBy: 'Sustainability lessons, impact actions, and planet quests' },
+  { id: 'foodie', name: 'Foodie', description: 'Loves trying new foods from around the world', icon: 'food', earnedBy: 'Logging bites and playing cooking games' },
+  { id: 'bookworm', name: 'Bookworm', description: 'Can never get enough lessons and facts', icon: 'book', earnedBy: 'Completing lessons and reading facts' },
+  { id: 'adventurer', name: 'Adventurer', description: 'Always ready to explore a new country', icon: 'map', earnedBy: 'Visiting countries and collecting stamps' },
+  { id: 'social_butterfly', name: 'Social Butterfly', description: 'Loves chatting and making friends', icon: 'heart', earnedBy: 'Chatting with Visby and friends' },
+  { id: 'linguist', name: 'Linguist', description: 'Picks up new words like a sponge', icon: 'chat', earnedBy: 'Word Match and language flashcards' },
+  { id: 'gamer', name: 'Gamer', description: 'Unstoppable in mini-games', icon: 'game', earnedBy: 'Playing and perfecting mini-games' },
+  { id: 'collector', name: 'Collector', description: 'Must catch them all — stamps, bites, badges', icon: 'camera', earnedBy: 'Collecting stamps, bites, and badges' },
+  { id: 'caring', name: 'Caring', description: "Always makes sure everyone's happy", icon: 'heart', earnedBy: 'Keeping Visby needs high' },
+  { id: 'earth_guardian', name: 'Earth Guardian', description: 'Cares for the planet — sustainability lessons, cleanups, and green choices', icon: 'globe', earnedBy: 'Sustainability lessons, impact actions, and planet quests' },
 ];
 
 // ─── EVOLUTION STAGE DETAILS ───
@@ -130,52 +130,52 @@ export function inferFavoriteCountry(visitedCountries: string[], countryProgress
 /** Get a personality-driven greeting from Visby */
 export function getPersonalityGreeting(dominant: VisbyTrait | null, stage: VisbyGrowthStage): string {
   if (stage === 'egg') return '...';
-  if (stage === 'baby') return "Waa! Hi! 💜";
+  if (stage === 'baby') return "Waa! Hi!";
 
   if (!dominant || dominant.level < 20) {
-    return "Hey! How are you? I'm so glad you're here. 💜";
+    return "Hey! How are you? I'm so glad you're here.";
   }
 
   const greetings: Record<string, string[]> = {
     foodie: [
-      "Hey! I've been thinking about food all day! 🍜",
+      "Hey! I've been thinking about food all day!",
       "Ooh, I'm a bit hungry. Did you try anything yummy today?",
     ],
     bookworm: [
-      "Hi! I just learned the coolest fact. Want to hear it? 📚",
+      "Hi! I just learned the coolest fact. Want to hear it?",
       "Hey there, smarty! Ready to discover something new?",
     ],
     adventurer: [
-      "Hey explorer! Where are we going today? 🗺️",
+      "Hey explorer! Where are we going today?",
       "I've got my backpack ready! Let's go somewhere amazing!",
     ],
     social_butterfly: [
-      "Yay, you're here! I missed talking to you! 🦋",
+      "Yay, you're here! I missed talking to you!",
       "Hi friend! How's everyone doing today?",
     ],
     linguist: [
-      "Konnichiwa! ...wait, was that right? 🗣️",
+      "Konnichiwa! ...wait, was that right?",
       "Bonjour! I've been practicing my words!",
     ],
     gamer: [
-      "Hey champ! Ready for a rematch? 🎮",
+      "Hey champ! Ready for a rematch?",
       "I've been training! Want to play something?",
     ],
     collector: [
-      "Look at all our stamps! Want to add more? 📸",
+      "Look at all our stamps! Want to add more?",
       "I found something cool — want to see?",
     ],
     caring: [
-      "Thanks for always taking such good care of me! 💜",
+      "Thanks for always taking such good care of me!",
       "I feel so happy when you're around!",
     ],
     earth_guardian: [
-      "We're helping the planet today! 🌍",
+      "We're helping the planet today!",
       "Hey! Ready to do something good for the Earth?",
     ],
   };
 
-  const options = greetings[dominant.id] || ["Hey! How are you? 💜"];
+  const options = greetings[dominant.id] || ["Hey! How are you?"];
   return options[Math.floor(Math.random() * options.length)];
 }
 
@@ -193,7 +193,7 @@ export function getNeglectEffects(needs: VisbyNeeds): {
       moodOverride: 'sick',
       auraMultiplier: 0.5,
       gamePerformance: 0.7,
-      message: "I don't feel so good... could you help me? 😢",
+      message: "I don't feel so good... could you help me?",
     };
   }
   if (avg <= 25) {
@@ -208,7 +208,7 @@ export function getNeglectEffects(needs: VisbyNeeds): {
     return {
       auraMultiplier: 1.15,
       gamePerformance: 1.0,
-      message: "I feel amazing! Let's go! ✨",
+      message: "I feel amazing! Let's go!",
     };
   }
   return { auraMultiplier: 1.0, gamePerformance: 1.0 };

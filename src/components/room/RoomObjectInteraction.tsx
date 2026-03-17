@@ -175,7 +175,7 @@ export const MicroEventModal = React.memo<MicroEventModalProps>(({
           <LinearGradient colors={[colors.reward.peachLight, colors.primary.wisteriaFaded]} style={StyleSheet.absoluteFill} />
           <Icon name={isRare ? 'sparkles' : 'star'} size={40} color={isRare ? colors.reward.gold : colors.reward.amber} />
           <Heading level={3} style={styles.microTitle}>
-            {isRare ? 'Rare find! ✨' : 'Visby found something!'}
+            {isRare ? 'Rare find!' : 'Visby found something!'}
           </Heading>
           <Text variant="body" color={colors.text.secondary} style={styles.microSub}>+{aura} Aura</Text>
           <Button title="Awesome!" onPress={onClose} variant="primary" size="sm" />

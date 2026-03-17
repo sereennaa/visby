@@ -170,7 +170,7 @@ export const HousePurchaseModal: React.FC<HousePurchaseModalProps> = ({
         return (
           <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.phaseContainer}>
             <View style={styles.celebrationBadge}>
-              <Text variant="h1" style={styles.celebEmoji}>🎉</Text>
+              <Icon name="sparkles" size={48} color={colors.reward.gold} />
             </View>
             <Heading level={2} align="center">Welcome Home!</Heading>
             <Caption align="center" style={styles.desc}>

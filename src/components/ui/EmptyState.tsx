@@ -11,11 +11,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Text, Heading } from './Text';
 import { Button } from './Button';
+import { IconBadge, IconName } from './Icon';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
 interface EmptyStateProps {
-  emoji: string;
+  icon: IconName;
   title: string;
   message: string;
   ctaLabel?: string;
@@ -24,7 +25,7 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  emoji,
+  icon,
   title,
   message,
   ctaLabel,
@@ -51,9 +52,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <Animated.Text style={[styles.emoji, bounceStyle]}>
-        {emoji}
-      </Animated.Text>
+      <Animated.View style={bounceStyle}>
+        <IconBadge
+          name={icon}
+          size={40}
+          color={colors.primary.wisteriaDark}
+          backgroundColor={colors.primary.wisteriaFaded}
+          padding={spacing.md}
+        />
+      </Animated.View>
       <Heading level={2} style={styles.title}>{title}</Heading>
       <Text variant="body" color={colors.text.muted} style={styles.message}>
         {message}
@@ -76,10 +83,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.xxl,
     gap: spacing.sm,
-  },
-  emoji: {
-    fontSize: 56,
-    marginBottom: spacing.sm,
   },
   title: {
     textAlign: 'center',

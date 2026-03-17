@@ -303,7 +303,16 @@ export interface Discovery {
   title: string;
   countryId: string;
   learnedAt: string; // ISO
-  type: 'fact' | 'quiz';
+  type: 'fact' | 'quiz' | 'stop' | 'game' | 'dish' | 'treasure';
+}
+
+export type JourneyTier = 'newcomer' | 'explorer' | 'adventurer' | 'local' | 'master';
+
+export interface JourneyAction {
+  id: string;
+  label: string;
+  done: boolean;
+  category: 'facts' | 'quiz' | 'places' | 'games' | 'dishes' | 'treasure';
 }
 
 // ===================================
@@ -661,7 +670,7 @@ export interface CountryFact {
   content: string;
   /** Icon name for display */
   icon: string;
-  category: 'culture' | 'food' | 'language' | 'nature' | 'history' | 'fun';
+  category: 'culture' | 'food' | 'language' | 'nature' | 'history' | 'fun' | 'sustainability' | 'manners' | 'greetings' | 'myths' | 'landmarks';
   /** Optional image URL (e.g. croissant, Eiffel Tower) for dreamy learning */
   imageUrl?: string;
 }
@@ -934,9 +943,10 @@ export type RootStackParamList = {
   StampDetail: { stampId: string };
   Bites: undefined;
   BiteDetail: { biteId: string };
-  AddBite: undefined;
+  AddBite: { countryId?: string } | undefined;
   Badges: undefined;
-  
+  WeeklyChallenge: undefined;
+
   // Avatar
   Avatar: undefined;
   
@@ -961,11 +971,11 @@ export type RootStackParamList = {
   
   // Mini-Games
   WordMatch: { countryId?: string; pathNodeId?: string } | undefined;
-  MemoryCards: { category?: string; pathNodeId?: string } | undefined;
+  MemoryCards: { category?: string; countryId?: string; pathNodeId?: string } | undefined;
   CookingGame: { countryId?: string; pathNodeId?: string } | undefined;
   TreasureHunt: { countryId?: string; pathNodeId?: string } | undefined;
-  FlagMatch: { pathNodeId?: string } | undefined;
-  MapPin: { pathNodeId?: string } | undefined;
+  FlagMatch: { countryId?: string; pathNodeId?: string } | undefined;
+  MapPin: { countryId?: string; pathNodeId?: string } | undefined;
   CultureDressUp: { countryId?: string; pathNodeId?: string } | undefined;
   SortCategorize: { countryId?: string; pathNodeId?: string } | undefined;
   StoryBuilder: { countryId?: string; pathNodeId?: string } | undefined;
@@ -986,7 +996,7 @@ export type ExploreStackParamList = {
   ExploreHome: undefined;
   Map: undefined;
   WorldMap: undefined;
-  CountryWorld: undefined;
+  CountryWorld: { countryId?: string } | undefined;
   CountryRoom: { countryId: string; /** When set, viewing a friend's house (read-only) */ friendUserId?: string };
   /** Map of the country with pinned cities and landmarks */
   CountryMap: { countryId: string };

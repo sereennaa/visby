@@ -42,6 +42,7 @@ import { SpeakerButton } from '../../components/ui/SpeakerButton';
 import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
 import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 import { speechService, LANGUAGE_NAME_TO_CODE } from '../../services/audio';
+import { getWordPairsForCountry } from '../../config/countryGameContent';
 
 type WordMatchScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WordMatch'>;
@@ -100,8 +101,9 @@ function shuffle<T>(array: T[]): T[] {
   return arr;
 }
 
-function pickRound(): { pairs: WordPair[]; shuffledEnglish: string[] } {
-  const picked = shuffle(WORD_PAIRS).slice(0, ROUND_SIZE);
+function pickRound(pool: WordPair[]): { pairs: WordPair[]; shuffledEnglish: string[] } {
+  const source = pool.length > 0 ? pool : WORD_PAIRS;
+  const picked = shuffle(source).slice(0, ROUND_SIZE);
   const shuffledEnglish = shuffle(picked.map((p) => p.english));
   return { pairs: picked, shuffledEnglish };
 }
@@ -319,6 +321,11 @@ const GAME_NAME = 'WordMatch';
 
 export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
+  const countryWordPairs = useMemo<WordPair[]>(
+    () => (countryId ? getWordPairsForCountry(countryId) : []),
+    [countryId],
+  );
   const addAura = useStore(s => s.addAura);
   const studyWithVisby = useStore(s => s.studyWithVisby);
   const addSkillPoints = useStore(s => s.addSkillPoints);
@@ -326,6 +333,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
   const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
   const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
   const getVisbyMood = useStore(s => s.getVisbyMood);
+  const markGamePlayed = useStore(s => s.markGamePlayed);
 
   const storyBeatsShown = useStore(s => s.storyBeatsShown);
   const markStoryBeatShown = useStore(s => s.markStoryBeatShown);
@@ -343,7 +351,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
     const t = setTimeout(() => setShowFirstTimeHint(false), 5000);
     return () => clearTimeout(t);
   }, [storyBeatsShown, markStoryBeatShown]);
-  const [round, setRound] = useState(() => pickRound());
+  const [round, setRound] = useState(() => pickRound(countryWordPairs));
   const [selectedForeign, setSelectedForeign] = useState<number | null>(null);
   const [foreignStates, setForeignStates] = useState<CardState[]>(
     Array(ROUND_SIZE).fill('idle'),
@@ -361,6 +369,10 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
   const [endTime, setEndTime] = useState<number | null>(null);
   const isProcessingRef = useRef(false);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
+  useEffect(() => {
+    setRound(pickRound(countryWordPairs));
+  }, [countryWordPairs]);
+
   useEffect(() => {
     return () => {
       timersRef.current.forEach(clearTimeout);
@@ -461,6 +473,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
           checkDailyMissionCompletion('play_minigame', 1);
           setAdventureGamePlayed();
           if (pathNodeId) completePathNode(pathNodeId);
+          if (countryId) markGamePlayed(countryId);
           if (finalAccuracy >= 100) {
             incrementGameStat('perfectWordMatches');
           }
@@ -498,7 +511,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
   );
 
   const handlePlayAgain = useCallback(() => {
-    setRound(pickRound());
+    setRound(pickRound(countryWordPairs));
     setSelectedForeign(null);
     setForeignStates(Array(ROUND_SIZE).fill('idle'));
     setEnglishStates(Array(ROUND_SIZE).fill('idle'));
@@ -510,7 +523,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
     setEndTime(null);
     isProcessingRef.current = false;
     setIsLaunching(true);
-  }, []);
+  }, [countryWordPairs]);
 
   if (isLaunching) {
     return (

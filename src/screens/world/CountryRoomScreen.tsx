@@ -35,6 +35,7 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCharacter } from '../../components/avatar/VisbyCharacter';
+import { VisbyMini } from '../../components/avatar/VisbyMini';
 import { COUNTRIES } from '../../config/constants';
 import { useStore } from '../../store/useStore';
 import { Tooltip } from '../../components/ui/Tooltip';
@@ -43,6 +44,7 @@ import type { CountryFact } from '../../types';
 import { FURNITURE_CATALOG } from '../../config/furniture';
 import { FloatingParticles, getCountryParticleVariant } from '../../components/effects/FloatingParticles';
 import { getCountryQuiz, getCountryLocations, getMythsForCountry, getNatureForCountry, getHistoryForCountry, getPhrasesForCountry } from '../../config/learningContent';
+import { getCountryGreetings, getCountryManners, getCountrySustainability, getCountryLandmarks, getCountryFoodHighlights, getCountryHistory } from '../../config/countryKnowledge';
 import { COUNTRY_HOUSES, RoomObject, HouseRoom } from '../../config/countryRooms';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
 import { getCountryStampProgress } from '../../config/collectionGoals';
@@ -52,7 +54,7 @@ import { NavBreadcrumb } from '../../components/ui/NavBreadcrumb';
 import type { FurnitureInteractionType } from '../../types';
 
 import * as Haptics from 'expo-haptics';
-import { PlaceChatModal } from '../../components/room/PlaceChatModal';
+import { RoomChatContainer } from '../../components/room/RoomChatContainer';
 import { RoomQuizModal } from '../../components/room/RoomQuizModal';
 import { RoomFactModal } from '../../components/room/RoomFactModal';
 import { FurniturePanel } from '../../components/room/FurniturePanel';
@@ -61,6 +63,8 @@ import { LocationsModal } from '../../components/room/LocationsModal';
 import { DraggableFurniture, GridOverlay } from '../../components/room/DraggableFurniture';
 import { RoomTintOverlay, DynamicWindow } from '../../components/room/RoomAtmosphere';
 import { RoomObjectIllustration, getObjectIllustration } from '../../components/room/illustrations';
+import { CountryJourneyChecklist } from '../../components/journey/CountryJourneyChecklist';
+import { TierUpCelebration } from '../../components/effects/TierUpCelebration';
 import { FurnitureMicroAnim, getAnimTypeForInteraction } from '../../components/room/FurnitureMicroAnim';
 import { VisbyReactions, ReactionTrigger } from '../../components/visby/VisbyReactions';
 import { AchievementCeremony } from '../../components/effects/AchievementCeremony';
@@ -85,6 +89,8 @@ const KNOT_POSITIONS_CR = [
 const FRINGE_COUNT_CR = 16;
 const FACT_AURA_REWARD = 5;
 const QUIZ_AURA_PER_CORRECT = 25;
+const COLLAPSED_AB_BOTTOM = 224;
+const UNDO_TOAST_BOTTOM = 280;
 
 const FURNITURE_MAP = new Map(FURNITURE_CATALOG.map(f => [f.id, f]));
 
@@ -239,11 +245,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
     const traitId = dominantTrait?.id;
     const roomNameLower = currentRoom.name.toLowerCase();
     if (traitId === 'foodie' && (roomNameLower.includes('kitchen') || roomNameLower.includes('dining'))) {
-      line = "Visby can't wait to try the food here! 🍜";
+      line = "Visby can't wait to try the food here!";
     } else if (traitId === 'bookworm' && (roomNameLower.includes('study') || roomNameLower.includes('library'))) {
-      line = "Visby is already reaching for a book! 📚";
+      line = "Visby is already reaching for a book!";
     } else if (traitId === 'adventurer') {
-      line = "Visby is excited to explore this place! 🗺️";
+      line = "Visby is excited to explore this place!";
     }
 
     setRoomDialogueLine(line);
@@ -264,9 +270,23 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const [showKnowledgeMap, setShowKnowledgeMap] = useState(false);
   const [visitedLocations, setVisitedLocations] = useState<Set<string>>(new Set());
   const locations = useMemo(() => getCountryLocations(countryId), [countryId]);
+  const greetings = useMemo(() => getCountryGreetings(countryId), [countryId]);
+  const manners = useMemo(() => getCountryManners(countryId), [countryId]);
+  const sustainability = useMemo(() => getCountrySustainability(countryId), [countryId]);
+  const landmarkKnowledge = useMemo(() => getCountryLandmarks(countryId), [countryId]);
+  const foodKnowledge = useMemo(() => getCountryFoodHighlights(countryId), [countryId]);
+  const historyKnowledge = useMemo(() => getCountryHistory(countryId), [countryId]);
   const [editMode, setEditMode] = useState(false);
   const [selectedPlacedItem, setSelectedPlacedItem] = useState<string | null>(null);
-  const [activeEditTab, setActiveEditTab] = useState<'furniture' | 'wallpaper' | 'flooring' | null>(null);
+  const [lastPlacedId, setLastPlacedId] = useState<string | null>(null);
+  const [undoAction, setUndoAction] = useState<{
+    type: 'remove' | 'move';
+    item: PlacedFurniture;
+    catalogItem?: import('../../types').FurnitureItem;
+    prevX?: number;
+    prevY?: number;
+  } | null>(null);
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [activeFurnitureInteraction, setActiveFurnitureInteraction] = useState<{
     placed: PlacedFurniture;
     catalogItem: import('../../types').FurnitureItem;
@@ -275,6 +295,9 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const [presenceFriends, setPresenceFriends] = useState<Array<{ userId: string; username: string }>>([]);
   const [showCountryIntro, setShowCountryIntro] = useState(false);
   const [showMasteryCelebration, setShowMasteryCelebration] = useState(false);
+  const [showTierUp, setShowTierUp] = useState(false);
+  const [tierUpTier, setTierUpTier] = useState<'newcomer' | 'explorer' | 'adventurer' | 'local' | 'master'>('newcomer');
+  const prevTierRef = useRef<string | null>(null);
   const introScale = useSharedValue(0.3);
   const introOpacity = useSharedValue(0);
   const visbyFlyY = useSharedValue(-200);
@@ -393,7 +416,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
     return countryProgress.factsReadCount >= facts.length && countryProgress.quizCompleted;
   }, [country?.facts, countryProgress]);
   const isMastered = useMemo(
-    () => isPlaceComplete && countryProgress.gamesPlayed > 0 && countryProgress.locationsVisited > 0,
+    () => isPlaceComplete && countryProgress.gamesPlayedCount > 0 && countryProgress.locationsVisitedCount > 0,
     [isPlaceComplete, countryProgress],
   );
 
@@ -404,6 +427,34 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
     markStoryBeatShown(masteryKey);
     addAura(500);
   }, [isMastered, isViewingFriendHouse, masteryKey, storyBeatsShown, markStoryBeatShown, addAura]);
+
+  const visitedPins = useStore((s) => s.visitedPins);
+  const visitedStops = useStore((s) => s.visitedStops);
+  const getCountryJourneyProgress = useStore((s) => s.getCountryJourneyProgress);
+  const autoAwardExplorationStamp = useStore((s) => s.autoAwardExplorationStamp);
+  const journeyProgress = useMemo(() => getCountryJourneyProgress(countryId), [countryId, getCountryJourneyProgress, countryProgress, visitedPins, visitedStops]);
+
+  useEffect(() => {
+    if (isViewingFriendHouse) return;
+    const currentTier = journeyProgress.tier;
+    if (prevTierRef.current === null) {
+      prevTierRef.current = currentTier;
+      return;
+    }
+    if (currentTier !== prevTierRef.current && currentTier !== 'newcomer') {
+      const tierKey = `tier_${countryId}_${currentTier}`;
+      if (!storyBeatsShown.includes(tierKey)) {
+        setTierUpTier(currentTier);
+        setShowTierUp(true);
+        markStoryBeatShown(tierKey);
+        const TIER_AURA: Record<string, number> = { explorer: 50, adventurer: 100, local: 200, master: 500 };
+        const bonus = TIER_AURA[currentTier] ?? 0;
+        if (bonus > 0) addAura(bonus);
+        autoAwardExplorationStamp(countryId, `tier_${currentTier}`, `${country?.name ?? ''}: ${currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}`, 'country');
+      }
+    }
+    prevTierRef.current = currentTier;
+  }, [journeyProgress.tier, countryId, isViewingFriendHouse]);
 
   const walkBob = useSharedValue(0);
   const idleBreathe = useSharedValue(1);
@@ -593,8 +644,55 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const handlePlaceFurniture = useCallback((item: PlacedFurniture) => {
     if (!currentRoom) return;
     placeFurniture(countryId, currentRoom.id, item);
+    setLastPlacedId(item.id);
+    setTimeout(() => setLastPlacedId(null), 1500);
     triggerReaction('decorate_room');
   }, [placeFurniture, countryId, currentRoom, triggerReaction]);
+
+  const handleDuplicateFurniture = useCallback(() => {
+    if (!selectedPlacedItem || !currentRoom) return;
+    const placed = placedItems.find((p: PlacedFurniture) => p.id === selectedPlacedItem);
+    if (!placed) return;
+    const dup: PlacedFurniture = {
+      id: `${placed.furnitureId}_${Date.now()}`,
+      furnitureId: placed.furnitureId,
+      roomId: currentRoom.id,
+      x: Math.min(95, placed.x + 10),
+      y: Math.min(95, placed.y + 5),
+      rotation: 0,
+    };
+    placeFurniture(countryId, currentRoom.id, dup);
+    setSelectedPlacedItem(dup.id);
+    setLastPlacedId(dup.id);
+    setTimeout(() => setLastPlacedId(null), 1500);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, [selectedPlacedItem, currentRoom, placedItems, placeFurniture, countryId]);
+
+  const handleRemoveFurniture = useCallback(() => {
+    if (!selectedPlacedItem || !currentRoom) return;
+    const placed = placedItems.find((p: PlacedFurniture) => p.id === selectedPlacedItem);
+    if (!placed) return;
+    const catalogItem = FURNITURE_MAP.get(placed.furnitureId);
+    removePlacedFurniture(countryId, currentRoom.id, placed.id);
+    setSelectedPlacedItem(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoAction({ type: 'remove', item: placed, catalogItem });
+    undoTimerRef.current = setTimeout(() => setUndoAction(null), 5000);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  }, [selectedPlacedItem, currentRoom, placedItems, removePlacedFurniture, countryId]);
+
+  const handleUndo = useCallback(() => {
+    if (!undoAction || !currentRoom) return;
+    if (undoAction.type === 'remove') {
+      placeFurniture(countryId, currentRoom.id, undoAction.item);
+    } else if (undoAction.type === 'move' && undoAction.prevX !== undefined && undoAction.prevY !== undefined) {
+      removePlacedFurniture(countryId, currentRoom.id, undoAction.item.id);
+      placeFurniture(countryId, currentRoom.id, { ...undoAction.item, x: undoAction.prevX, y: undoAction.prevY });
+    }
+    setUndoAction(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, [undoAction, currentRoom, placeFurniture, removePlacedFurniture, countryId]);
 
   const handleUpdateWallColor = useCallback((color: string) => {
     if (currentRoom) updateRoomColors(countryId, currentRoom.id, color, undefined);
@@ -649,7 +747,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           >
             <FloatingParticles count={12} variant={getCountryParticleVariant(countryId).variant} opacity={0.6} speed="normal" />
             <Animated.View style={[styles.visbyFlyIn, visbyFlyStyle]}>
-              <Text style={styles.visbyFlyEmoji}>🦊</Text>
+              <VisbyMini size={32} />
               <Text style={styles.visbyFlyLabel}>Visby is flying to {country.name}!</Text>
             </Animated.View>
             <Animated.View style={[styles.countryIntroInner, flagRotateStyle]}>
@@ -735,6 +833,22 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   <Text style={styles.placeCompleteSub}>You've mastered {country.name}. Explore the next place.</Text>
                 </View>
               </View>
+            </View>
+          )}
+
+          {/* Journey checklist */}
+          {!isViewingFriendHouse && country && (
+            <View style={styles.journeySection}>
+              <CountryJourneyChecklist
+                countryId={countryId}
+                countryName={country.name}
+                onNavigate={(action) => {
+                  if (action.category === 'places') navigation.navigate('CountryMap', { countryId });
+                  else if (action.category === 'dishes') (navigation as any).getParent()?.navigate('AddBite', { countryId });
+                  else if (action.category === 'treasure') (navigation as any).getParent()?.navigate('TreasureHunt', { countryId });
+                  else if (action.category === 'games') (navigation as any).getParent()?.navigate('TreasureHunt', { countryId });
+                }}
+              />
             </View>
           )}
 
@@ -911,10 +1025,14 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                       {isOwner && (
                         <TouchableOpacity
                           style={[styles.editToggleBtn, editMode && styles.editToggleBtnActive]}
-                          onPress={() => { setEditMode(v => !v); setSelectedPlacedItem(null); setActiveEditTab(null); }}
+                          onPress={() => {
+                            setEditMode(v => !v);
+                            setSelectedPlacedItem(null);
+                            setUndoAction(null);
+                          }}
                           activeOpacity={0.8}
                         >
-                          <Icon name="edit" size={12} color={editMode ? '#FFFFFF' : colors.primary.wisteriaDark} />
+                          <Icon name={editMode ? 'check' : 'edit'} size={editMode ? 14 : 12} color={editMode ? '#FFFFFF' : colors.primary.wisteriaDark} />
                           <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
                             {editMode ? 'Done' : 'Edit'}
                           </Text>
@@ -956,11 +1074,13 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   {/* Objects layer */}
                   <View style={[styles.objectsLayer, { height: (WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40 }]}>
                     {editMode && (
-                      <GridOverlay
-                        width={SCREEN_WIDTH - spacing.md * 2}
-                        height={(WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40}
-                        visible={editMode}
-                      />
+                      <Animated.View entering={FadeIn.duration(400)} exiting={FadeOut.duration(200)} style={StyleSheet.absoluteFill}>
+                        <GridOverlay
+                          width={SCREEN_WIDTH - spacing.md * 2}
+                          height={(WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40}
+                          visible={editMode}
+                        />
+                      </Animated.View>
                     )}
                     {currentRoom.objects.map((obj) => {
                       const wasInteracted = interactedObjects.has(obj.id);
@@ -1019,6 +1139,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                       if (!catalogItem) return null;
                       const canInteract = !editMode && catalogItem.interactionType;
                       const animType = getAnimTypeForInteraction(catalogItem.interactionType);
+                      const isJustPlaced = lastPlacedId === placed.id;
 
                       const furnitureContent = (
                         <TouchableOpacity
@@ -1066,23 +1187,16 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                               <Text style={styles.useFurnitureBadgeText}>Use</Text>
                             </View>
                           )}
-                          {editMode && selectedPlacedItem === placed.id && (
-                            <View style={styles.placedFurniturePopup}>
-                              <TouchableOpacity
-                                style={styles.removeBtn}
-                                onPress={() => { removePlacedFurniture(countryId, currentRoom.id, placed.id); setSelectedPlacedItem(null); }}
-                              >
-                                <Icon name="close" size={12} color="#FFFFFF" />
-                                <Text style={styles.removeBtnText}>Remove</Text>
-                              </TouchableOpacity>
-                            </View>
-                          )}
                         </TouchableOpacity>
                       );
 
                       if (editMode) {
                         return (
-                          <View key={placed.id} style={{ position: 'absolute', left: `${placed.x}%` as any, top: `${placed.y}%` as any }}>
+                          <Animated.View
+                            key={placed.id}
+                            entering={isJustPlaced ? ZoomIn.springify().damping(10).stiffness(120) : undefined}
+                            style={{ position: 'absolute', left: `${placed.x}%` as any, top: `${placed.y}%` as any }}
+                          >
                             <DraggableFurniture
                               initialX={placed.x}
                               initialY={placed.y}
@@ -1090,13 +1204,22 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                               containerHeight={(WALL_HEIGHT - WINDOW_STRIP_HEIGHT) - 40}
                               isEditMode={editMode}
                               onPositionChange={(newX, newY) => {
+                                const prevX = placed.x;
+                                const prevY = placed.y;
                                 removePlacedFurniture(countryId, currentRoom.id, placed.id);
-                                placeFurniture(countryId, currentRoom.id, { ...placed, x: newX, y: newY });
+                                const moved = { ...placed, x: newX, y: newY };
+                                placeFurniture(countryId, currentRoom.id, moved);
+                                if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+                                setUndoAction({ type: 'move', item: moved, prevX, prevY });
+                                undoTimerRef.current = setTimeout(() => setUndoAction(null), 5000);
+                              }}
+                              onTap={() => {
+                                setSelectedPlacedItem(selectedPlacedItem === placed.id ? null : placed.id);
                               }}
                             >
                               {furnitureContent}
                             </DraggableFurniture>
-                          </View>
+                          </Animated.View>
                         );
                       }
                       return furnitureContent;
@@ -1152,8 +1275,12 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     </View>
                   </View>
 
-                  {!editMode && (
-                    <Animated.View style={[styles.avatarContainer, avatarStyle]}>
+                  {!editMode ? (
+                    <Animated.View
+                      entering={FadeIn.duration(300)}
+                      exiting={FadeOut.duration(200)}
+                      style={[styles.avatarContainer, avatarStyle]}
+                    >
                       <View style={styles.visbyShadow}>
                         <LinearGradient
                           colors={['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.04)', 'transparent']}
@@ -1180,27 +1307,12 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                         </View>
                       </Animated.View>
                     </Animated.View>
-                  )}
+                  ) : null}
 
                   {editMode ? (
-                    <View style={styles.editToolbar}>
-                      {(['furniture', 'wallpaper', 'flooring'] as const).map((tab) => (
-                        <TouchableOpacity
-                          key={tab}
-                          style={[styles.editToolbarBtn, activeEditTab === tab && styles.editToolbarBtnActive]}
-                          onPress={() => setActiveEditTab(tab)}
-                          activeOpacity={0.8}
-                        >
-                          <Icon
-                            name={tab === 'furniture' ? 'home' : tab === 'wallpaper' ? 'edit' : 'culture'}
-                            size={18}
-                            color={activeEditTab === tab ? '#FFFFFF' : colors.primary.wisteriaDark}
-                          />
-                          <Text style={[styles.editToolbarLabel, activeEditTab === tab && styles.editToolbarLabelActive]}>
-                            {tab === 'furniture' ? 'Furniture' : tab === 'wallpaper' ? 'Wall' : 'Floor'}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                    <View style={styles.editHintArea}>
+                      <Icon name="edit" size={14} color={colors.text.muted} />
+                      <Text style={styles.editHintText}>Drag items to rearrange · Tap to select</Text>
                     </View>
                   ) : (
                     <View style={styles.walkControls}>
@@ -1507,7 +1619,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
       {/* Conditionally rendered modals */}
       {showPlaceChatModal && currentRoom && (
-        <PlaceChatModal
+        <RoomChatContainer
           visible={showPlaceChatModal}
           onClose={() => setShowPlaceChatModal(false)}
           roomName={currentRoom.name}
@@ -1581,11 +1693,10 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
         />
       )}
 
-      {activeEditTab && currentRoom && (
+      {currentRoom && (
         <FurniturePanel
-          visible={!!activeEditTab}
-          panelType={activeEditTab}
-          onClose={() => setActiveEditTab(null)}
+          visible={editMode}
+          onClose={() => { setEditMode(false); setSelectedPlacedItem(null); setUndoAction(null); }}
           visitedCountries={user?.visitedCountries ?? []}
           ownedFurniture={ownedFurniture}
           onBuyFurniture={buyFurniture}
@@ -1596,6 +1707,59 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           currentFloorColor={effectiveFloorColor}
           roomId={currentRoom.id}
         />
+      )}
+
+      {/* Edit mode action bar for selected items */}
+      {editMode && selectedPlacedItem && currentRoom && (() => {
+        const selPlaced = placedItems.find((p: PlacedFurniture) => p.id === selectedPlacedItem);
+        const selCatalog = selPlaced ? FURNITURE_MAP.get(selPlaced.furnitureId) : null;
+        if (!selPlaced || !selCatalog) return null;
+        return (
+          <Animated.View
+            entering={FadeInDown.springify().damping(16)}
+            exiting={FadeOut.duration(150)}
+            style={styles.actionBar}
+          >
+            <View style={styles.actionBarInner}>
+              <View style={styles.actionBarInfo}>
+                <FurnitureVisual
+                  interactionType={selCatalog.interactionType}
+                  icon={selCatalog.icon as IconName}
+                  size="small"
+                />
+                <Text style={styles.actionBarName} numberOfLines={1}>{selCatalog.name}</Text>
+              </View>
+              <View style={styles.actionBarButtons}>
+                <TouchableOpacity style={styles.actionBarBtn} onPress={handleDuplicateFurniture} activeOpacity={0.8}>
+                  <Icon name="copy" size={16} color={colors.primary.wisteriaDark} />
+                  <Text style={styles.actionBarBtnText}>Duplicate</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBarBtn, styles.actionBarBtnDanger]} onPress={handleRemoveFurniture} activeOpacity={0.8}>
+                  <Icon name="close" size={16} color="#FFFFFF" />
+                  <Text style={[styles.actionBarBtnText, styles.actionBarBtnTextDanger]}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        );
+      })()}
+
+      {/* Undo toast */}
+      {undoAction && (
+        <Animated.View
+          entering={FadeInDown.springify().damping(14)}
+          exiting={FadeOut.duration(200)}
+          style={styles.undoToast}
+        >
+          <View style={styles.undoToastInner}>
+            <Text style={styles.undoToastText}>
+              {undoAction.type === 'remove' ? 'Item removed' : 'Item moved'}
+            </Text>
+            <TouchableOpacity style={styles.undoBtn} onPress={handleUndo} activeOpacity={0.8}>
+              <Text style={styles.undoBtnText}>Undo</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       )}
 
       {showLocationsModal && (
@@ -1622,9 +1786,14 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   { label: 'Facts', icon: 'book' as const, color: colors.calm.ocean, count: readFacts.size, total: facts.length },
                   { label: 'Quiz', icon: 'quiz' as const, color: colors.primary.wisteriaDark, count: countryProgress.quizCompleted ? 1 : 0, total: 1 },
                   { label: 'Locations', icon: 'compass' as const, color: colors.success.emerald, count: visitedLocations.size, total: locations.length },
+                  { label: 'Greetings', icon: 'language' as const, color: '#42A5F5', count: 0, total: greetings.length },
+                  { label: 'Manners', icon: 'heart' as const, color: '#E91E63', count: 0, total: manners.length },
+                  { label: 'Sustainability', icon: 'nature' as const, color: '#2E7D32', count: 0, total: sustainability.length },
                   { label: 'Myths', icon: 'sparkles' as const, color: colors.primary.wisteria, count: 0, total: getMythsForCountry(countryId).length },
+                  { label: 'Landmarks', icon: 'landmark' as const, color: '#5C6BC0', count: 0, total: landmarkKnowledge.length },
+                  { label: 'Food', icon: 'food' as const, color: colors.reward.peachDark, count: 0, total: foodKnowledge.length },
                   { label: 'Nature', icon: 'nature' as const, color: '#4CAF50', count: 0, total: getNatureForCountry(countryId).length },
-                  { label: 'History', icon: 'globe' as const, color: '#FF9800', count: 0, total: getHistoryForCountry(countryId).length },
+                  { label: 'History', icon: 'globe' as const, color: '#FF9800', count: 0, total: Math.max(getHistoryForCountry(countryId).length, historyKnowledge.length) },
                   { label: 'Phrases', icon: 'language' as const, color: '#42A5F5', count: 0, total: getPhrasesForCountry(countryId).length },
                 ].map((cat) => {
                   const pct = cat.total > 0 ? Math.round((cat.count / cat.total) * 100) : 0;
@@ -1643,6 +1812,72 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     </View>
                   );
                 })}
+                {greetings.length > 0 && (
+                  <View style={styles.knowledgeSection}>
+                    <Text style={styles.knowledgeSectionTitle}>Greetings</Text>
+                    {greetings.slice(0, 3).map((item, idx) => (
+                      <View key={`greeting_${idx}`} style={styles.knowledgeDetailCard}>
+                        <Text style={styles.knowledgeDetailTitle}>{item.phrase}</Text>
+                        <Caption>{item.pronunciation} - {item.meaning}</Caption>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {manners.length > 0 && (
+                  <View style={styles.knowledgeSection}>
+                    <Text style={styles.knowledgeSectionTitle}>Manners and Etiquette</Text>
+                    {manners.slice(0, 3).map((item, idx) => (
+                      <View key={`manners_${idx}`} style={styles.knowledgeDetailCard}>
+                        <Text style={styles.knowledgeDetailTitle}>{item.title}</Text>
+                        <Caption>{item.description}</Caption>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {sustainability.length > 0 && (
+                  <View style={styles.knowledgeSection}>
+                    <Text style={styles.knowledgeSectionTitle}>Sustainability</Text>
+                    {sustainability.slice(0, 3).map((item, idx) => (
+                      <View key={`sustainability_${idx}`} style={styles.knowledgeDetailCard}>
+                        <Text style={styles.knowledgeDetailTitle}>{item.title}</Text>
+                        <Caption>{item.description}</Caption>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {landmarkKnowledge.length > 0 && (
+                  <View style={styles.knowledgeSection}>
+                    <Text style={styles.knowledgeSectionTitle}>Landmarks</Text>
+                    {landmarkKnowledge.slice(0, 3).map((item, idx) => (
+                      <View key={`landmark_${idx}`} style={styles.knowledgeDetailCard}>
+                        <Text style={styles.knowledgeDetailTitle}>{item.name}</Text>
+                        <Caption>{item.funFact}</Caption>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {foodKnowledge.length > 0 && (
+                  <View style={styles.knowledgeSection}>
+                    <Text style={styles.knowledgeSectionTitle}>Food Spotlight</Text>
+                    {foodKnowledge.slice(0, 3).map((item, idx) => (
+                      <View key={`food_${idx}`} style={styles.knowledgeDetailCard}>
+                        <Text style={styles.knowledgeDetailTitle}>{item.name}</Text>
+                        <Caption>{item.funFact}</Caption>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {historyKnowledge.length > 0 && (
+                  <View style={styles.knowledgeSection}>
+                    <Text style={styles.knowledgeSectionTitle}>History Timeline</Text>
+                    {historyKnowledge.slice(0, 3).map((item, idx) => (
+                      <View key={`history_${idx}`} style={styles.knowledgeDetailCard}>
+                        <Text style={styles.knowledgeDetailTitle}>{item.year ? `${item.year} - ${item.title}` : item.title}</Text>
+                        <Caption>{item.description}</Caption>
+                      </View>
+                    ))}
+                  </View>
+                )}
                 {getMythsForCountry(countryId).length === 0 && getNatureForCountry(countryId).length === 0 && (
                   <View style={styles.knowledgeEmpty}>
                     <Icon name="sparkles" size={24} color={colors.text.muted} />
@@ -1674,6 +1909,14 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
           subtitle={`${currentRoom.name} fully explored`}
           auraReward={25}
           onDismiss={() => setShowRoomCelebration(false)}
+        />
+      )}
+
+      {showTierUp && country && (
+        <TierUpCelebration
+          tier={tierUpTier}
+          countryName={country.name}
+          onDismiss={() => setShowTierUp(false)}
         />
       )}
 
@@ -2024,12 +2267,18 @@ const styles = StyleSheet.create({
   roomProgressText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.success.emerald },
   editToggleBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    marginLeft: spacing.sm, paddingVertical: 4, paddingHorizontal: 10,
-    borderRadius: 14, borderWidth: 1.5,
+    marginLeft: spacing.sm, paddingVertical: 5, paddingHorizontal: 12,
+    borderRadius: 16, borderWidth: 1.5,
     borderColor: colors.primary.wisteria, backgroundColor: 'rgba(184, 165, 224, 0.1)',
   },
-  editToggleBtnActive: { backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark },
-  editToggleText: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
+  editToggleBtnActive: {
+    backgroundColor: colors.success.emerald, borderColor: colors.success.emerald,
+    paddingHorizontal: 14,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 8px rgba(76,175,80,0.3)' }
+      : { shadowColor: colors.success.emerald, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }),
+  },
+  editToggleText: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.primary.wisteriaDark },
   editToggleTextActive: { color: '#FFFFFF' },
   roomDialogueBubble: {
     alignSelf: 'center', maxWidth: '90%', marginTop: spacing.xs,
@@ -2113,14 +2362,76 @@ const styles = StyleSheet.create({
   },
   walkLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.muted },
 
-  editToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
-  editToolbarBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12,
-    borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.8)', borderWidth: 1.5, borderColor: 'transparent',
+  editHintArea: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10,
   },
-  editToolbarBtnActive: { backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark },
-  editToolbarLabel: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark },
-  editToolbarLabelActive: { color: '#FFFFFF' },
+  editHintText: {
+    fontFamily: 'Nunito-Medium', fontSize: 12, color: colors.text.muted,
+  },
+
+  actionBar: {
+    position: 'absolute', left: spacing.md, right: spacing.md,
+    bottom: COLLAPSED_AB_BOTTOM,
+    zIndex: 55,
+  },
+  actionBarInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 8,
+    paddingHorizontal: 14, gap: spacing.sm,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 16px rgba(0,0,0,0.14)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 12, elevation: 8 }),
+    borderWidth: 1.5, borderColor: colors.primary.wisteria + '30',
+  },
+  actionBarInfo: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1,
+  },
+  actionBarName: {
+    fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.text.primary,
+    flex: 1,
+  },
+  actionBarButtons: {
+    flexDirection: 'row', gap: 6,
+  },
+  actionBarBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14,
+    backgroundColor: colors.surface.lavender,
+  },
+  actionBarBtnDanger: {
+    backgroundColor: '#E53935',
+  },
+  actionBarBtnText: {
+    fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.primary.wisteriaDark,
+  },
+  actionBarBtnTextDanger: {
+    color: '#FFFFFF',
+  },
+
+  undoToast: {
+    position: 'absolute', left: spacing.lg, right: spacing.lg,
+    bottom: UNDO_TOAST_BOTTOM,
+    zIndex: 60, alignItems: 'center',
+  },
+  undoToastInner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: '#333', paddingVertical: 10, paddingHorizontal: 16,
+    borderRadius: 20,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 12px rgba(0,0,0,0.25)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 10 }),
+  },
+  undoToastText: {
+    fontFamily: 'Nunito-SemiBold', fontSize: 13, color: '#FFFFFF', flex: 1,
+  },
+  undoBtn: {
+    paddingVertical: 4, paddingHorizontal: 14, borderRadius: 12,
+    backgroundColor: colors.primary.wisteria,
+  },
+  undoBtnText: {
+    fontFamily: 'Nunito-Bold', fontSize: 12, color: '#FFFFFF',
+  },
 
   roomNavLeft: { position: 'absolute', left: 6, top: '38%' as any, zIndex: 10 },
   roomNavRight: { position: 'absolute', right: 6, top: '38%' as any, zIndex: 10 },
@@ -2331,6 +2642,31 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   knowledgeCloseText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.text.secondary },
+  knowledgeSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.primary.wisteriaFaded,
+  },
+  knowledgeSectionTitle: {
+    fontFamily: 'Baloo2-SemiBold',
+    fontSize: 16,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  knowledgeDetailCard: {
+    backgroundColor: colors.base.cream,
+    borderRadius: 12,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary.wisteriaFaded,
+  },
+  knowledgeDetailTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+    marginBottom: 2,
+  },
 
   masteryOverlay: {
     flex: 1,

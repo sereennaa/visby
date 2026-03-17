@@ -36,8 +36,8 @@ class VisbyWidgetProvider : AppWidgetProvider() {
                 val p = JSONObject(json)
                 val name = p.optString("visbyName", "Visby")
                 val mood = p.optString("mood", "happy")
-                val emoji = moodToEmoji(mood)
-                views.setTextViewText(R.id.widget_mood, emoji)
+                val label = moodToLabel(mood)
+                views.setTextViewText(R.id.widget_mood, label)
                 views.setTextViewText(R.id.widget_name, name)
                 val needs = p.getJSONObject("needs")
                 setProgress(views, R.id.bar_hunger, needs.optInt("hunger", 80))
@@ -60,16 +60,16 @@ class VisbyWidgetProvider : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun moodToEmoji(mood: String): String = when (mood) {
-        "happy" -> "😊"
-        "excited" -> "🤩"
-        "sleepy" -> "😴"
-        "hungry" -> "🍽️"
-        "bored" -> "😑"
-        "lonely" -> "🥺"
-        "sick" -> "🤒"
-        "confused" -> "🤔"
-        else -> "😊"
+    private fun moodToLabel(mood: String): String = when (mood) {
+        "happy" -> "Happy"
+        "excited" -> "Excited"
+        "sleepy" -> "Sleepy"
+        "hungry" -> "Hungry"
+        "bored" -> "Bored"
+        "lonely" -> "Lonely"
+        "sick" -> "Sick"
+        "confused" -> "Confused"
+        else -> "Happy"
     }
 
     private fun setProgress(views: RemoteViews, id: Int, value: Int) {

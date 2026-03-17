@@ -248,7 +248,7 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
                   <Icon name="sparkles" size={48} color={colors.reward.gold} />
                 </View>
                 <Heading level={1} style={styles.resultsTitle}>Level complete!</Heading>
-                <Text variant="body" style={styles.resultsSubtitle}>Another step on your journey ✨</Text>
+                <Text variant="body" style={styles.resultsSubtitle}>Another step on your journey</Text>
                 <View style={styles.scoreDivider} />
                 <View style={styles.auraRow}>
                   <Icon name="sparkles" size={24} color={colors.reward.amber} />

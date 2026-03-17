@@ -40,10 +40,33 @@ interface FlagQuestion {
   correctIndex: number;
 }
 
-function generateQuestions(count: number): FlagQuestion[] {
+const CONTINENT_BY_COUNTRY: Record<string, string> = {
+  jp: 'Asia',
+  kr: 'Asia',
+  th: 'Asia',
+  tr: 'Asia',
+  fr: 'Europe',
+  it: 'Europe',
+  gb: 'Europe',
+  no: 'Europe',
+  gr: 'Europe',
+  mx: 'North America',
+  br: 'South America',
+  pe: 'South America',
+  ma: 'Africa',
+  ke: 'Africa',
+};
+
+function generateQuestions(count: number, focusCountryId?: string | null): FlagQuestion[] {
   const pool = COUNTRIES.filter((c) => c.flagEmoji);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, Math.min(count, pool.length));
+  const focus = focusCountryId ? pool.find((c) => c.id === focusCountryId) : undefined;
+  const focusContinent = focus?.continent ?? (focusCountryId ? CONTINENT_BY_COUNTRY[focusCountryId] : undefined);
+  const regionPool = focusContinent ? pool.filter((c) => (c.continent ?? CONTINENT_BY_COUNTRY[c.id]) === focusContinent) : [];
+  const globalPool = pool.filter((c) => !regionPool.some((r) => r.id === c.id));
+  const selected = [
+    ...[...(focus ? [focus] : []), ...regionPool.filter((c) => c.id !== focus?.id)].sort(() => Math.random() - 0.5).slice(0, Math.ceil(count * 0.7)),
+    ...globalPool.sort(() => Math.random() - 0.5).slice(0, count),
+  ].slice(0, Math.min(count, pool.length));
 
   return selected.map((country) => {
     const wrong = pool
@@ -71,6 +94,7 @@ const GAME_NAME = 'FlagMatch';
 
 export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
   const addAura = useStore(s => s.addAura);
   const addSkillPoints = useStore(s => s.addSkillPoints);
   const incrementGameStat = useStore(s => s.incrementGameStat);
@@ -90,7 +114,7 @@ export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
   }, []);
   const [phase, setPhase] = useState<'launching' | 'playing' | 'result'>('launching');
   const [showCelebration, setShowCelebration] = useState(false);
-  const [questions] = useState(() => generateQuestions(ROUNDS));
+  const [questions] = useState(() => generateQuestions(ROUNDS, countryId));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -174,7 +198,11 @@ export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
         <FloatingParticles count={8} variant="stars" opacity={0.15} speed="slow" />
         <SafeAreaView style={styles.safeArea}>
           <Animated.View entering={ZoomIn.duration(500)} style={styles.resultCard}>
-            <Text style={styles.resultStars}>{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</Text>
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              {Array.from({ length: 3 }, (_, i) => (
+                <Icon key={i} name={i < stars ? 'star' : 'starOutline'} size={28} color={colors.reward.gold} />
+              ))}
+            </View>
             <Heading level={2} style={styles.resultTitle}>
               {percent >= 80 ? 'Flag Expert!' : percent >= 50 ? 'Great Job!' : 'Keep Practicing!'}
             </Heading>

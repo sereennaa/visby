@@ -30,6 +30,10 @@ import { Button } from '../../components/ui/Button';
 import { AnimatedAuraBadge } from '../../components/effects/AnimatedAuraBadge';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCheckInModal } from '../../components/visby/VisbyCheckInModal';
+import { VisbyChatInner } from '../../components/visby/VisbyChatInner';
+import { NeedsFloatingPanel } from '../../components/visby/NeedsFloatingPanel';
+import { ChatFAB } from '../../components/visby/ChatFAB';
+import { useResponsiveLayout } from '../../hooks/useResponsiveLayout';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
 import { HouseExterior } from '../../components/house/HouseExterior';
 import { PulseGlow } from '../../components/effects/Shimmer';
@@ -97,6 +101,7 @@ type PlanTask = {
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const { isDesktop } = useResponsiveLayout();
   const {
     user, visby, userHouses, settings, discoveryLog, flashcardSRData,
     completedPathNodes, lessonProgress, stamps, bites, badges, storyBeatsShown,
@@ -140,7 +145,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     markStoryBeatShown: s.markStoryBeatShown,
     getAdventureOfTheDay: s.getAdventureOfTheDay,
     awardAdventureIfCompleted: s.awardAdventureIfCompleted,
+    getWeeklyChallengeProgress: s.getWeeklyChallengeProgress,
   })));
+
+  const challengeProgress = useMemo(() => getWeeklyChallengeProgress(), [getWeeklyChallengeProgress]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [careHint, setCareHint] = useState<typeof NEED_CONFIG[number] | null>(null);
@@ -318,6 +326,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     markWeeklyRecapShown();
   }, [markWeeklyRecapShown]);
   const handleVisitWorldFromHouses = useCallback(() => navigation.navigate('Explore', { screen: 'CountryWorld' }), [navigation]);
+  const handleWeeklyChallengePress = useCallback(() => navigation.navigate('WeeklyChallenge'), [navigation]);
 
   const handleDailyMissionPress = useCallback(() => {
     if (!dailyMission) return;
@@ -333,6 +342,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     (countryId: string) => navigation.navigate('Explore', { screen: 'CountryRoom', params: { countryId } }),
     [navigation],
   );
+
+  const handleNeedsPanelNavigate = useCallback((screen: string, params?: object) => {
+    if (params) (navigation as any).navigate(screen, params);
+    else navigation.navigate(screen as any);
+  }, [navigation]);
+
+  const handleDesktopChatNavigate = useCallback((screen: string, params?: object) => {
+    if (params) (navigation as any).navigate(screen, params);
+    else navigation.navigate(screen as any);
+  }, [navigation]);
 
   const handleEventBannerPress = useCallback(() => {
     const activeEvent = getActiveEvent();
@@ -495,7 +514,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <AnimatedPressable onPress={handleEventBannerPress} scaleDown={0.97}>
           <LinearGradient colors={activeEvent.bgGradient} style={styles.eventBannerGradient}>
             <View style={styles.eventBannerRow}>
-              <Text style={styles.eventBannerIcon}>{activeEvent.icon}</Text>
+              <Icon name={activeEvent.icon as any} size={28} color={colors.text.primary} />
               <View style={styles.eventBannerTextWrap}>
                 <Text variant="h3" style={styles.eventBannerName}>{activeEvent.name}</Text>
                 <Caption>{activeEvent.description}</Caption>
@@ -512,89 +531,65 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }, [handleEventBannerPress]);
 
-  return (
-    <View style={styles.container}>
-      {/* Layered gradient background */}
-      <LinearGradient
-        colors={[colors.base.cream, colors.primary.wisteriaFaded, colors.calm.skyLight, colors.reward.peachLight, colors.base.cream]}
-        locations={[0, 0.25, 0.5, 0.75, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+  const scrollContent = (
+    <>
+      {refreshing && (
+        <View style={styles.refreshPeek}>
+          <Icon name="compass" size={28} color={colors.primary.wisteriaDark} />
+          <Caption style={styles.refreshPeekText}>Visby is looking around...</Caption>
+        </View>
+      )}
 
-      {seasonalVisuals}
-
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary.wisteria}
-              colors={[colors.primary.wisteria, colors.reward.gold]}
-              progressBackgroundColor={colors.base.cream}
-            />
-          }
-        >
-          {refreshing && (
-            <View style={styles.refreshPeek}>
-              <Text style={styles.refreshPeekEmoji}>{'🧭'}</Text>
-              <Caption style={styles.refreshPeekText}>Visby is looking around...</Caption>
+      {/* ──── HEADER ──── */}
+      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text variant="body" color={colors.text.muted} style={styles.greetingText}>
+            {greeting}, {user?.username || 'Explorer'}
+          </Text>
+          <Heading level={1} style={styles.titleText}>
+            {currentLevel.title}
+          </Heading>
+        </View>
+        <View style={styles.headerBadges}>
+          {(user?.currentStreak ?? 0) > 0 && (
+            <View style={styles.streakChip}>
+              <Icon name="flame" size={14} color={colors.status.streak} />
+              <Caption style={styles.streakChipText}>{user?.currentStreak}</Caption>
             </View>
           )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('DiscoveryLog')}
+            style={styles.discoveryChip}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Discovery journal"
+          >
+            <Icon name="book" size={14} color={colors.calm.ocean} />
+            <Caption style={styles.discoveryChipText}>{discoveryLog.length}/200</Caption>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleNavigateAuraStore}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="View Aura Store"
+            style={{ position: 'relative' as const }}
+          >
+            <PulseGlow color="rgba(255, 215, 0, 0.35)" intensity={14} speed={3000}>
+              <AnimatedAuraBadge amount={currentAura} />
+            </PulseGlow>
+            <Tooltip
+              id="home_aura_badge"
+              text="This is Aura -- earn it by learning and exploring!"
+              position="below"
+            />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
-          {/* ──── HEADER ──── */}
-          <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
-            <View style={styles.headerLeft}>
-              <Text variant="body" color={colors.text.muted} style={styles.greetingText}>
-                {greeting}, {user?.username || 'Explorer'}
-              </Text>
-              <Heading level={1} style={styles.titleText}>
-                {currentLevel.title}
-              </Heading>
-            </View>
-            <View style={styles.headerBadges}>
-              {(user?.currentStreak ?? 0) > 0 && (
-                <View style={styles.streakChip}>
-                  <Icon name="flame" size={14} color={colors.status.streak} />
-                  <Caption style={styles.streakChipText}>{user?.currentStreak}</Caption>
-                </View>
-              )}
-              <TouchableOpacity
-                onPress={() => navigation.navigate('DiscoveryLog')}
-                style={styles.discoveryChip}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Discovery journal"
-              >
-                <Icon name="book" size={14} color={colors.calm.ocean} />
-                <Caption style={styles.discoveryChipText}>{discoveryLog.length}/200</Caption>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleNavigateAuraStore}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="View Aura Store"
-                style={{ position: 'relative' as const }}
-              >
-                <PulseGlow color="rgba(255, 215, 0, 0.35)" intensity={14} speed={3000}>
-                  <AnimatedAuraBadge amount={currentAura} />
-                </PulseGlow>
-                <Tooltip
-                  id="home_aura_badge"
-                  text="This is Aura -- earn it by learning and exploring!"
-                  position="below"
-                />
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+      {/* ──── HOME ROOM: full Club Penguin / Sims style room ──── */}
+      {homeRoomElement}
 
-          {/* ──── HOME ROOM: full Club Penguin / Sims style room ──── */}
-          {homeRoomElement}
-
-          {/* ──── TODAY'S PLAN ──── */}
+      {/* ──── TODAY'S PLAN ──── */}
           <Animated.View entering={FadeInDown.duration(500).delay(250)} style={styles.todaysPlanSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -687,7 +682,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {userHouses.length === 0 ? (
             <Animated.View entering={FadeInDown.duration(400).delay(340)}>
               <EmptyState
-                emoji="🏠"
+                icon="home"
                 title="No houses yet!"
                 message="Visit a country and buy your first house to start decorating."
                 ctaLabel="Explore the world"
@@ -727,6 +722,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     >
                       <HouseExterior
                         theme={country?.roomTheme ?? 'traditional'}
+                        countryId={house.countryId}
                         houseName={house.houseName}
                         flagEmoji={country?.flagEmoji}
                         furnitureCount={furnitureCount}
@@ -746,32 +742,105 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           {/* ──── WEEKLY PROGRESS (compact) ──── */}
           <Animated.View entering={FadeInDown.duration(400).delay(360)}>
-            <View style={styles.weeklyProgressCard}>
-              <View style={[styles.weeklyProgressIcon, { backgroundColor: colors.semantic.warmOrangeAccent + '30' }]}>
-                <Icon name={(weeklyChallenge.icon || 'star') as IconName} size={18} color={colors.semantic.warmOrange} />
-              </View>
-              <View style={styles.weeklyProgressBody}>
-                <Text variant="body" style={styles.weeklyProgressTitle}>{weeklyChallenge.title}</Text>
-                <View style={styles.weeklyProgressDots}>
-                  {weeklyChallenge.tasks.map((_: unknown, i: number) => (
-                    <View
-                      key={i}
-                      style={[styles.weeklyProgressDot, i < 1 && styles.weeklyProgressDotDone]}
-                    />
-                  ))}
+            <AnimatedPressable onPress={handleWeeklyChallengePress} scaleDown={0.97}>
+              <View style={styles.weeklyProgressCard}>
+                <View style={[styles.weeklyProgressIcon, { backgroundColor: colors.semantic.warmOrangeAccent + '30' }]}>
+                  <Icon name={(weeklyChallenge.icon || 'star') as IconName} size={18} color={colors.semantic.warmOrange} />
                 </View>
+                <View style={styles.weeklyProgressBody}>
+                  <Text variant="body" style={styles.weeklyProgressTitle}>{weeklyChallenge.title}</Text>
+                  <View style={styles.weeklyProgressDots}>
+                    {weeklyChallenge.tasks.map((task: { type: string; target: number }, i: number) => {
+                      const taskDone = (challengeProgress[task.type] ?? 0) >= task.target;
+                      return (
+                        <View
+                          key={i}
+                          style={[styles.weeklyProgressDot, taskDone && styles.weeklyProgressDotDone]}
+                        />
+                      );
+                    })}
+                  </View>
+                </View>
+                <View style={styles.weeklyProgressBadge}>
+                  <Text variant="bodySmall" style={styles.weeklyProgressBadgeText}>+{weeklyChallenge.auraBonus}</Text>
+                </View>
+                <Icon name="chevronRight" size={16} color={colors.text.muted} />
               </View>
-              <View style={styles.weeklyProgressBadge}>
-                <Text variant="bodySmall" style={styles.weeklyProgressBadgeText}>+{weeklyChallenge.auraBonus}</Text>
-              </View>
-            </View>
+            </AnimatedPressable>
           </Animated.View>
 
-          {/* ──── SEASONAL EVENT BANNER ──── */}
-          {eventBannerElement}
+      {/* ──── SEASONAL EVENT BANNER ──── */}
+      {eventBannerElement}
 
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
+      <View style={styles.bottomSpacer} />
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Layered gradient background */}
+      <LinearGradient
+        colors={[colors.base.cream, colors.primary.wisteriaFaded, colors.calm.skyLight, colors.reward.peachLight, colors.base.cream]}
+        locations={[0, 0.25, 0.5, 0.75, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {seasonalVisuals}
+
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {isDesktop ? (
+          <View style={styles.desktopRow}>
+            <ScrollView
+              style={styles.desktopMainCol}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={colors.primary.wisteria}
+                  colors={[colors.primary.wisteria, colors.reward.gold]}
+                  progressBackgroundColor={colors.base.cream}
+                />
+              }
+            >
+              {scrollContent}
+            </ScrollView>
+            <View style={styles.desktopSidebar}>
+              <NeedsFloatingPanel onNavigateAway={handleNeedsPanelNavigate} />
+              <View style={styles.desktopChatWrap}>
+                <VisbyChatInner
+                  active
+                  onNavigateAway={handleDesktopChatNavigate}
+                  showNeeds={false}
+                />
+              </View>
+            </View>
+          </View>
+        ) : (
+          <>
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={colors.primary.wisteria}
+                  colors={[colors.primary.wisteria, colors.reward.gold]}
+                  progressBackgroundColor={colors.base.cream}
+                />
+              }
+            >
+              {scrollContent}
+            </ScrollView>
+            <View style={styles.mobileNeedsWrap}>
+              <NeedsFloatingPanel onNavigateAway={handleNeedsPanelNavigate} />
+            </View>
+            <ChatFAB onPress={handleShowVisbyCheckIn} />
+          </>
+        )}
       </SafeAreaView>
 
       {/* Daily Reward Modal */}
@@ -795,7 +864,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </Pressable>
       </Modal>
 
-      <VisbyCheckInModal visible={showVisbyCheckIn} onClose={handleCloseVisbyCheckIn} />
+      {!isDesktop && (
+        <VisbyCheckInModal visible={showVisbyCheckIn} onClose={handleCloseVisbyCheckIn} />
+      )}
 
       {/* Story beat: Visby milestone message */}
       <Modal visible={showStoryBeat} transparent animationType="fade">
@@ -807,7 +878,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
             <Caption style={styles.storyBeatLabel}>Visby says</Caption>
             <Heading level={2} style={styles.careTitle}>We're really going to see the world together!</Heading>
-            <Text variant="body" style={styles.careDesc}>You visited your first place. There's so much more to explore — and I'll be right there with you. 🌍</Text>
+            <Text variant="body" style={styles.careDesc}>You visited your first place. There's so much more to explore — and I'll be right there with you.</Text>
             <Button title="Let's go!" onPress={handleStoryBeatDismiss} variant="primary" style={{ marginTop: spacing.lg }} />
           </Pressable>
           </Animated.View>
@@ -968,6 +1039,41 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xxl,
+  },
+
+  /* Desktop two-column layout */
+  desktopRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  desktopMainCol: {
+    flex: 1,
+  },
+  desktopSidebar: {
+    width: 340,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(184,165,224,0.15)',
+    backgroundColor: colors.base.cream,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  desktopChatWrap: {
+    flex: 1,
+    backgroundColor: colors.base.cream,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(184,165,224,0.2)',
+    padding: spacing.sm,
+    overflow: 'hidden',
+  },
+
+  /* Mobile floating needs panel */
+  mobileNeedsWrap: {
+    position: 'absolute',
+    bottom: 90,
+    left: 16,
+    zIndex: 90,
+    maxWidth: 280,
   },
 
   /* Header */

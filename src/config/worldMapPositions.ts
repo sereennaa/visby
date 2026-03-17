@@ -1,6 +1,8 @@
 /**
- * Approximate position of each country on a flat world map (0–100 percent).
- * Used for the illustrated world map: x = longitude (-180..180 → 0..100), y = latitude (90..-90 → 0..100).
+ * Country pin positions on the world map (0-100 percent of the canvas).
+ * The background SVG uses a 1000x500 viewBox with equirectangular-ish projection.
+ * x: 0 = far left (Pacific), 100 = far right (Pacific)
+ * y: 0 = top (north pole), 100 = bottom (south pole)
  */
 
 export interface WorldMapPosition {
@@ -10,99 +12,98 @@ export interface WorldMapPosition {
 
 export const WORLD_MAP_POSITIONS: Record<string, WorldMapPosition> = {
   // East Asia
-  jp: { xPercent: 89, yPercent: 30 },
-  kr: { xPercent: 85, yPercent: 29 },
-  cn: { xPercent: 79, yPercent: 30 },
-  tw: { xPercent: 84, yPercent: 36 },
+  jp: { xPercent: 85, yPercent: 22 },
+  kr: { xPercent: 83, yPercent: 22 },
+  cn: { xPercent: 76, yPercent: 26 },
+  tw: { xPercent: 82, yPercent: 36 },
 
   // Southeast Asia
-  th: { xPercent: 78, yPercent: 42 },
-  vn: { xPercent: 80, yPercent: 42 },
-  id: { xPercent: 82, yPercent: 52 },
+  th: { xPercent: 74, yPercent: 44 },
+  vn: { xPercent: 76, yPercent: 42 },
+  id: { xPercent: 80, yPercent: 56 },
 
   // South Asia / Middle East
-  in: { xPercent: 72, yPercent: 38 },
-  lb: { xPercent: 61, yPercent: 30 },
-  ae: { xPercent: 65, yPercent: 36 },
-  tr: { xPercent: 59, yPercent: 28 },
+  in: { xPercent: 69, yPercent: 42 },
+  lb: { xPercent: 60, yPercent: 34 },
+  ae: { xPercent: 63, yPercent: 40 },
+  tr: { xPercent: 57, yPercent: 28 },
 
   // Northern Europe
-  is: { xPercent: 43, yPercent: 14 },
-  no: { xPercent: 53, yPercent: 17 },
-  se: { xPercent: 55, yPercent: 15 },
-  fi: { xPercent: 57, yPercent: 14 },
+  is: { xPercent: 44, yPercent: 12 },
+  no: { xPercent: 51, yPercent: 10 },
+  se: { xPercent: 53, yPercent: 12 },
+  fi: { xPercent: 55, yPercent: 10 },
 
   // Western Europe
-  gb: { xPercent: 49, yPercent: 20 },
-  nl: { xPercent: 50, yPercent: 21 },
-  be: { xPercent: 49, yPercent: 22 },
-  fr: { xPercent: 51, yPercent: 23 },
-  de: { xPercent: 53, yPercent: 21 },
-  ch: { xPercent: 52, yPercent: 25 },
-  mc: { xPercent: 52, yPercent: 26 },
-  es: { xPercent: 48, yPercent: 27 },
-  pt: { xPercent: 46, yPercent: 28 },
-  it: { xPercent: 54, yPercent: 27 },
-  va: { xPercent: 53, yPercent: 28 },
+  gb: { xPercent: 47, yPercent: 19 },
+  nl: { xPercent: 50, yPercent: 18 },
+  be: { xPercent: 50, yPercent: 20 },
+  fr: { xPercent: 49, yPercent: 24 },
+  de: { xPercent: 53, yPercent: 20 },
+  ch: { xPercent: 52, yPercent: 24 },
+  mc: { xPercent: 51, yPercent: 26 },
+  es: { xPercent: 46, yPercent: 28 },
+  pt: { xPercent: 44, yPercent: 28 },
+  it: { xPercent: 53, yPercent: 28 },
+  va: { xPercent: 54, yPercent: 30 },
 
   // Central / Eastern Europe
-  pl: { xPercent: 55, yPercent: 20 },
-  cz: { xPercent: 54, yPercent: 23 },
-  sk: { xPercent: 56, yPercent: 23 },
-  at: { xPercent: 53, yPercent: 24 },
-  hu: { xPercent: 56, yPercent: 25 },
-  si: { xPercent: 54, yPercent: 26 },
-  hr: { xPercent: 55, yPercent: 27 },
+  pl: { xPercent: 55, yPercent: 18 },
+  cz: { xPercent: 54, yPercent: 20 },
+  sk: { xPercent: 56, yPercent: 21 },
+  at: { xPercent: 54, yPercent: 22 },
+  hu: { xPercent: 56, yPercent: 23 },
+  si: { xPercent: 54, yPercent: 25 },
+  hr: { xPercent: 55, yPercent: 26 },
   ba: { xPercent: 56, yPercent: 27 },
-  me: { xPercent: 57, yPercent: 28 },
-  al: { xPercent: 56, yPercent: 29 },
-  gr: { xPercent: 57, yPercent: 29 },
-  ro: { xPercent: 58, yPercent: 25 },
-  bg: { xPercent: 58, yPercent: 27 },
+  me: { xPercent: 56, yPercent: 29 },
+  al: { xPercent: 55, yPercent: 30 },
+  gr: { xPercent: 56, yPercent: 31 },
+  ro: { xPercent: 57, yPercent: 24 },
+  bg: { xPercent: 57, yPercent: 27 },
 
   // North Africa
-  ma: { xPercent: 48, yPercent: 31 },
-  tn: { xPercent: 52, yPercent: 32 },
-  eg: { xPercent: 58, yPercent: 35 },
+  ma: { xPercent: 47, yPercent: 34 },
+  tn: { xPercent: 51, yPercent: 34 },
+  eg: { xPercent: 57, yPercent: 38 },
 
   // Sub-Saharan Africa
-  ke: { xPercent: 60, yPercent: 51 },
-  tz: { xPercent: 60, yPercent: 54 },
-  za: { xPercent: 56, yPercent: 67 },
-  mg: { xPercent: 63, yPercent: 60 },
+  ke: { xPercent: 57, yPercent: 52 },
+  tz: { xPercent: 57, yPercent: 56 },
+  za: { xPercent: 53, yPercent: 68 },
+  mg: { xPercent: 60, yPercent: 62 },
 
   // North America
-  ca: { xPercent: 19, yPercent: 22 },
-  us: { xPercent: 17, yPercent: 30 },
-  mx: { xPercent: 23, yPercent: 39 },
+  ca: { xPercent: 15, yPercent: 20 },
+  us: { xPercent: 16, yPercent: 32 },
+  mx: { xPercent: 13, yPercent: 44 },
 
   // Caribbean
-  cu: { xPercent: 25, yPercent: 40 },
-  jm: { xPercent: 26, yPercent: 42 },
-  do: { xPercent: 28, yPercent: 41 },
-  bb: { xPercent: 31, yPercent: 43 },
-  lc: { xPercent: 33, yPercent: 43 },
-  cw: { xPercent: 30, yPercent: 44 },
+  cu: { xPercent: 16, yPercent: 48 },
+  jm: { xPercent: 17, yPercent: 50 },
+  do: { xPercent: 19, yPercent: 48 },
+  bb: { xPercent: 20, yPercent: 50 },
+  lc: { xPercent: 21, yPercent: 50 },
+  cw: { xPercent: 19, yPercent: 52 },
 
   // South America
-  co: { xPercent: 27, yPercent: 49 },
-  ec: { xPercent: 25, yPercent: 51 },
-  pe: { xPercent: 29, yPercent: 57 },
-  br: { xPercent: 37, yPercent: 59 },
-  cl: { xPercent: 28, yPercent: 69 },
-  uy: { xPercent: 33, yPercent: 70 },
-  ar: { xPercent: 31, yPercent: 71 },
+  co: { xPercent: 17, yPercent: 56 },
+  ec: { xPercent: 15, yPercent: 58 },
+  pe: { xPercent: 16, yPercent: 64 },
+  br: { xPercent: 21, yPercent: 62 },
+  cl: { xPercent: 15, yPercent: 76 },
+  uy: { xPercent: 19, yPercent: 76 },
+  ar: { xPercent: 17, yPercent: 80 },
 
   // Oceania
-  au: { xPercent: 87, yPercent: 64 },
-  nz: { xPercent: 94, yPercent: 71 },
+  au: { xPercent: 86, yPercent: 70 },
+  nz: { xPercent: 93, yPercent: 76 },
 };
 
 export function getWorldMapPosition(countryId: string): WorldMapPosition | null {
   return WORLD_MAP_POSITIONS[countryId] ?? null;
 }
 
-/** Short label for the world map so names fit (e.g. "UK" not "United Kingdom"). */
 export const WORLD_MAP_LABELS: Record<string, string> = {
   gb: 'UK',
   us: 'USA',

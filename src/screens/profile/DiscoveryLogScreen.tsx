@@ -41,7 +41,7 @@ export const DiscoveryLogScreen: React.FC<DiscoveryLogScreenProps> = ({ navigati
 
   const handleShareMilestone = () => {
     Share.share({
-      message: `I've discovered ${count} things about the world in Visby! 🌍✨ #Visby`,
+      message: `I've discovered ${count} things about the world in Visby! #Visby`,
     });
   };
 
@@ -69,7 +69,7 @@ export const DiscoveryLogScreen: React.FC<DiscoveryLogScreenProps> = ({ navigati
             <Card style={styles.milestoneCard}>
               <Icon name="sparkles" size={28} color={colors.reward.gold} />
               <View style={styles.milestoneContent}>
-                <Text variant="body" style={styles.milestoneTitle}>{count} discoveries! 🎉</Text>
+                <Text variant="body" style={styles.milestoneTitle}>{count} discoveries!</Text>
                 <Caption style={styles.milestoneSub}>Share your milestone with friends!</Caption>
                 <Button title="Share" onPress={handleShareMilestone} variant="primary" size="sm" style={styles.shareBtn} />
               </View>
@@ -88,7 +88,7 @@ export const DiscoveryLogScreen: React.FC<DiscoveryLogScreenProps> = ({ navigati
             <View style={styles.list}>
               {Object.entries(groupedByCountry).map(([countryId, items]) => {
                 const country = COUNTRIES.find((c) => c.id === countryId);
-                const flagEmoji = country?.flagEmoji ?? '🌍';
+                const flagEmoji = country?.flagEmoji ?? '🏳️';
                 return (
                   <View key={countryId} style={styles.countryGroup}>
                     <View style={styles.countryGroupHeader}>

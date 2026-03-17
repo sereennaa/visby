@@ -72,7 +72,7 @@ YOUR VOICE:
 - Warm, curious, playful. You love exploring the world together.
 - Simple language for ages 6-12. Short words, short sentences.
 - 1-3 sentences max per reply. Your replies will be read aloud, so keep them natural and brief.
-- One emoji max per message (💜, ✨, or 🌍). Skip emoji when the topic is serious.
+- Never use emojis in your messages.
 - Never repeat your last message. Vary your phrasing.
 - User is level ${context.level} with a ${context.streak}-day streak.
 ${traitLine}
@@ -168,7 +168,7 @@ function sanitizeReply(reply: string): string {
   cleaned = cleaned.replace(/https?:\/\/\S+/g, '');
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
 
-  return cleaned || "Hmm, I got a little confused. What were we talking about? 💜";
+  return cleaned || "Hmm, I got a little confused. What were we talking about?";
 }
 
 export { filterUserInput, getSafetyResponse };
@@ -180,7 +180,7 @@ export async function getAIReply(
 ): Promise<string> {
   const safetyFlag = filterUserInput(userText);
   if (safetyFlag.level === 'high') {
-    return getSafetyResponse(safetyFlag) || "I'm glad you told me. Please talk to a grown-up you trust. 💜";
+    return getSafetyResponse(safetyFlag) || "I'm glad you told me. Please talk to a grown-up you trust.";
   }
 
   if (!isAIChatConfigured) {
@@ -283,7 +283,7 @@ function getFallbackReply(userText: string): string {
 
   if (/\b(tired|exhausted|stressed|sad|anxious|not great|meh|upset|angry|mad|scared)\b/.test(t)) {
     const options = [
-      "That makes sense. Some days just feel heavy — and that's okay. 💜",
+      "That makes sense. Some days just feel heavy — and that's okay.",
       "I hear you. It takes courage to say how you're feeling. What would feel good right now?",
       "That sounds tough. You don't have to figure it all out — just being here is enough.",
     ];
@@ -292,18 +292,18 @@ function getFallbackReply(userText: string): string {
 
   if (/\b(good|great|amazing|awesome|fantastic|happy|excited)\b/.test(t)) {
     const options = [
-      "That's awesome! What made today good? I want to hear! ✨",
+      "That's awesome! What made today good? I want to hear!",
       "Yay! I love that energy. Want to go on an adventure together?",
-      "Love to hear it! Should we explore somewhere new today? 💜",
+      "Love to hear it! Should we explore somewhere new today?",
     ];
     return options[Math.floor(Math.random() * options.length)];
   }
 
   if (t.endsWith('?')) {
     const options = [
-      "Hmm, good question! What do you think? I love hearing your ideas. 🌍",
+      "Hmm, good question! What do you think? I love hearing your ideas.",
       "Ooh, that's interesting! Let's figure it out together!",
-      "I'm not totally sure, but we could explore and find out! ✨",
+      "I'm not totally sure, but we could explore and find out!",
     ];
     return options[Math.floor(Math.random() * options.length)];
   }
@@ -311,14 +311,14 @@ function getFallbackReply(userText: string): string {
   if (visitedCountries.length > 0) {
     const countryId = visitedCountries[Math.floor(Math.random() * visitedCountries.length)];
     const name = countryIdToName(countryId);
-    return `That's cool! Hey, remember when we explored ${name} together? What was your favorite part? 💜`;
+    return `That's cool! Hey, remember when we explored ${name} together? What was your favorite part?`;
   }
 
   const affirmations = [
     "Thanks for sharing that with me. Tell me more!",
     "That's really interesting — what made you think of that?",
-    "I like hearing what's on your mind. 💜",
-    "You notice cool things. Want to go explore the world together? 🌍",
+    "I like hearing what's on your mind.",
+    "You notice cool things. Want to go explore the world together?",
     "I'm glad you told me that. What else is going on?",
   ];
   return affirmations[Math.floor(Math.random() * affirmations.length)];

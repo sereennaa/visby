@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import { Text, Caption } from '../ui/Text';
-import { Icon } from '../ui/Icon';
+import { Icon, IconName } from '../ui/Icon';
 import { FloatingParticles, getCountryParticleVariant } from '../effects/FloatingParticles';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -24,15 +24,15 @@ import { filterPlaceChatMessage } from '../../config/safetyFilters';
 import { getPhrasesForRoom, PHRASE_CATEGORIES, CATEGORY_LABELS } from '../../config/quickChatPhrases';
 import { useStore } from '../../store/useStore';
 
-const EMOTE_MAP: Record<ChatEmote, string> = {
-  wave: '👋',
-  heart: '❤️',
-  laugh: '😂',
-  wow: '😮',
-  cool: '😎',
-  dance: '💃',
-  sparkle: '✨',
-  thumbsup: '👍',
+const EMOTE_MAP: Record<ChatEmote, IconName> = {
+  wave: 'hand',
+  heart: 'heart',
+  laugh: 'happy',
+  wow: 'star',
+  cool: 'flash',
+  dance: 'music',
+  sparkle: 'sparkles',
+  thumbsup: 'like',
 };
 
 const EMOTE_LIST: ChatEmote[] = ['wave', 'heart', 'laugh', 'wow', 'cool', 'dance', 'sparkle', 'thumbsup'];
@@ -296,7 +296,7 @@ export const PlaceChatModal = React.memo<PlaceChatModalProps>(({
           <View style={styles.emoteBar}>
             {EMOTE_LIST.map((emote) => (
               <TouchableOpacity key={emote} style={styles.emoteBtn} onPress={() => handleEmote(emote)} activeOpacity={0.6}>
-                <Text style={styles.emoteIcon}>{EMOTE_MAP[emote]}</Text>
+                <Icon name={EMOTE_MAP[emote]} size={22} color={colors.primary.wisteriaDark} />
               </TouchableOpacity>
             ))}
           </View>

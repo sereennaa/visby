@@ -61,6 +61,7 @@ const GAME_NAME = 'CultureDressUp';
 
 export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => {
   const pathNodeId = route.params?.pathNodeId;
+  const countryId = route.params?.countryId ?? null;
   const visby = useStore(s => s.visby);
   const addAura = useStore(s => s.addAura);
   const addSkillPoints = useStore(s => s.addSkillPoints);
@@ -77,15 +78,24 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
   const [phase, setPhase] = useState<'browse' | 'quiz'>('browse');
-  const [selectedOutfit, setSelectedOutfit] = useState<CulturalOutfit>(CULTURAL_OUTFITS[0]);
+  const [selectedOutfit, setSelectedOutfit] = useState<CulturalOutfit>(
+    countryId ? CULTURAL_OUTFITS.find((item) => item.countryId === countryId) ?? CULTURAL_OUTFITS[0] : CULTURAL_OUTFITS[0],
+  );
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [showFact, setShowFact] = useState(false);
   const [isLaunching, setIsLaunching] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
 
+  const prioritizedOutfits = useMemo(() => {
+    if (!countryId) return CULTURAL_OUTFITS;
+    const target = CULTURAL_OUTFITS.find((item) => item.countryId === countryId);
+    if (!target) return CULTURAL_OUTFITS;
+    return [target, ...CULTURAL_OUTFITS.filter((item) => item.id !== target.id)];
+  }, [countryId]);
+
   const quizQuestions = useMemo(() => {
-    return [...CULTURAL_OUTFITS].sort(() => Math.random() - 0.5).slice(0, 6).map((outfit) => {
+    return [...prioritizedOutfits].sort(() => Math.random() - 0.5).slice(0, 6).map((outfit) => {
       const wrong = CULTURAL_OUTFITS.filter((o) => o.id !== outfit.id)
         .sort(() => Math.random() - 0.5)
         .slice(0, 2)
@@ -93,7 +103,7 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
       const options = [...wrong, outfit.countryName].sort(() => Math.random() - 0.5);
       return { outfit, options, correctIndex: options.indexOf(outfit.countryName) };
     });
-  }, []);
+  }, [prioritizedOutfits]);
 
   const handleSelectOutfit = (outfit: CulturalOutfit) => {
     setSelectedOutfit(outfit);

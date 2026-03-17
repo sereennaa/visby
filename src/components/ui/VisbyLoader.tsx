@@ -10,6 +10,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { Text } from './Text';
+import { Icon } from './Icon';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
@@ -64,18 +65,18 @@ export const VisbyLoader: React.FC<VisbyLoaderProps> = ({ message, compact }) =>
   if (compact) {
     return (
       <View style={styles.compactContainer}>
-        <Animated.Text style={[styles.character, styles.compactCharacter, bounceStyle]}>
-          {'🧭'}
-        </Animated.Text>
+        <Animated.View style={bounceStyle}>
+          <Icon name="compass" size={32} color={colors.primary.wisteriaDark} />
+        </Animated.View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Animated.Text style={[styles.character, bounceStyle]}>
-        {'🧭'}
-      </Animated.Text>
+      <Animated.View style={bounceStyle}>
+        <Icon name="compass" size={48} color={colors.primary.wisteriaDark} />
+      </Animated.View>
       <Text variant="body" color={colors.text.muted} style={styles.message}>
         {displayMessage}
       </Text>
@@ -95,12 +96,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-  },
-  character: {
-    fontSize: 48,
-  },
-  compactCharacter: {
-    fontSize: 32,
   },
   message: {
     textAlign: 'center',
