@@ -163,6 +163,7 @@ export const iconMap = {
   shirt: { family: 'Ionicons', name: 'shirt' },
   rocket: { family: 'Ionicons', name: 'rocket' },
   hand: { family: 'MaterialCommunityIcons', name: 'hand-wave' },
+  greeting: { family: 'MaterialCommunityIcons', name: 'hand-wave' },
   levelUp: { family: 'MaterialCommunityIcons', name: 'arrow-up-bold-circle' },
   crown: { family: 'MaterialCommunityIcons', name: 'crown' },
   viking: { family: 'MaterialCommunityIcons', name: 'shield-account' },
@@ -195,6 +196,8 @@ export const iconMap = {
   drama: { family: 'MaterialCommunityIcons', name: 'drama-masks' },
   kimono: { family: 'MaterialCommunityIcons', name: 'tshirt-crew' },
   skull: { family: 'MaterialCommunityIcons', name: 'skull' },
+  door: { family: 'MaterialCommunityIcons', name: 'door' },
+  chevronUp: { family: 'Ionicons', name: 'chevron-up' },
 } as const;
 
 export type IconName = keyof typeof iconMap;

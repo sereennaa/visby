@@ -5,6 +5,8 @@
 
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Speech from 'expo-speech';
+import type { Voice } from 'expo-speech';
+import { VoiceQuality } from 'expo-speech';
 import { useStore } from '../store/useStore';
 
 let audioModeSet = false;
@@ -110,6 +112,31 @@ function isReadAloudEnabled(): boolean {
   return settings.readAloud !== false;
 }
 
+// Best voice per language (Enhanced > Default), populated lazily.
+let voiceCache: Map<string, string> | null = null;
+
+function pickBestVoiceForLanguage(voices: Voice[], language: string): string | undefined {
+  const lang = language.toLowerCase();
+  const forLang = voices.filter((v) => v.language.toLowerCase().startsWith(lang.split('-')[0]) || v.language.toLowerCase() === lang);
+  if (forLang.length === 0) return undefined;
+  const enhanced = forLang.find((v) => v.quality === VoiceQuality.Enhanced);
+  if (enhanced) return enhanced.identifier;
+  return forLang[0].identifier;
+}
+
+async function getVoiceForLanguage(language: string): Promise<string | undefined> {
+  if (voiceCache?.has(language)) return voiceCache.get(language);
+  try {
+    const voices = await Speech.getAvailableVoicesAsync();
+    if (!voiceCache) voiceCache = new Map();
+    const identifier = pickBestVoiceForLanguage(voices, language);
+    if (identifier) voiceCache.set(language, identifier);
+    return identifier;
+  } catch {
+    return undefined;
+  }
+}
+
 export const speechService = {
   speak(text: string, countryId?: string, onDone?: () => void): void {
     if (!isSoundEnabled() || !isReadAloudEnabled()) {
@@ -117,14 +144,18 @@ export const speechService = {
       return;
     }
     Speech.stop();
-    const language = countryId ? LANGUAGE_CODES[countryId] : undefined;
-    Speech.speak(text, {
-      language: language || 'en-US',
-      rate: 0.85,
-      pitch: 1.1,
-      onDone: () => onDone?.(),
-      onStopped: () => onDone?.(),
-      onError: () => onDone?.(),
+    const language = countryId ? LANGUAGE_CODES[countryId] : 'en-US';
+    const lang = language || 'en-US';
+    getVoiceForLanguage(lang).then((voice) => {
+      Speech.speak(text, {
+        language: lang,
+        rate: 0.85,
+        pitch: 1.1,
+        ...(voice && { voice }),
+        onDone: () => onDone?.(),
+        onStopped: () => onDone?.(),
+        onError: () => onDone?.(),
+      });
     });
   },
 
@@ -134,13 +165,16 @@ export const speechService = {
       return;
     }
     Speech.stop();
-    Speech.speak(word, {
-      language,
-      rate: 0.75,
-      pitch: 1.0,
-      onDone: () => onDone?.(),
-      onStopped: () => onDone?.(),
-      onError: () => onDone?.(),
+    getVoiceForLanguage(language).then((voice) => {
+      Speech.speak(word, {
+        language,
+        rate: 0.75,
+        pitch: 1.0,
+        ...(voice && { voice }),
+        onDone: () => onDone?.(),
+        onStopped: () => onDone?.(),
+        onError: () => onDone?.(),
+      });
     });
   },
 

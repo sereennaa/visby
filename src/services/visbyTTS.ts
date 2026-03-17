@@ -14,7 +14,7 @@ const MAX_CACHE_ENTRIES = 50;
 
 let speaking = false;
 let doneCallback: (() => void) | null = null;
-let currentPlayer: AudioPlayer | null = null;
+let currentPlayer: ReturnType<typeof createAudioPlayer> | null = null;
 const cache = new Map<string, string>();
 let cacheOrder: string[] = [];
 
@@ -81,7 +81,7 @@ function finishSpeaking(): void {
   cb?.();
 }
 
-function fallbackSpeak(clean: string, onDone?: () => void): void {
+function fallbackSpeak(clean: string): void {
   Speech.speak(clean, {
     ...FALLBACK_CONFIG,
     onDone: finishSpeaking,
@@ -95,7 +95,7 @@ function fallbackSpeak(clean: string, onDone?: () => void): void {
 
 async function fetchAndPlayOpenAITTS(clean: string): Promise<void> {
   if (!API_KEY) {
-    fallbackSpeak(clean, onDone);
+    fallbackSpeak(clean);
     return;
   }
 
@@ -105,7 +105,7 @@ async function fetchAndPlayOpenAITTS(clean: string): Promise<void> {
   try {
     await ensureAudioMode();
   } catch {
-    fallbackSpeak(clean, onDone);
+    fallbackSpeak(clean);
     return;
   }
 
@@ -120,23 +120,16 @@ async function fetchAndPlayOpenAITTS(clean: string): Promise<void> {
       try {
         const player = createAudioPlayer(fileUri);
         if (!player) {
-          fallbackSpeak(clean, onDone);
+          fallbackSpeak(clean);
           return;
         }
         currentPlayer = player;
-        const onEnd = () => {
-          finishSpeaking();
-          onDone?.();
-        };
         (player as { addListener?(event: string, cb: (s: { didJustFinish?: boolean }) => void): void }).addListener?.('playbackStatusUpdate', (status) => {
-          if (status?.didJustFinish) onEnd();
+          if (status?.didJustFinish) finishSpeaking();
         });
         player.play();
         setTimeout(() => {
-          if (speaking) {
-            finishSpeaking();
-            onDone?.();
-          }
+          if (speaking) finishSpeaking();
         }, 60000);
         return;
       } catch {
@@ -166,7 +159,7 @@ async function fetchAndPlayOpenAITTS(clean: string): Promise<void> {
     });
 
     if (!res.ok) {
-      fallbackSpeak(clean, onDone);
+      fallbackSpeak(clean);
       return;
     }
 
@@ -184,26 +177,19 @@ async function fetchAndPlayOpenAITTS(clean: string): Promise<void> {
 
     const player = createAudioPlayer(fileUri);
     if (!player) {
-      fallbackSpeak(clean, onDone);
+      fallbackSpeak(clean);
       return;
     }
     currentPlayer = player;
-    const onEnd = () => {
-      finishSpeaking();
-      onDone?.();
-    };
     (player as { addListener?(event: string, cb: (s: { didJustFinish?: boolean }) => void): void }).addListener?.('playbackStatusUpdate', (status) => {
-      if (status?.didJustFinish) onEnd();
+      if (status?.didJustFinish) finishSpeaking();
     });
     player.play();
     setTimeout(() => {
-      if (speaking) {
-        finishSpeaking();
-        onDone?.();
-      }
+      if (speaking) finishSpeaking();
     }, 60000);
   } catch {
-    fallbackSpeak(clean, onDone);
+    fallbackSpeak(clean);
   }
 }
 

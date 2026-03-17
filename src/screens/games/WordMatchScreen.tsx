@@ -110,8 +110,6 @@ function pickRound(pool: WordPair[]): { pairs: WordPair[]; shuffledEnglish: stri
 
 type CardState = 'idle' | 'selected' | 'matched' | 'wrong';
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
 const ForeignCardBase: React.FC<{
   word: string;
   language: string;
@@ -120,7 +118,6 @@ const ForeignCardBase: React.FC<{
   index: number;
   imageUrl?: string;
 }> = ({ word, language, state, onPress, index, imageUrl }) => {
-  const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
 
   useEffect(() => {
@@ -135,17 +132,9 @@ const ForeignCardBase: React.FC<{
     }
   }, [state]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: translateX.value }],
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
   }));
-
-  const handlePressIn = () => {
-    if (state === 'matched') return;
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
-  };
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  };
 
   const bg =
     state === 'matched'
@@ -167,53 +156,52 @@ const ForeignCardBase: React.FC<{
 
   return (
     <Animated.View entering={FadeInUp.delay(index * 80).duration(400)}>
-      <AnimatedTouchable
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={state === 'matched'}
-        activeOpacity={0.85}
-        style={animStyle}
-      >
-        <View
-          style={[
-            styles.wordCard,
-            styles.foreignCard,
-            { backgroundColor: bg, borderColor, borderWidth: state !== 'idle' ? 2 : 0 },
-          ]}
+      <Animated.View style={shakeStyle}>
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={state === 'matched'}
+          activeOpacity={0.85}
         >
-          {state === 'matched' ? (
-            <View style={styles.matchedBadge}>
-              <Icon name="check" size={16} color={colors.success.emerald} />
-            </View>
-          ) : null}
-          {imageUrl && (
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.wordImage}
-              contentFit="cover"
-              transition={150}
-            />
-          )}
-          <View style={styles.wordRow}>
-            <Text
-              variant="body"
-              color={state === 'matched' ? colors.success.emerald : colors.text.primary}
-              style={styles.wordText}
-              numberOfLines={2}
-            >
-              {word}
-            </Text>
-            <SpeakerButton text={word} languageName={language} size={14} compact />
-          </View>
-          <Caption
-            color={state === 'matched' ? colors.success.honeydewDark : colors.text.muted}
-            style={styles.languageLabel}
+          <View
+            style={[
+              styles.wordCard,
+              styles.foreignCard,
+              { backgroundColor: bg, borderColor, borderWidth: state !== 'idle' ? 2 : 0 },
+            ]}
           >
-            {language}
-          </Caption>
-        </View>
-      </AnimatedTouchable>
+            {state === 'matched' ? (
+              <View style={styles.matchedBadge}>
+                <Icon name="check" size={16} color={colors.success.emerald} />
+              </View>
+            ) : null}
+            {imageUrl && (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.wordImage}
+                contentFit="cover"
+                transition={150}
+              />
+            )}
+            <View style={styles.wordRow}>
+              <Text
+                variant="body"
+                color={state === 'matched' ? colors.success.emerald : colors.text.primary}
+                style={styles.wordText}
+                numberOfLines={2}
+              >
+                {word}
+              </Text>
+              <SpeakerButton text={word} languageName={language} size={14} compact />
+            </View>
+            <Caption
+              color={state === 'matched' ? colors.success.honeydewDark : colors.text.muted}
+              style={styles.languageLabel}
+            >
+              {language}
+            </Caption>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -234,7 +222,6 @@ const EnglishCardBase: React.FC<{
   onPress: () => void;
   index: number;
 }> = ({ word, state, onPress, index }) => {
-  const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
 
   useEffect(() => {
@@ -249,17 +236,9 @@ const EnglishCardBase: React.FC<{
     }
   }, [state]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: translateX.value }],
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
   }));
-
-  const handlePressIn = () => {
-    if (state === 'matched') return;
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
-  };
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  };
 
   const bg =
     state === 'matched'
@@ -281,36 +260,35 @@ const EnglishCardBase: React.FC<{
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 80 + 200).duration(400)}>
-      <AnimatedTouchable
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={state === 'matched'}
-        activeOpacity={0.85}
-        style={animStyle}
-      >
-        <View
-          style={[
-            styles.wordCard,
-            styles.englishCard,
-            { backgroundColor: bg, borderColor, borderWidth: state !== 'idle' ? 2 : 0 },
-          ]}
+      <Animated.View style={shakeStyle}>
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={state === 'matched'}
+          activeOpacity={0.85}
         >
-          {state === 'matched' ? (
-            <View style={styles.matchedBadge}>
-              <Icon name="check" size={16} color={colors.success.emerald} />
-            </View>
-          ) : null}
-          <Text
-            variant="body"
-            color={state === 'matched' ? colors.success.emerald : colors.text.primary}
-            style={styles.wordText}
-            numberOfLines={2}
+          <View
+            style={[
+              styles.wordCard,
+              styles.englishCard,
+              { backgroundColor: bg, borderColor, borderWidth: state !== 'idle' ? 2 : 0 },
+            ]}
           >
-            {word}
-          </Text>
-        </View>
-      </AnimatedTouchable>
+            {state === 'matched' ? (
+              <View style={styles.matchedBadge}>
+                <Icon name="check" size={16} color={colors.success.emerald} />
+              </View>
+            ) : null}
+            <Text
+              variant="body"
+              color={state === 'matched' ? colors.success.emerald : colors.text.primary}
+              style={styles.wordText}
+              numberOfLines={2}
+            >
+              {word}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -450,8 +428,9 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
 
       isProcessingRef.current = true;
       const foreignPair = round.pairs[selectedForeign];
-      const selectedEnglish = round.shuffledEnglish[englishIndex];
-      const isCorrect = foreignPair.english === selectedEnglish;
+      const selectedEnglish = (round.shuffledEnglish[englishIndex] ?? '').trim();
+      const expectedEnglish = (foreignPair.english ?? '').trim();
+      const isCorrect = expectedEnglish === selectedEnglish;
 
       if (isCorrect) {
         haptic(Haptics.ImpactFeedbackStyle.Medium);

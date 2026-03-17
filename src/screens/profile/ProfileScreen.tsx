@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  Platform,
 } from 'react-native';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -629,11 +630,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base.cream,
     borderRadius: spacing.radius.round,
     padding: spacing.xxs,
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.2)' }
+      : { shadowColor: colors.shadow.medium, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2 }),
   },
   profileInfo: {
     flex: 1,
@@ -883,11 +882,9 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     width: '85%',
     maxWidth: 360,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 }),
   },
   modalTitle: {
     marginBottom: spacing.sm,

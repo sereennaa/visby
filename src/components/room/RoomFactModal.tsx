@@ -45,6 +45,7 @@ interface RoomFactModalProps {
   hasMultipleFacts: boolean;
   onNextFact: () => void;
   onClose: () => void;
+  onMarkRead?: () => void;
 }
 
 export const RoomFactModal = React.memo<RoomFactModalProps>(({
@@ -55,6 +56,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
   hasMultipleFacts,
   onNextFact,
   onClose,
+  onMarkRead,
 }) => {
   const [elaborationPrompt, setElaborationPrompt] = useState<typeof ELABORATION_PROMPTS[0] | null>(null);
   const [elaborationRevealed, setElaborationRevealed] = useState(false);
@@ -63,6 +65,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
   const [teachBackAnswer, setTeachBackAnswer] = useState<number | null>(null);
   const { addDiscovery, addAura } = useStore();
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const justOpenedRef = useRef(false);
 
   useEffect(() => {
     return () => timersRef.current.forEach(clearTimeout);
@@ -72,6 +75,9 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
 
   useEffect(() => {
     if (visible) {
+      justOpenedRef.current = true;
+      const t = setTimeout(() => { justOpenedRef.current = false; }, 400);
+      timersRef.current.push(t);
       const prompt = ELABORATION_PROMPTS[Math.floor(Math.random() * ELABORATION_PROMPTS.length)];
       setElaborationPrompt(prompt);
       setElaborationRevealed(false);
@@ -119,11 +125,15 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
     timersRef.current.push(setTimeout(() => setSavedToJournal(false), 1800));
   };
 
+  const handleOverlayPress = () => {
+    if (!justOpenedRef.current) onClose();
+  };
+
   if (!visible || !fact) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable style={styles.overlay} onPress={handleOverlayPress}>
         <Animated.View entering={ZoomIn.duration(210).springify().damping(15)}>
         <Animated.View style={[styles.card, cardAnimatedStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={(e) => e.stopPropagation()}>
@@ -233,7 +243,15 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
                 {hasMultipleFacts && (
                   <Button size="sm" variant="secondary" title="Next fact" onPress={onNextFact} />
                 )}
-                <Button size="sm" variant="primary" title="Got it!" onPress={() => setShowTeachBack(true)} />
+                <Button
+                  size="sm"
+                  variant="primary"
+                  title="Got it!"
+                  onPress={() => {
+                    onMarkRead?.();
+                    setShowTeachBack(true);
+                  }}
+                />
               </View>
             )}
           </Animated.View>
