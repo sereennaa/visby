@@ -21,7 +21,8 @@
         "NSLocationWhenInUseUsageDescription": "Visby needs your location to collect stamps and discover nearby places.",
         "NSPhotoLibraryUsageDescription": "Visby needs access to your photos to add pictures to stamps and food logs.",
         "NSCameraUsageDescription": "Visby needs camera access to take photos for your collection."
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
