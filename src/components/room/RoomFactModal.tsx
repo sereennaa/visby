@@ -9,9 +9,6 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
   FadeInDown,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -71,8 +68,6 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
 
-  const scale = useSharedValue(0.95);
-
   useEffect(() => {
     if (visible) {
       justOpenedRef.current = true;
@@ -84,9 +79,6 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
       setSavedToJournal(false);
       setShowTeachBack(false);
       setTeachBackAnswer(null);
-      scale.value = withSpring(1, { damping: 14, stiffness: 120 });
-    } else {
-      scale.value = 0.95;
     }
   }, [visible]);
 
@@ -114,10 +106,6 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
     }
   };
 
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   const handleSaveToJournal = () => {
     if (!fact) return;
     addDiscovery(fact.title, countryId, 'fact');
@@ -134,9 +122,11 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={handleOverlayPress}>
-        <Animated.View entering={ZoomIn.duration(210).springify().damping(15)}>
-        <Animated.View style={[styles.card, cardAnimatedStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={(e) => e.stopPropagation()}>
+        <Animated.View
+          entering={ZoomIn.duration(210).springify().damping(15)}
+          style={styles.card}
+        >
+        <Pressable onPress={(e) => e.stopPropagation()}>
           <LinearGradient
             colors={[colors.surface.lavender, colors.base.cream, colors.calm.skyLight]}
             style={StyleSheet.absoluteFill}
@@ -256,7 +246,6 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
             )}
           </Animated.View>
         </Pressable>
-        </Animated.View>
         </Animated.View>
       </Pressable>
     </Modal>

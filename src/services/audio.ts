@@ -112,19 +112,30 @@ function isReadAloudEnabled(): boolean {
   return settings.readAloud !== false;
 }
 
+// Languages that sound best with system default voice only (no custom voice id).
+// Custom voice selection can break Japanese/Korean/Chinese on some devices.
+const USE_SYSTEM_DEFAULT_VOICE_ONLY = new Set(['ja-JP', 'ja', 'ko-KR', 'ko', 'zh-CN', 'zh-TW', 'zh']);
+
 // Best voice per language (Enhanced > Default), populated lazily.
 let voiceCache: Map<string, string> | null = null;
 
 function pickBestVoiceForLanguage(voices: Voice[], language: string): string | undefined {
   const lang = language.toLowerCase();
-  const forLang = voices.filter((v) => v.language.toLowerCase().startsWith(lang.split('-')[0]) || v.language.toLowerCase() === lang);
+  const langBase = lang.split('-')[0];
+  const forLang = voices.filter(
+    (v) => v.language.toLowerCase() === lang || v.language.toLowerCase().startsWith(langBase)
+  );
   if (forLang.length === 0) return undefined;
-  const enhanced = forLang.find((v) => v.quality === VoiceQuality.Enhanced);
+  // Prefer exact language match (e.g. ja-JP over generic ja)
+  const exact = forLang.find((v) => v.language.toLowerCase() === lang);
+  const pool = exact ? forLang.filter((v) => v.language.toLowerCase() === lang) : forLang;
+  const enhanced = pool.find((v) => v.quality === VoiceQuality.Enhanced);
   if (enhanced) return enhanced.identifier;
-  return forLang[0].identifier;
+  return pool[0].identifier;
 }
 
 async function getVoiceForLanguage(language: string): Promise<string | undefined> {
+  if (USE_SYSTEM_DEFAULT_VOICE_ONLY.has(language)) return undefined;
   if (voiceCache?.has(language)) return voiceCache.get(language);
   try {
     const voices = await Speech.getAvailableVoicesAsync();

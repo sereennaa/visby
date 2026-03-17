@@ -157,6 +157,7 @@ export const PersistentBottomNav = React.memo<PersistentBottomNavProps>(
 
 const styles = StyleSheet.create({
   container: {
+    flexShrink: 0,
     backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(253, 251, 248, 0.92)',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,

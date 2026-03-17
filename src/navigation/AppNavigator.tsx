@@ -1,5 +1,5 @@
-import React, { Suspense, useCallback, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React, { Suspense, useCallback, useState, useEffect } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, Platform } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { analyticsService } from '../services/analytics';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -200,8 +200,6 @@ const MainTabs = () => (
   </Tab.Navigator>
 );
 
-const AUTH_SCREENS = new Set(['Welcome', 'Login', 'SignUp', 'ForgotPassword', 'Onboarding']);
-
 function getActiveTabFromState(state: any): keyof MainTabParamList {
   const mainRoute = state?.routes?.find((r: any) => r.name === 'Main');
   if (mainRoute?.state) {
@@ -212,11 +210,20 @@ function getActiveTabFromState(state: any): keyof MainTabParamList {
   return 'Home';
 }
 
+/** Root stack screen name (e.g. 'Main', 'Welcome'). Used to show bottom nav only when on Main tabs. */
+function getRootFocusedScreenName(state: any): string {
+  if (!state?.routes?.length) return '';
+  const index = state.index ?? 0;
+  const route = state.routes[index];
+  return route?.name ?? '';
+}
+
 export const AppNavigator = () => {
   const isAuthenticated = useStore(s => s.isAuthenticated);
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [currentRoute, setCurrentRoute] = useState('');
   const [activeTab, setActiveTab] = useState<keyof MainTabParamList>('Home');
+  const [rootScreen, setRootScreen] = useState('');
 
   const handleStateChange = useCallback(() => {
     const route = navigationRef.getCurrentRoute();
@@ -226,9 +233,18 @@ export const AppNavigator = () => {
     }
     const state = navigationRef.getRootState();
     setActiveTab(getActiveTabFromState(state));
+    setRootScreen(getRootFocusedScreenName(state));
   }, [navigationRef]);
 
-  const showBottomNav = isAuthenticated && !AUTH_SCREENS.has(currentRoute);
+  useEffect(() => {
+    const state = navigationRef.getRootState();
+    if (state) {
+      setRootScreen(getRootFocusedScreenName(state));
+      setActiveTab(getActiveTabFromState(state));
+    }
+  }, [isAuthenticated]);
+
+  const showBottomNav = isAuthenticated && (rootScreen === 'Main' || rootScreen === '');
 
   return (
     <NavigationContainer ref={navigationRef} onStateChange={handleStateChange}>
@@ -295,7 +311,10 @@ export const AppNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  rootLayout: { flex: 1 },
+  rootLayout: {
+    flex: 1,
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' as any } : {}),
+  },
   stackWrap: { flex: 1 },
   loadingWrap: {
     flex: 1, justifyContent: 'center', alignItems: 'center',

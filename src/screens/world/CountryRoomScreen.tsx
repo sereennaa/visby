@@ -29,7 +29,9 @@ import Animated, {
   SlideInLeft,
   FadeInRight,
   FadeInLeft,
+  runOnJS,
 } from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
@@ -353,7 +355,8 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const effectiveWallColor = roomCustomization?.wallColor || currentRoom?.wallColor || '#FFF8F0';
   const effectiveFloorColor = roomCustomization?.floorColor || currentRoom?.floorColor || '#D4C5A0';
 
-  const avatarX = useSharedValue(SCREEN_WIDTH / 2 - AVATAR_SIZE / 2);
+  const floorWidth = SCREEN_WIDTH - spacing.md * 2;
+  const avatarX = useSharedValue(floorWidth / 2 - AVATAR_SIZE / 2);
   const avatarY = useSharedValue(110); // center Y in floor (default)
   const avatarDirection = useSharedValue<'left' | 'right'>('right');
 
@@ -534,7 +537,6 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   }));
 
   const moveToPosition = useCallback((locationX: number, locationY: number) => {
-    const floorWidth = SCREEN_WIDTH - spacing.md * 2;
     const minX = spacing.lg;
     const maxX = floorWidth - AVATAR_SIZE - spacing.lg;
     const targetX = Math.max(minX, Math.min(maxX, locationX - AVATAR_SIZE / 2));
@@ -550,14 +552,19 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       withTiming(-1, { duration: 100 }),
       withTiming(0, { duration: 100 }),
     );
-  }, []);
+  }, [floorWidth]);
 
-  const handleFloorPress = useCallback((e: { nativeEvent: { locationX: number; locationY: number } }) => {
+  const onFloorTap = useCallback((x: number, y: number) => {
     if (editMode) return;
-    const { locationX, locationY } = e.nativeEvent;
-    moveToPosition(locationX, locationY);
+    moveToPosition(x, y);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [editMode, moveToPosition]);
+
+  const floorTapGesture = useMemo(() =>
+    Gesture.Tap().onEnd((event) => {
+      runOnJS(onFloorTap)(event.x, event.y);
+    }),
+  [onFloorTap]);
 
   const avatarStyle = useAnimatedStyle(() => {
     const centerYDefault = 110;
@@ -584,7 +591,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       setRoomSlideDir(idx > currentRoomIdx ? 'right' : 'left');
       setCurrentRoomIdx(idx);
       setRoomTransitionKey((k) => k + 1);
-      avatarX.value = withSpring(SCREEN_WIDTH / 2 - AVATAR_SIZE / 2, { damping: 14, stiffness: 120 });
+      avatarX.value = withSpring(floorWidth / 2 - AVATAR_SIZE / 2, { damping: 14, stiffness: 120 });
       avatarY.value = withSpring(110, { damping: 14, stiffness: 120 });
       roomEntranceScale.value = 0.95;
       roomEntranceOpacity.value = 0.7;
@@ -831,7 +838,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       )}
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!editMode} contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -1215,27 +1222,8 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                       const animType = getAnimTypeForInteraction(catalogItem.interactionType);
                       const isJustPlaced = lastPlacedId === placed.id;
 
-                      const furnitureContent = (
-                        <TouchableOpacity
-                          key={placed.id}
-                          style={[
-                            styles.placedFurnitureItem,
-                            !editMode && { left: `${placed.x}%` as any, top: `${placed.y}%` as any },
-                            selectedPlacedItem === placed.id && styles.placedFurnitureItemSelected,
-                            canInteract && styles.placedFurnitureItemInteractive,
-                            { zIndex: Math.round(placed.y) },
-                          ]}
-                          onPress={() => {
-                            if (editMode) {
-                              setSelectedPlacedItem(selectedPlacedItem === placed.id ? null : placed.id);
-                            } else if (catalogItem.interactionType) {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                              setActiveFurnitureInteraction({ placed, catalogItem });
-                            }
-                          }}
-                          activeOpacity={editMode || canInteract ? 0.7 : 1}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        >
+                      const furnitureVisual = (
+                        <>
                           <FurnitureVisual
                             item={catalogItem}
                             interactionType={catalogItem.interactionType}
@@ -1261,7 +1249,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                               <Text style={styles.useFurnitureBadgeText}>Use</Text>
                             </View>
                           )}
-                        </TouchableOpacity>
+                        </>
                       );
 
                       if (editMode) {
@@ -1269,7 +1257,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                           <Animated.View
                             key={placed.id}
                             entering={isJustPlaced ? ZoomIn.springify().damping(10).stiffness(120) : undefined}
-                            style={{ position: 'absolute', left: `${placed.x}%` as any, top: `${placed.y}%` as any }}
+                            style={{ position: 'absolute', left: `${placed.x}%` as any, top: `${placed.y}%` as any, zIndex: Math.round(placed.y) }}
                           >
                             <DraggableFurniture
                               initialX={placed.x}
@@ -1291,12 +1279,37 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                                 setSelectedPlacedItem(selectedPlacedItem === placed.id ? null : placed.id);
                               }}
                             >
-                              {furnitureContent}
+                              <View style={[
+                                styles.placedFurnitureEditContent,
+                                selectedPlacedItem === placed.id && styles.placedFurnitureItemSelected,
+                              ]}>
+                                {furnitureVisual}
+                              </View>
                             </DraggableFurniture>
                           </Animated.View>
                         );
                       }
-                      return furnitureContent;
+                      return (
+                        <TouchableOpacity
+                          key={placed.id}
+                          style={[
+                            styles.placedFurnitureItem,
+                            { left: `${placed.x}%` as any, top: `${placed.y}%` as any },
+                            canInteract && styles.placedFurnitureItemInteractive,
+                            { zIndex: Math.round(placed.y) },
+                          ]}
+                          onPress={() => {
+                            if (catalogItem.interactionType) {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                              setActiveFurnitureInteraction({ placed, catalogItem });
+                            }
+                          }}
+                          activeOpacity={canInteract ? 0.7 : 1}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                        >
+                          {furnitureVisual}
+                        </TouchableOpacity>
+                      );
                     })}
                   </View>
                 </LinearGradient>
@@ -1306,7 +1319,8 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 <View style={[styles.baseboard, { backgroundColor: effectiveFloorColor }]} />
 
                 {/* Floor - tap to move Visby */}
-                <Pressable style={styles.roomFloorPressable} onPress={handleFloorPress}>
+                <GestureDetector gesture={floorTapGesture}>
+                <Animated.View style={styles.roomFloorPressable}>
                   <LinearGradient
                     colors={[effectiveFloorColor, effectiveFloorColor, (country?.accentColor ?? '#000') + '08']}
                     style={styles.roomFloor}
@@ -1396,7 +1410,8 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     </View>
                   )}
                 </LinearGradient>
-                </Pressable>
+                </Animated.View>
+                </GestureDetector>
 
                 {currentRoomIdx > 0 && (
                   <TouchableOpacity style={styles.roomNavLeft} onPress={() => goToRoom(currentRoomIdx - 1)} activeOpacity={0.85}>
@@ -2298,7 +2313,7 @@ const styles = StyleSheet.create({
     height: FLOOR_HEIGHT, width: '100%',
   },
   roomFloor: {
-    height: FLOOR_HEIGHT, width: '100%', position: 'absolute', left: 0, top: 0,
+    height: FLOOR_HEIGHT, width: '100%',
     justifyContent: 'center', alignItems: 'center',
     ...(Platform.OS === 'web' ? { perspective: '600px' } : {}),
   },
@@ -2447,7 +2462,7 @@ const styles = StyleSheet.create({
   },
 
   avatarContainer: {
-    position: 'absolute', left: spacing.lg, bottom: 4,
+    position: 'absolute', left: 0, bottom: 4,
     width: AVATAR_SIZE, height: AVATAR_SIZE + 24, alignItems: 'center',
   },
   visbyShadow: {
@@ -2551,6 +2566,10 @@ const styles = StyleSheet.create({
   placedFurnitureItem: {
     position: 'absolute', alignItems: 'center',
     transform: [{ translateX: -50 }, { translateY: -30 }], padding: 4, borderRadius: 14,
+  },
+  placedFurnitureEditContent: {
+    alignItems: 'center', padding: 4, borderRadius: 14,
+    transform: [{ translateX: -50 }, { translateY: -30 }],
   },
   placedFurnitureItemSelected: {
     backgroundColor: 'rgba(184, 165, 224, 0.25)',
