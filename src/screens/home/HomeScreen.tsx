@@ -5,7 +5,6 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  Dimensions,
   Modal,
   Pressable,
 } from 'react-native';
@@ -28,7 +27,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
-import { AuraBadge } from '../../components/ui/Badge';
+import { AnimatedAuraBadge } from '../../components/effects/AnimatedAuraBadge';
 import { Icon, IconName } from '../../components/ui/Icon';
 import { VisbyCheckInModal } from '../../components/visby/VisbyCheckInModal';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
@@ -36,7 +35,7 @@ import { HouseExterior } from '../../components/house/HouseExterior';
 import { PulseGlow } from '../../components/effects/Shimmer';
 import { useStore } from '../../store/useStore';
 import { LEVEL_THRESHOLDS, COUNTRIES } from '../../config/constants';
-import { RootStackParamList, VisbyNeeds, VisbyGrowthStage } from '../../types';
+import { RootStackParamList, VisbyNeeds } from '../../types';
 import { DEFAULT_HOME_ROOM, HOME_ATMOSPHERE } from '../../config/homeRoom';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
 import { COUNTRY_HOUSES } from '../../config/countryRooms';
@@ -46,22 +45,11 @@ import { getActiveEvent, getActiveSeasonalVisuals, getCurrentWeeklyChallenge } f
 import { getPhraseOfTheDay } from '../../config/learningContent';
 import { speechService } from '../../services/audio';
 import { analyticsService } from '../../services/analytics';
-import { getUnlockableNodes } from '../../config/learningPaths';
 import { getDueCount } from '../../services/spacedRepetition';
-import { STORY_CHAPTERS, getChapterUnlockCurrent } from '../../config/storyChapters';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { DailyGreetingOverlay } from '../../components/home/DailyGreetingOverlay';
 import { Tooltip } from '../../components/ui/Tooltip';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const STAGE_LABELS: Record<VisbyGrowthStage, string> = {
-  egg: 'Egg',
-  baby: 'Baby',
-  kid: 'Kid',
-  teen: 'Teen',
-  adult: 'Adult',
-};
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const MOOD_LABELS: Record<string, { label: string; icon: IconName }> = {
   happy: { label: 'Happy', icon: 'heart' },
@@ -98,6 +86,14 @@ const MOOD_TO_NEED_KEY: Record<string, keyof Omit<VisbyNeeds, 'lastUpdated'>> = 
   sleepy: 'energy',
   curious: 'knowledge',
   lonely: 'socialBattery',
+};
+
+type PlanTask = {
+  id: string;
+  icon: IconName;
+  label: string;
+  done: boolean;
+  onPress: () => void;
 };
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
@@ -321,15 +317,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setShowWeeklyRecap(false);
     markWeeklyRecapShown();
   }, [markWeeklyRecapShown]);
-  const handleVisitWorld = useCallback(() => navigation.navigate('Explore', { screen: 'CountryWorld' }), [navigation]);
   const handleVisitWorldFromHouses = useCallback(() => navigation.navigate('Explore', { screen: 'CountryWorld' }), [navigation]);
-
-  const handleDailyAdventureCta = useCallback(() => {
-    const adventure = getAdventureOfTheDay();
-    if (!adventure.step1) navigation.navigate('Explore', { screen: 'CountryWorld' });
-    else if (!adventure.step2) navigation.navigate('Learn');
-    else (navigation as any).navigate('WordMatch');
-  }, [navigation, getAdventureOfTheDay]);
 
   const handleDailyMissionPress = useCallback(() => {
     if (!dailyMission) return;
@@ -351,71 +339,74 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (activeEvent) analyticsService.trackEventParticipation(activeEvent.id);
   }, []);
 
-  const smartNudge = useMemo<{ icon: IconName; label: string; cta: string; action: string; progress?: string } | null>(() => {
-    const needs = getVisbyNeeds();
-    const minNeed = Math.min(needs.hunger, needs.happiness, needs.energy, needs.knowledge, needs.socialBattery ?? 80);
+  const adventure = useMemo(() => getAdventureOfTheDay(), [getAdventureOfTheDay, lessonProgress, stamps, userHouses]);
+
+  const todaysPlanTasks = useMemo<PlanTask[]>(() => {
+    const adv = getAdventureOfTheDay();
+    const tasks: PlanTask[] = [
+      {
+        id: 'adv1',
+        icon: 'globe',
+        label: 'Explore a country',
+        done: !!adv.step1,
+        onPress: () => navigation.navigate('Explore', { screen: 'CountryWorld' }),
+      },
+      {
+        id: 'adv2',
+        icon: 'book',
+        label: 'Learn 2 new things',
+        done: !!adv.step2,
+        onPress: () => navigation.navigate('Learn'),
+      },
+      {
+        id: 'adv3',
+        icon: 'quiz',
+        label: 'Play a mini-game',
+        done: !!adv.step3,
+        onPress: () => (navigation as any).navigate('WordMatch'),
+      },
+    ];
 
     if (dailyMission && !dailyMissionCompletedAt) {
-      return { icon: 'target', label: dailyMission.label, cta: 'Do it', action: 'daily_mission', progress: `${dailyMissionProgress}/${dailyMission.target}` };
+      tasks.push({
+        id: 'mission',
+        icon: 'target',
+        label: `${dailyMission.label} (${dailyMissionProgress}/${dailyMission.target})`,
+        done: false,
+        onPress: handleDailyMissionPress,
+      });
     }
-    if (minNeed < 20) {
-      const worstKey = (['hunger', 'happiness', 'energy', 'knowledge', 'socialBattery'] as const).reduce((a, b) => ((needs[a] as number) < (needs[b] as number) ? a : b));
-      const labels: Record<string, string> = { hunger: 'Feed Visby', happiness: 'Play with Visby', energy: 'Let Visby rest', knowledge: 'Study with Visby', socialBattery: 'Chat with Visby' };
-      return { icon: 'heart', label: labels[worstKey] || 'Care for Visby', cta: 'Help', action: 'care_visby' };
-    }
-    const adventure = getAdventureOfTheDay();
-    if (!adventure.completed) {
-      const step = !adventure.step1 ? 'Explore a new country' : !adventure.step2 ? 'Learn 2 new things' : 'Play a mini-game';
-      return { icon: 'compass', label: step, cta: "Let's go", action: 'adventure' };
-    }
-    const dueCount = getDueCount(flashcardSRData);
-    if (dueCount > 0) {
-      return { icon: 'cards', label: `Review ${dueCount} flashcard${dueCount > 1 ? 's' : ''}`, cta: 'Review', action: 'flashcards' };
-    }
-    const sustainLessons = lessonProgress.filter((p) => p.completed && ['sustain_travel', 'sustain_food', 'sustain_oceans'].includes(p.lessonId)).length;
-    const context = {
-      countriesVisited: user?.visitedCountries?.length ?? 0,
-      bitesCount: bites.length,
-      lessonsCompleted: lessonProgress.filter((p) => p.completed).length,
-      badgesCount: badges.length,
-      stampsCount: stamps.length,
-      housesOwned: userHouses.length,
-      streakDays: user?.currentStreak ?? 0,
-      sustainabilityLessonsCompleted: sustainLessons,
-    };
-    for (const chapter of STORY_CHAPTERS) {
-      if (storyBeatsShown.includes(chapter.storyBeatId)) continue;
-      const current = getChapterUnlockCurrent(chapter.unlock.type, context);
-      const pct = Math.min(100, Math.round((current / chapter.unlock.value) * 100));
-      if (pct >= 75) {
-        return { icon: 'book', label: `Almost unlocked: ${chapter.title}`, cta: 'Go', action: 'learn', progress: `${pct}%` };
-      }
-      break;
-    }
-    const activeEvent = getActiveEvent();
-    if (activeEvent) {
-      return { icon: 'star', label: `${activeEvent.name} — ${activeEvent.auraMultiplier}x Aura!`, cta: 'Explore', action: 'explore' };
-    }
-    const nextNodes = getUnlockableNodes(completedPathNodes);
-    if (nextNodes.length > 0) {
-      return { icon: 'sparkles', label: `Next up: ${nextNodes[0].title}`, cta: 'Start', action: 'learning_path' };
-    }
-    return null;
-  }, [dailyMission, dailyMissionCompletedAt, dailyMissionProgress, getVisbyNeeds, getAdventureOfTheDay, flashcardSRData, user, lessonProgress, stamps, bites, badges, userHouses, storyBeatsShown, completedPathNodes]);
 
-  const handleSmartNudgePress = useCallback(() => {
-    if (!smartNudge) return;
-    switch (smartNudge.action) {
-      case 'daily_mission': handleDailyMissionPress(); break;
-      case 'care_visby': setShowVisbyCheckIn(true); break;
-      case 'adventure': handleDailyAdventureCta(); break;
-      case 'flashcards': navigation.navigate('Flashcards'); break;
-      case 'learn': navigation.navigate('Learn'); break;
-      case 'explore': navigation.navigate('Explore', { screen: 'CountryWorld' }); break;
-      case 'learning_path': navigation.navigate('LearningPath'); break;
-      default: break;
+    if (adv.completed) {
+      const needs = getVisbyNeeds();
+      const minNeed = Math.min(needs.hunger, needs.happiness, needs.energy, needs.knowledge, needs.socialBattery ?? 80);
+      if (minNeed < 20) {
+        tasks.push({
+          id: 'care',
+          icon: 'heart',
+          label: 'Care for Visby',
+          done: false,
+          onPress: () => setShowVisbyCheckIn(true),
+        });
+      } else {
+        const dueCount = getDueCount(flashcardSRData);
+        if (dueCount > 0) {
+          tasks.push({
+            id: 'review',
+            icon: 'cards',
+            label: `Review ${dueCount} flashcard${dueCount > 1 ? 's' : ''}`,
+            done: false,
+            onPress: () => navigation.navigate('Flashcards'),
+          });
+        }
+      }
     }
-  }, [smartNudge, handleDailyMissionPress, handleDailyAdventureCta, navigation]);
+
+    return tasks;
+  }, [getAdventureOfTheDay, lessonProgress, stamps, userHouses, dailyMission, dailyMissionCompletedAt, dailyMissionProgress, handleDailyMissionPress, getVisbyNeeds, flashcardSRData, navigation]);
+
+  const planDoneCount = useMemo(() => todaysPlanTasks.filter((t) => t.done).length, [todaysPlanTasks]);
+  const planAllDone = planDoneCount === todaysPlanTasks.length && todaysPlanTasks.length > 0;
 
   const handleCareDismissAndNavigate = useCallback(
     (screen: string, params?: object) => {
@@ -496,67 +487,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }, [userHouses, visby, defaultAppearance, getGrowthStage, getVisbyMood, handleShowVisbyCheckIn, openCareHintForMood, handleTapSubtitle]);
 
-  const adventure = useMemo(() => getAdventureOfTheDay(), [getAdventureOfTheDay, lessonProgress, stamps, userHouses]);
-
-  const dailyAdventureElement = useMemo(() => {
-    const showVisitWorld = userHouses.length === 0;
-    return (
-      <Animated.View entering={FadeInDown.duration(400).delay(320)} style={styles.dailyAdventureSection}>
-        <View style={styles.sectionTitleRow}>
-          <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
-          <Heading level={2} style={styles.sectionTitle}>Daily adventure</Heading>
-        </View>
-        <View style={styles.dailyAdventureCard}>
-          <View style={styles.dailyAdventureSteps}>
-            <View style={[styles.dailyAdventureStep, adventure.step1 && styles.dailyAdventureStepDone]}>
-              <Icon name={adventure.step1 ? 'check' : 'globe'} size={18} color={adventure.step1 ? colors.success.emerald : colors.text.muted} />
-              <Caption style={styles.dailyAdventureStepLabel}>Explore a new country</Caption>
-            </View>
-            <View style={[styles.dailyAdventureStep, adventure.step2 && styles.dailyAdventureStepDone]}>
-              <Icon name={adventure.step2 ? 'check' : 'book'} size={18} color={adventure.step2 ? colors.success.emerald : colors.text.muted} />
-              <Caption style={styles.dailyAdventureStepLabel}>Learn 2 new things</Caption>
-            </View>
-            <View style={[styles.dailyAdventureStep, adventure.step3 && styles.dailyAdventureStepDone]}>
-              <Icon name={adventure.step3 ? 'check' : 'quiz'} size={18} color={adventure.step3 ? colors.success.emerald : colors.text.muted} />
-              <Caption style={styles.dailyAdventureStepLabel}>Play a mini-game</Caption>
-            </View>
-          </View>
-          {!adventure.completed ? (
-            <TouchableOpacity
-              style={styles.dailyAdventureCta}
-              onPress={handleDailyAdventureCta}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Continue daily adventure"
-            >
-              <Text variant="bodySmall" style={styles.dailyAdventureCtaText}>
-                {!adventure.step1 ? "Let's go" : !adventure.step2 ? 'Do a lesson' : 'Play game'}
-              </Text>
-              <Icon name="chevronRight" size={16} color={colors.primary.wisteriaDark} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.dailyAdventureDone}>
-              <Icon name="trophy" size={18} color={colors.reward.gold} />
-              <Caption style={styles.dailyAdventureDoneText}>Done! +{adventure.rewardAura} Aura</Caption>
-            </View>
-          )}
-        </View>
-        {showVisitWorld && (
-          <TouchableOpacity
-            style={styles.homeQuickCta}
-            onPress={handleVisitWorld}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Explore the world"
-          >
-            <Icon name="globe" size={18} color={colors.primary.wisteriaDark} />
-            <Text variant="bodySmall" style={styles.homeQuickCtaText}>Explore World</Text>
-          </TouchableOpacity>
-        )}
-      </Animated.View>
-    );
-  }, [adventure, userHouses.length, handleDailyAdventureCta, handleVisitWorld]);
-
   const eventBannerElement = useMemo(() => {
     const activeEvent = getActiveEvent();
     if (!activeEvent) return null;
@@ -599,9 +529,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary.wisteria}
+              colors={[colors.primary.wisteria, colors.reward.gold]}
+              progressBackgroundColor={colors.base.cream}
+            />
           }
         >
+          {refreshing && (
+            <View style={styles.refreshPeek}>
+              <Text style={styles.refreshPeekEmoji}>{'🧭'}</Text>
+              <Caption style={styles.refreshPeekText}>Visby is looking around...</Caption>
+            </View>
+          )}
+
           {/* ──── HEADER ──── */}
           <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
             <View style={styles.headerLeft}>
@@ -611,11 +554,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Heading level={1} style={styles.titleText}>
                 {currentLevel.title}
               </Heading>
-              <Caption style={styles.dashboardCaption}>
-                Your home base — learn, play, and see what&apos;s new.
-              </Caption>
             </View>
             <View style={styles.headerBadges}>
+              {(user?.currentStreak ?? 0) > 0 && (
+                <View style={styles.streakChip}>
+                  <Icon name="flame" size={14} color={colors.status.streak} />
+                  <Caption style={styles.streakChipText}>{user?.currentStreak}</Caption>
+                </View>
+              )}
               <TouchableOpacity
                 onPress={() => navigation.navigate('DiscoveryLog')}
                 style={styles.discoveryChip}
@@ -634,7 +580,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 style={{ position: 'relative' as const }}
               >
                 <PulseGlow color="rgba(255, 215, 0, 0.35)" intensity={14} speed={3000}>
-                  <AuraBadge amount={currentAura} />
+                  <AnimatedAuraBadge amount={currentAura} />
                 </PulseGlow>
                 <Tooltip
                   id="home_aura_badge"
@@ -648,216 +594,188 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {/* ──── HOME ROOM: full Club Penguin / Sims style room ──── */}
           {homeRoomElement}
 
-          {/* ──── TODAY'S FOCUS: Hero Card ──── */}
-          {smartNudge && (
-            <Animated.View entering={FadeInDown.duration(500).delay(250)} style={{ position: 'relative' as const }}>
-              {lessonProgress.length === 0 && stamps.length === 0 && (
-                <Tooltip
-                  id="home_first_action"
-                  text="Tap here to begin your first adventure!"
-                />
-              )}
-              <AnimatedPressable
-                style={styles.todayFocusCard}
-                onPress={handleSmartNudgePress}
-                scaleDown={0.97}
-              >
-                <LinearGradient
-                  colors={[colors.primary.wisteriaFaded, colors.surface.lavender, colors.calm.skyLight]}
-                  locations={[0, 0.6, 1]}
-                  style={styles.todayFocusGradient}
-                >
-                  <View style={styles.todayFocusIconWrap}>
-                    <Icon name={smartNudge.icon} size={28} color={colors.primary.wisteriaDark} />
-                  </View>
-                  <View style={styles.todayFocusTextWrap}>
-                    <Caption style={styles.todayFocusHint}>Today's focus</Caption>
-                    <Heading level={3} style={styles.todayFocusLabel}>{smartNudge.label}</Heading>
-                    {smartNudge.progress && <Caption style={styles.todayFocusProgress}>{smartNudge.progress}</Caption>}
-                  </View>
-                  <View style={styles.todayFocusCta}>
-                    <Text variant="body" style={styles.todayFocusCtaText}>{smartNudge.cta}</Text>
-                    <Icon name="chevronRight" size={18} color={colors.text.inverse} />
-                  </View>
-                </LinearGradient>
-              </AnimatedPressable>
-            </Animated.View>
-          )}
-
-          {/* ──── QUICK ACTIONS ──── */}
-          <Animated.View entering={FadeInDown.duration(400).delay(300)} style={styles.quickActionsRow}>
-            <TouchableOpacity style={styles.quickActionPill} onPress={() => navigation.navigate('Learn')} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Learn">
-              <Icon name="book" size={18} color={colors.primary.wisteriaDark} />
-              <Text variant="bodySmall" style={styles.quickActionText}>Learn</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionPill} onPress={() => navigation.navigate('Explore', { screen: 'CountryWorld' })} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Explore the world">
-              <Icon name="globe" size={18} color={colors.calm.ocean} />
-              <Text variant="bodySmall" style={styles.quickActionText}>Explore</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionPill} onPress={() => (navigation as any).navigate('WordMatch')} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Play games">
-              <Icon name="quiz" size={18} color={colors.reward.peachDark} />
-              <Text variant="bodySmall" style={styles.quickActionText}>Games</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionPill} onPress={() => navigation.navigate('ShopHub')} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Visit shop">
-              <Icon name="gift" size={18} color={colors.accent.coral} />
-              <Text variant="bodySmall" style={styles.quickActionText}>Shop</Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* ──── DAILY ADVENTURE ──── */}
-          {dailyAdventureElement}
-
-          {/* ──── DAILY MISSION ──── */}
-          {dailyMission && !dailyMissionCompletedAt && (
-            <Animated.View entering={FadeInDown.duration(400).delay(360)} style={styles.dailyMissionSection}>
+          {/* ──── TODAY'S PLAN ──── */}
+          <Animated.View entering={FadeInDown.duration(500).delay(250)} style={styles.todaysPlanSection}>
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
-                <Icon name="target" size={18} color={colors.primary.wisteriaDark} />
-                <Heading level={2} style={styles.sectionTitle}>Today&apos;s mission</Heading>
+                <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
+                <Heading level={2} style={styles.sectionTitle}>Today&apos;s Plan</Heading>
               </View>
-              <AnimatedPressable
-                style={[styles.dailyMissionCard, { marginTop: spacing.xs }]}
-                onPress={handleDailyMissionPress}
-                scaleDown={0.97}
-              >
-                <LinearGradient colors={[colors.surface.lavender, colors.primary.wisteriaFaded]} style={styles.dailyMissionGradient}>
-                  <View style={styles.dailyMissionLeft}>
-                    <View style={styles.dailyMissionIconWrap}>
-                      <Icon name="target" size={22} color={colors.primary.wisteriaDark} />
-                    </View>
-                    <View>
-                      <Text variant="body" style={styles.dailyMissionTitle}>{dailyMission.label}</Text>
-                      <Caption style={styles.dailyMissionLabel}>
-                        {dailyMissionProgress}/{dailyMission.target} completed
-                      </Caption>
-                    </View>
-                  </View>
-                  <View style={styles.dailyMissionCta}>
-                    <Text variant="bodySmall" style={styles.dailyMissionCtaText}>Do it</Text>
-                    <Icon name="chevronRight" size={16} color={colors.primary.wisteriaDark} />
-                  </View>
-                </LinearGradient>
-              </AnimatedPressable>
-            </Animated.View>
-          )}
+              <View style={styles.planProgressChip}>
+                <Text variant="bodySmall" style={styles.planProgressText}>
+                  {planDoneCount}/{todaysPlanTasks.length}
+                </Text>
+              </View>
+            </View>
 
-          {/* ── Phrase of the Day ── */}
-          <Animated.View entering={FadeInDown.duration(400).delay(340)} style={styles.phraseCard}>
-            <LinearGradient
-              colors={[colors.semantic.successBg, colors.semantic.successBgAlt, colors.base.cream]}
-              style={styles.phraseGradient}
-            >
-              <View style={styles.phraseTop}>
-                <View style={[styles.phraseIcon, { backgroundColor: colors.semantic.successAccent + '30' }]}>
-                  <Icon name="language" size={22} color={colors.semantic.success} />
-                </View>
-                <Caption style={styles.phraseLabel}>Phrase of the Day</Caption>
-              </View>
-              <Text variant="heading" style={styles.phraseText}>{phraseOfTheDay.phrase}</Text>
-              <Text variant="body" style={styles.phrasePronunciation}>{phraseOfTheDay.pronunciation}</Text>
-              <View style={styles.phraseBottom}>
-                <Text variant="bodySmall" style={styles.phraseTranslation}>{phraseOfTheDay.translation}</Text>
-                <TouchableOpacity
-                  style={styles.phraseSpeakBtn}
-                  onPress={() => speechService.speak(phraseOfTheDay.phrase)}
-                  accessibilityLabel="Listen to pronunciation"
-                  accessibilityRole="button"
-                >
-                  <Icon name="music" size={16} color={colors.semantic.success} />
-                  <Text variant="bodySmall" style={styles.phraseSpeakText}>Listen</Text>
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* ── Weekly Challenge ── */}
-          <Animated.View entering={FadeInDown.duration(400).delay(360)} style={styles.challengeCard}>
-            <LinearGradient
-              colors={[colors.semantic.warmOrangeBg, colors.semantic.warmOrangeBgAlt, colors.base.cream]}
-              style={styles.challengeGradient}
-            >
-              <View style={styles.challengeHeader}>
-                <View style={[styles.challengeIconWrap, { backgroundColor: colors.semantic.warmOrangeAccent + '30' }]}>
-                  <Icon name={(weeklyChallenge.icon || 'star') as IconName} size={22} color={colors.semantic.warmOrange} />
-                </View>
-                <View style={styles.challengeTextWrap}>
-                  <Text variant="body" style={styles.challengeTitle}>{weeklyChallenge.title}</Text>
-                  <Caption>Complete 5 tasks for {weeklyChallenge.cosmeticRewardName}</Caption>
-                </View>
-                <View style={styles.challengeBadge}>
-                  <Text variant="bodySmall" style={styles.challengeBadgeText}>+{weeklyChallenge.auraBonus}</Text>
+            {planAllDone ? (
+              <View style={styles.planDoneCard}>
+                <Icon name="trophy" size={22} color={colors.reward.gold} />
+                <View style={styles.planDoneTextWrap}>
+                  <Text variant="body" style={styles.planDoneTitle}>All done for today!</Text>
+                  <Caption>+{adventure.rewardAura} Aura earned</Caption>
                 </View>
               </View>
-              <View style={styles.challengeTasks}>
-                {weeklyChallenge.tasks.map((task, i) => (
-                  <View key={i} style={styles.challengeTask}>
-                    <View style={[styles.challengeCheckbox, i < 1 && styles.challengeCheckboxDone]}>
-                      {i < 1 && <Icon name="check" size={10} color={colors.text.inverse} />}
+            ) : (
+              <View style={styles.planTaskList}>
+                {todaysPlanTasks.map((task, i) => (
+                  <TouchableOpacity
+                    key={task.id}
+                    style={[
+                      styles.planTaskRow,
+                      i === todaysPlanTasks.length - 1 && styles.planTaskRowLast,
+                    ]}
+                    onPress={task.done ? undefined : task.onPress}
+                    activeOpacity={task.done ? 1 : 0.7}
+                    disabled={task.done}
+                    accessibilityRole="button"
+                    accessibilityLabel={task.label}
+                  >
+                    <View style={[styles.planTaskCheck, task.done && styles.planTaskCheckDone]}>
+                      {task.done ? (
+                        <Icon name="check" size={12} color={colors.text.inverse} />
+                      ) : (
+                        <Icon name={task.icon} size={14} color={colors.text.muted} />
+                      )}
                     </View>
-                    <Text variant="bodySmall" style={[styles.challengeTaskText, i < 1 && styles.challengeTaskDone]}>{task.description}</Text>
-                  </View>
+                    <Text
+                      variant="body"
+                      style={[styles.planTaskLabel, task.done && styles.planTaskLabelDone]}
+                    >
+                      {task.label}
+                    </Text>
+                    {!task.done && (
+                      <Icon name="chevronRight" size={16} color={colors.text.muted} />
+                    )}
+                  </TouchableOpacity>
                 ))}
               </View>
-            </LinearGradient>
+            )}
+
+            {lessonProgress.length === 0 && stamps.length === 0 && (
+              <Tooltip
+                id="home_first_action"
+                text="Tap a task to begin your first adventure!"
+              />
+            )}
+          </Animated.View>
+
+          {/* ──── PHRASE OF THE DAY (compact) ──── */}
+          <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+            <View style={styles.phraseCompactCard}>
+              <View style={[styles.phraseCompactIcon, { backgroundColor: colors.semantic.successAccent + '30' }]}>
+                <Icon name="language" size={18} color={colors.semantic.success} />
+              </View>
+              <View style={styles.phraseCompactBody}>
+                <Text variant="body" style={styles.phraseCompactText}>{phraseOfTheDay.phrase}</Text>
+                <Caption style={styles.phraseCompactSub}>
+                  {phraseOfTheDay.pronunciation} · {phraseOfTheDay.translation}
+                </Caption>
+              </View>
+              <TouchableOpacity
+                style={styles.phraseCompactBtn}
+                onPress={() => speechService.speak(phraseOfTheDay.phrase, phraseOfTheDay.countryId)}
+                accessibilityLabel="Listen to pronunciation"
+                accessibilityRole="button"
+              >
+                <Icon name="music" size={16} color={colors.semantic.success} />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
+          {/* ──── MY WORLD (promoted houses) ──── */}
+          {userHouses.length === 0 ? (
+            <Animated.View entering={FadeInDown.duration(400).delay(340)}>
+              <EmptyState
+                emoji="🏠"
+                title="No houses yet!"
+                message="Visit a country and buy your first house to start decorating."
+                ctaLabel="Explore the world"
+                onCta={handleVisitWorldFromHouses}
+              />
+            </Animated.View>
+          ) : (
+            <Animated.View entering={FadeInDown.duration(400).delay(340)} style={styles.myWorldSection}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Icon name="globe" size={18} color={colors.primary.wisteriaDark} />
+                  <Heading level={2} style={styles.sectionTitle}>My World</Heading>
+                  <View style={styles.countryCountChip}>
+                    <Caption style={styles.countryCountText}>
+                      {userHouses.length} {userHouses.length === 1 ? 'country' : 'countries'}
+                    </Caption>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={handleVisitWorldFromHouses} accessibilityRole="button" accessibilityLabel="Explore more">
+                  <Text variant="bodySmall" color={colors.primary.wisteriaDark}>Explore more</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myWorldScroll}>
+                {userHouses.map((house) => {
+                  const country = COUNTRIES.find((c) => c.id === house.countryId);
+                  const furnitureCount = Object.values(house.roomCustomizations || {}).reduce(
+                    (sum, r) => sum + (r?.placedFurniture?.length || 0), 0,
+                  );
+                  return (
+                    <AnimatedPressable
+                      key={house.id}
+                      style={styles.myWorldCard}
+                      onPress={() => handleHousePress(house.countryId)}
+                      scaleDown={0.95}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Visit ${house.houseName}`}
+                    >
+                      <HouseExterior
+                        theme={country?.roomTheme ?? 'traditional'}
+                        houseName={house.houseName}
+                        flagEmoji={country?.flagEmoji}
+                        furnitureCount={furnitureCount}
+                        size={130}
+                        seasonalDecoration={getActiveSeasonalVisuals()?.houseDecoration}
+                      />
+                      <Caption style={styles.myWorldCountry}>{country?.name ?? house.countryId}</Caption>
+                      {furnitureCount > 0 && (
+                        <Caption style={styles.myWorldFurniture}>{furnitureCount} items</Caption>
+                      )}
+                    </AnimatedPressable>
+                  );
+                })}
+              </ScrollView>
+            </Animated.View>
+          )}
+
+          {/* ──── WEEKLY PROGRESS (compact) ──── */}
+          <Animated.View entering={FadeInDown.duration(400).delay(360)}>
+            <View style={styles.weeklyProgressCard}>
+              <View style={[styles.weeklyProgressIcon, { backgroundColor: colors.semantic.warmOrangeAccent + '30' }]}>
+                <Icon name={(weeklyChallenge.icon || 'star') as IconName} size={18} color={colors.semantic.warmOrange} />
+              </View>
+              <View style={styles.weeklyProgressBody}>
+                <Text variant="body" style={styles.weeklyProgressTitle}>{weeklyChallenge.title}</Text>
+                <View style={styles.weeklyProgressDots}>
+                  {weeklyChallenge.tasks.map((_: unknown, i: number) => (
+                    <View
+                      key={i}
+                      style={[styles.weeklyProgressDot, i < 1 && styles.weeklyProgressDotDone]}
+                    />
+                  ))}
+                </View>
+              </View>
+              <View style={styles.weeklyProgressBadge}>
+                <Text variant="bodySmall" style={styles.weeklyProgressBadgeText}>+{weeklyChallenge.auraBonus}</Text>
+              </View>
+            </View>
           </Animated.View>
 
           {/* ──── SEASONAL EVENT BANNER ──── */}
           {eventBannerElement}
-
-          {userHouses.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(400).delay(380)} style={styles.myHousesSection}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Icon name="home" size={18} color={colors.primary.wisteriaDark} />
-                  <Heading level={2} style={styles.sectionTitle}>My Houses</Heading>
-                </View>
-                <TouchableOpacity onPress={handleVisitWorldFromHouses} accessibilityRole="button" accessibilityLabel="Visit world">
-                  <Text variant="bodySmall" color={colors.primary.wisteriaDark}>Visit World</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.streetSceneWrap}>
-                <View style={styles.streetGrass} />
-                <View style={styles.streetPath} />
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myHousesScroll}>
-                  {userHouses.map((house) => {
-                    const country = COUNTRIES.find((c) => c.id === house.countryId);
-                    const furnitureCount = Object.values(house.roomCustomizations || {}).reduce(
-                      (sum, r) => sum + (r?.placedFurniture?.length || 0), 0,
-                    );
-                    return (
-                      <AnimatedPressable
-                        key={house.id}
-                        style={styles.myHouseCard}
-                        onPress={() => handleHousePress(house.countryId)}
-                        scaleDown={0.95}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Visit ${house.houseName}`}
-                      >
-                        <HouseExterior
-                          theme={country?.roomTheme ?? 'traditional'}
-                          houseName={house.houseName}
-                          flagEmoji={country?.flagEmoji}
-                          furnitureCount={furnitureCount}
-                          size={130}
-                          seasonalDecoration={getActiveSeasonalVisuals()?.houseDecoration}
-                        />
-                        <Caption style={styles.myHouseCountry}>{country?.name ?? house.countryId}</Caption>
-                        {furnitureCount > 0 && (
-                          <Caption style={styles.myHouseFurnitureCount}>{furnitureCount} items</Caption>
-                        )}
-                      </AnimatedPressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </Animated.View>
-          )}
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
 
       {/* Daily Reward Modal */}
-      <Modal visible={showDailyReward} transparent animationType="none">
+      <Modal visible={showDailyReward} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={handleCloseDailyReward}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.careModal} onPress={handleCareModalStopPropagation}>
@@ -880,7 +798,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <VisbyCheckInModal visible={showVisbyCheckIn} onClose={handleCloseVisbyCheckIn} />
 
       {/* Story beat: Visby milestone message */}
-      <Modal visible={showStoryBeat} transparent animationType="none">
+      <Modal visible={showStoryBeat} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={handleStoryBeatDismiss}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.careModal} onPress={handleCareModalStopPropagation}>
@@ -897,7 +815,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* Streak freeze offer: you missed a day, use a freeze? */}
-      <Modal visible={pendingStreakFreezeOffer} transparent animationType="none">
+      <Modal visible={pendingStreakFreezeOffer} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={() => {}}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.careModal} onPress={handleCareModalStopPropagation}>
@@ -918,7 +836,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* Comeback: Welcome back! bonus */}
-      <Modal visible={showComebackReward} transparent animationType="none">
+      <Modal visible={showComebackReward} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={handleDismissComebackReward}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.careModal} onPress={handleCareModalStopPropagation}>
@@ -935,7 +853,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* Surprise: Visby found a gift! */}
-      <Modal visible={showSurpriseBonus} transparent animationType="none">
+      <Modal visible={showSurpriseBonus} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={handleCloseSurpriseBonus}>
           <Animated.View entering={ZoomIn.duration(400).springify()}>
             <Pressable style={styles.careModal} onPress={handleCareModalStopPropagation}>
@@ -962,7 +880,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       )}
 
       {/* Care Hint Modal */}
-      <Modal visible={!!careHint} transparent animationType="none">
+      <Modal visible={!!careHint} transparent animationType="fade">
         <Pressable style={styles.careOverlay} onPress={handleDismissCareHint}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.careModal} onPress={handleCareModalStopPropagation}>
@@ -1049,7 +967,7 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: 120,
+    paddingBottom: spacing.xxl,
   },
 
   /* Header */
@@ -1065,6 +983,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  streakChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: colors.status.streakBg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.status.streak + '40',
+  },
+  streakChipText: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 12,
+    color: colors.status.streak,
   },
   discoveryChip: {
     flexDirection: 'row',
@@ -1092,337 +1026,203 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginTop: 2,
   },
-  dashboardCaption: {
-    marginTop: 4,
-    color: colors.text.muted,
-    fontSize: 12,
-  },
 
-  homeQuickCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: colors.surface.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.2)',
-  },
-  homeQuickCtaText: {
-    fontFamily: 'Nunito-SemiBold',
-    color: colors.primary.wisteriaDark,
-  },
-
-  /* Today's Focus hero card */
-  todayFocusCard: {
-    marginBottom: spacing.lg,
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  todayFocusGradient: {
-    padding: spacing.lg,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.25)',
-    gap: spacing.md,
-  },
-  todayFocusIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(167, 139, 219, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  todayFocusTextWrap: {
-    flex: 1,
-  },
-  todayFocusHint: {
-    fontSize: 10,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    color: colors.primary.wisteriaDark,
-    fontFamily: 'Nunito-Bold',
-    marginBottom: 2,
-  },
-  todayFocusLabel: {
-    fontFamily: 'Baloo2-SemiBold',
-    color: colors.text.primary,
-    fontSize: 20,
-  },
-  todayFocusProgress: {
-    marginTop: 2,
-    color: colors.text.muted,
-    fontSize: 11,
-  },
-  todayFocusCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: colors.primary.wisteriaDark,
-    borderRadius: 16,
-  },
-  todayFocusCtaText: {
-    fontFamily: 'Nunito-Bold',
-    color: colors.text.inverse,
-  },
-
-  /* Quick actions */
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  /* Today's Plan */
+  todaysPlanSection: {
     marginBottom: spacing.lg,
   },
-  quickActionPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 10,
-    backgroundColor: colors.surface.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.15)',
-  },
-  quickActionText: {
-    fontFamily: 'Nunito-SemiBold',
-    color: colors.text.primary,
-    fontSize: 12,
-  },
-
-  /* Daily adventure */
-  dailyAdventureSection: {
-    marginBottom: spacing.lg,
-  },
-  dailyAdventureCard: {
-    backgroundColor: colors.surface.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(184, 165, 224, 0.2)',
-    padding: spacing.md,
-    marginTop: spacing.xs,
-  },
-  dailyAdventureSteps: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  dailyAdventureStep: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  dailyAdventureStepDone: {
-    opacity: 1,
-  },
-  dailyAdventureStepLabel: {
-    fontSize: 10,
-    color: colors.text.muted,
-  },
-  dailyAdventureCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+  planProgressChip: {
     backgroundColor: colors.primary.wisteriaFaded,
-    borderRadius: 12,
-  },
-  dailyAdventureCtaText: {
-    fontFamily: 'Nunito-SemiBold',
-    color: colors.primary.wisteriaDark,
-  },
-  dailyAdventureDone: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 6,
-  },
-  dailyAdventureDoneText: {
-    color: colors.text.secondary,
-    fontFamily: 'Nunito-SemiBold',
-  },
-
-  /* Daily mission */
-  dailyMissionSection: {
-    marginBottom: spacing.lg,
-  },
-  dailyMissionCard: {
-    marginBottom: spacing.md,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  dailyMissionGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    borderRadius: 20,
-  },
-  dailyMissionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  dailyMissionIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  dailyMissionTitle: {
-    fontFamily: 'Nunito-Bold',
-    color: colors.text.primary,
-  },
-  dailyMissionLabel: {
-    marginTop: 2,
-  },
-  dailyMissionCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingVertical: 3,
     borderRadius: 12,
   },
-  dailyMissionCtaText: {
-    fontFamily: 'Nunito-SemiBold',
+  planProgressText: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 12,
     color: colors.primary.wisteriaDark,
   },
-
-  /* Phrase of the Day */
-  phraseCard: {
-    marginBottom: spacing.md,
-  },
-  phraseGradient: {
-    borderRadius: spacing.radius.lg,
-    padding: spacing.md,
-  },
-  phraseTop: {
+  planDoneCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.sm,
+    backgroundColor: colors.semantic.successBg,
+    borderRadius: 16,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.semantic.successAccent + '30',
   },
-  phraseIcon: {
+  planDoneTextWrap: { flex: 1 },
+  planDoneTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+  },
+  planTaskList: {
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 165, 224, 0.2)',
+    overflow: 'hidden',
+  },
+  planTaskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(184, 165, 224, 0.12)',
+  },
+  planTaskRowLast: {
+    borderBottomWidth: 0,
+  },
+  planTaskCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.text.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planTaskCheckDone: {
+    backgroundColor: colors.success.emerald,
+    borderColor: colors.success.emerald,
+  },
+  planTaskLabel: {
+    flex: 1,
+    fontFamily: 'Nunito-SemiBold',
+    color: colors.text.primary,
+  },
+  planTaskLabelDone: {
+    textDecorationLine: 'line-through' as const,
+    color: colors.text.muted,
+  },
+
+  /* Phrase of the Day (compact) */
+  phraseCompactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.semantic.successAccent + '20',
+  },
+  phraseCompactIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  phraseText: {
-    fontSize: 26,
+  phraseCompactBody: { flex: 1 },
+  phraseCompactText: {
+    fontFamily: 'Nunito-Bold',
     color: colors.text.primary,
-    marginBottom: 2,
+    fontSize: 15,
   },
-  phrasePronunciation: {
-    color: colors.text.secondary,
-    fontStyle: 'italic' as const,
-    marginBottom: spacing.sm,
+  phraseCompactSub: {
+    fontSize: 11,
+    color: colors.text.muted,
+    marginTop: 1,
   },
-  phraseBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  phraseTranslation: {
-    color: colors.text.primary,
-    fontWeight: '600' as const,
-  },
-  phraseLabel: {
-    color: colors.semantic.success,
-  },
-  phraseSpeakBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  phraseCompactBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.semantic.success + '18',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: spacing.radius.md,
-  },
-  phraseSpeakText: {
-    color: colors.semantic.success,
-    marginLeft: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  /* Weekly Challenge */
-  challengeCard: {
-    marginBottom: spacing.md,
+  /* My World */
+  myWorldSection: {
+    marginBottom: spacing.lg,
   },
-  challengeGradient: {
-    borderRadius: spacing.radius.lg,
-    padding: spacing.md,
-  },
-  challengeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  challengeIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  challengeTextWrap: {
-    flex: 1,
-  },
-  challengeTitle: {
-    fontWeight: '700' as const,
-    color: colors.semantic.warmOrange,
-  },
-  challengeBadge: {
-    backgroundColor: colors.semantic.warmOrangeAccent + '30',
+  countryCountChip: {
+    backgroundColor: colors.primary.wisteriaFaded,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: spacing.radius.sm,
+    borderRadius: 10,
   },
-  challengeBadgeText: {
-    color: colors.semantic.warmOrange,
-    fontWeight: '600' as const,
-    fontSize: 12,
+  countryCountText: {
+    fontSize: 11,
+    color: colors.primary.wisteriaDark,
+    fontFamily: 'Nunito-SemiBold',
   },
-  challengeTasks: {
-    gap: 8,
+  myWorldScroll: {
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  challengeTask: {
+  myWorldCard: {
+    width: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  myWorldCountry: {
+    marginTop: 2,
+    fontSize: 11,
+    color: colors.text.muted,
+  },
+  myWorldFurniture: {
+    fontSize: 9,
+    color: colors.text.light,
+  },
+
+  /* Weekly Progress (compact) */
+  weeklyProgressCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.semantic.warmOrangeAccent + '20',
   },
-  challengeCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.semantic.checkboxBorder,
+  weeklyProgressIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  challengeCheckboxDone: {
+  weeklyProgressBody: { flex: 1 },
+  weeklyProgressTitle: {
+    fontFamily: 'Nunito-Bold',
+    color: colors.text.primary,
+    fontSize: 14,
+  },
+  weeklyProgressDots: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+  },
+  weeklyProgressDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: colors.semantic.checkboxBorder,
+  },
+  weeklyProgressDotDone: {
     backgroundColor: colors.semantic.successAccent,
     borderColor: colors.semantic.successAccent,
   },
-  challengeTaskText: {
-    color: colors.text.secondary,
-    flex: 1,
+  weeklyProgressBadge: {
+    backgroundColor: colors.semantic.warmOrangeAccent + '30',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  challengeTaskDone: {
-    textDecorationLine: 'line-through' as const,
-    color: colors.text.muted,
+  weeklyProgressBadgeText: {
+    color: colors.semantic.warmOrange,
+    fontWeight: '600' as const,
+    fontSize: 12,
   },
 
   /* Event banner */
@@ -1449,51 +1249,6 @@ const styles = StyleSheet.create({
     color: colors.reward.amber,
     fontFamily: 'Nunito-Bold',
     marginTop: 2,
-  },
-
-  /* My Houses */
-  myHousesSection: {
-    marginBottom: spacing.lg,
-  },
-  myHousesScroll: {
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  myHouseCard: {
-    width: 140,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  myHouseCountry: {
-    marginTop: 2,
-    fontSize: 11,
-    color: colors.text.muted,
-  },
-  myHouseFurnitureCount: {
-    fontSize: 9,
-    color: colors.text.light,
-  },
-  streetSceneWrap: {
-    position: 'relative',
-    paddingBottom: spacing.xs,
-  },
-  streetGrass: {
-    position: 'absolute',
-    bottom: 0,
-    left: -spacing.screenPadding,
-    right: -spacing.screenPadding,
-    height: 24,
-    backgroundColor: 'rgba(139, 195, 74, 0.15)',
-    borderRadius: 12,
-  },
-  streetPath: {
-    position: 'absolute',
-    bottom: 4,
-    left: -spacing.screenPadding,
-    right: -spacing.screenPadding,
-    height: 8,
-    backgroundColor: 'rgba(188, 170, 164, 0.2)',
-    borderRadius: 4,
   },
 
   /* Section headers */
@@ -1584,6 +1339,17 @@ const styles = StyleSheet.create({
   },
 
   bottomSpacer: { height: 20 },
+  refreshPeek: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  refreshPeekEmoji: {
+    fontSize: 28,
+  },
+  refreshPeekText: {
+    textAlign: 'center',
+  },
 });
 
 export default HomeScreen;

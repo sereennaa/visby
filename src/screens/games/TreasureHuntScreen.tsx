@@ -40,6 +40,7 @@ import { soundService } from '../../services/sound';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
 import { COUNTRIES } from '../../config/constants';
 import { copy } from '../../config/copy';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
@@ -52,6 +53,7 @@ import {
   type RoomHuntItem,
   type LocationHuntRound,
 } from '../../config/treasureHunt';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ROOM_HORIZONTAL_PADDING = spacing.screenPadding;
@@ -150,7 +152,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
     completeTreasureHuntRoom,
     completeTreasureHuntLocation,
     getVisbyMood,
-    addVisbyChatMessage,
+
     completePathNode,
   } = useStore();
 
@@ -180,6 +182,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
   const [locationRoundIndex, setLocationRoundIndex] = useState(0);
   const [locationFoundForSummary, setLocationFoundForSummary] = useState<{ name: string; learningPoints: number; imageUrl?: string; description?: string }[]>([]);
   const [locationReveal, setLocationReveal] = useState<LocationHuntRound['target'] | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const country = countryId ? COUNTRIES.find((c) => c.id === countryId) : null;
   const accentColor = country?.accentColor ?? colors.primary.wisteria;
@@ -221,6 +224,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
       setCountryId(cid);
       setWrongTapMessage(null);
       setElapsedSeconds(0);
+      setShowCelebration(false);
 
       if (huntMode === 'location') {
         const rounds: LocationHuntRound[] = [];
@@ -288,11 +292,11 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
         (sum, i) => sum + (i.auraReward ?? AURA_PER_ITEM_FALLBACK),
         0
       );
+      setShowCelebration(true);
       setPhase('complete');
       addAura(totalAura);
       const bonus = getGameOfTheDayBonusAura('TreasureHunt');
       if (bonus > 0) addAura(bonus);
-      addVisbyChatMessage('visby', getPostGameLine('TreasureHunt', 'won', getVisbyMood()));
       playWithVisby();
       incrementGameStat('gamesPlayed');
       analyticsService.trackGameComplete(GAME_NAME, roomHuntData.items.length, true);
@@ -336,10 +340,10 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
     if (locationRoundIndex + 1 >= locationRounds.length) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       soundService.playMissionComplete();
+      setShowCelebration(true);
       setPhase('location_complete');
       const bonus = getGameOfTheDayBonusAura('TreasureHunt');
       if (bonus > 0) addAura(bonus);
-      addVisbyChatMessage('visby', getPostGameLine('TreasureHunt', 'won', getVisbyMood()));
       playWithVisby();
       incrementGameStat('gamesPlayed');
       analyticsService.trackGameComplete(GAME_NAME, locationRounds.length, true);
@@ -383,6 +387,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
     setRevealItem(null);
     setFoundItemsForSummary([]);
     setElapsedSeconds(0);
+    setShowCelebration(false);
     setPhase('room_hunt');
   }, [countryId, getTreasureHuntProgress]);
 
@@ -599,6 +604,16 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
             <Button title={copy.treasureHunt.back} onPress={() => navigation.goBack()} variant="secondary" size="lg" fullWidth />
           </Animated.View>
         </SafeAreaView>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(locationFoundForSummary.length, locationRounds.length)}
+            score={locationFoundForSummary.length}
+            maxScore={locationRounds.length}
+            auraEarned={locationTotalAura}
+            gameName="Treasure Hunt"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
       </LinearGradient>
     );
   }
@@ -679,6 +694,16 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
             <Button title={copy.treasureHunt.back} onPress={() => navigation.goBack()} variant="secondary" size="lg" fullWidth />
           </Animated.View>
         </SafeAreaView>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(foundItemsForSummary.length, roomHuntData.items.length)}
+            score={foundItemsForSummary.length}
+            maxScore={roomHuntData.items.length}
+            auraEarned={totalAura}
+            gameName="Treasure Hunt"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
       </LinearGradient>
     );
   }
@@ -1430,9 +1455,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: spacing.md,
   },
+  revealTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
   revealTitle: {
     textAlign: 'center',
-    marginBottom: spacing.sm,
   },
   revealContent: {
     textAlign: 'center',
@@ -1732,7 +1763,10 @@ function TreasureRevealModal(props: {
                 <Icon name={icon} size={48} color={accentColor} />
               </View>
             ) : null}
-            <Heading level={3} style={styles.revealTitle}>{title}</Heading>
+            <View style={styles.revealTitleRow}>
+              <Heading level={3} style={styles.revealTitle}>{title}</Heading>
+              <SpeakerButton text={description ? `${title}. ${description}` : title} size={18} compact />
+            </View>
             {description ? (
               <Text variant="body" color={colors.text.secondary} style={styles.revealContent}>{description}</Text>
             ) : null}

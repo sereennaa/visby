@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -37,6 +38,9 @@ import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
 import { getDiscoveryCookingRecipes } from '../../config/worldFoods';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 
 const BASE_RECIPES = [
   {
@@ -45,6 +49,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Noodles', 'Broth', 'Pork', 'Egg', 'Green Onion'],
     wrongIngredients: ['Tortilla', 'Cheese', 'Ketchup'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1557872943-16a5ac26437e?w=600',
   },
   {
     name: 'Italian Pizza Margherita',
@@ -52,6 +57,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Dough', 'Tomato Sauce', 'Mozzarella', 'Basil'],
     wrongIngredients: ['Soy Sauce', 'Rice', 'Curry Powder', 'Avocado'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600',
   },
   {
     name: 'Mexican Tacos',
@@ -59,6 +65,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Tortilla', 'Beef', 'Salsa', 'Cheese', 'Lettuce'],
     wrongIngredients: ['Noodles', 'Soy Sauce', 'Wasabi'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=600',
   },
   {
     name: 'French Crepes',
@@ -66,6 +73,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Flour', 'Eggs', 'Milk', 'Butter'],
     wrongIngredients: ['Rice', 'Soy Sauce', 'Chili', 'Tofu'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1519676867240-f03562e64548?w=600',
   },
   {
     name: 'Indian Curry',
@@ -73,6 +81,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Curry Powder', 'Chicken', 'Onion', 'Tomato', 'Rice'],
     wrongIngredients: ['Pasta', 'Cream Cheese', 'Ketchup'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600',
   },
   {
     name: 'Korean Bibimbap',
@@ -80,6 +89,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Rice', 'Vegetables', 'Egg', 'Gochujang', 'Beef'],
     wrongIngredients: ['Bread', 'Cream', 'Maple Syrup'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=600',
   },
   {
     name: 'Thai Pad Thai',
@@ -87,6 +97,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Rice Noodles', 'Shrimp', 'Peanuts', 'Lime', 'Bean Sprouts'],
     wrongIngredients: ['Pasta', 'Cream', 'Ketchup'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1559314809-0d155014e29e?w=600',
   },
   {
     name: 'Brazilian Feijoada',
@@ -94,6 +105,7 @@ const BASE_RECIPES = [
     correctIngredients: ['Black Beans', 'Pork', 'Rice', 'Orange', 'Garlic'],
     wrongIngredients: ['Noodles', 'Soy Sauce', 'Wasabi'],
     icon: 'food' as IconName,
+    imageUrl: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=600',
   },
 ];
 
@@ -210,7 +222,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
   const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
   const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
   const getVisbyMood = useStore(s => s.getVisbyMood);
-  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
+
   const completePathNode = useStore(s => s.completePathNode);
 
   const RECIPES = useMemo(() => {
@@ -238,8 +250,9 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
   const [lives, setLives] = useState(3);
   const [nextCorrectIndex, setNextCorrectIndex] = useState(0);
   const [ingredientStates, setIngredientStates] = useState<Record<string, 'idle' | 'correct' | 'wrong' | 'used'>>({});
-  const [gamePhase, setGamePhase] = useState<'playing' | 'won' | 'lost'>('playing');
+  const [gamePhase, setGamePhase] = useState<'launching' | 'playing' | 'won' | 'lost'>('launching');
   const [score, setScore] = useState(0);
+  const [showCelebration, setShowCelebration] = useState(false);
   const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
 
@@ -286,12 +299,11 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
             setScore(finalScore);
             setGamePhase('won');
+            setShowCelebration(true);
             addAura(finalScore);
             const bonus = getGameOfTheDayBonusAura('CookingGame');
             if (bonus > 0) addAura(bonus);
             feedVisby();
-            const outcome = lives === 3 ? 'perfect' : 'won';
-            addVisbyChatMessage('visby', getPostGameLine('CookingGame', outcome, getVisbyMood()));
             addSkillPoints('cooking', 5);
             incrementGameStat('gamesPlayed');
             analyticsService.trackGameComplete(GAME_NAME, finalScore, lives === 3);
@@ -320,7 +332,6 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
             const finalScore = score;
             if (finalScore > 0) addAura(finalScore);
             feedVisby();
-            addVisbyChatMessage('visby', getPostGameLine('CookingGame', 'lost', getVisbyMood()));
             checkDailyMissionCompletion('play_minigame', 1);
             setAdventureGamePlayed();
           }, 700));
@@ -341,12 +352,35 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
     setScore(0);
   };
 
+  if (gamePhase === 'launching') {
+    return (
+      <GameLaunchSequence
+        gameName="World Cooking"
+        gameIcon="food"
+        countryName={recipe?.country}
+        rules="Add the right ingredients in order!"
+        onComplete={() => setGamePhase('playing')}
+      />
+    );
+  }
+
   if (gamePhase === 'won' || gamePhase === 'lost') {
     return (
-      <LinearGradient
-        colors={
-          gamePhase === 'won'
-            ? [colors.reward.peachLight, colors.base.cream]
+      <>
+        {showCelebration && gamePhase === 'won' && (
+          <GameCelebration
+            tier={getCelebrationTier(score, recipe.correctIngredients.length * 10 + 15)}
+            score={score}
+            maxScore={recipe.correctIngredients.length * 10 + 15}
+            auraEarned={score}
+            gameName="World Cooking"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
+        <LinearGradient
+          colors={
+            gamePhase === 'won'
+              ? [colors.reward.peachLight, colors.base.cream]
             : [colors.status.errorLight, colors.base.cream]
         }
         style={styles.container}
@@ -418,6 +452,7 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
           </Animated.View>
         </SafeAreaView>
       </LinearGradient>
+      </>
     );
   }
 
@@ -461,13 +496,25 @@ export const CookingGameScreen: React.FC<CookingGameScreenProps> = ({ navigation
           <Animated.View>
             <Card variant="gradient" gradientColors={['#FFFAF0', '#FFF0DB']} style={styles.recipeCard}>
               <View style={styles.recipeHeader}>
-                <View style={styles.recipeIconWrap}>
-                  <Icon name={recipe.icon} size={28} color={colors.reward.peachDark} />
-                </View>
+                {recipe.imageUrl ? (
+                  <Image
+                    source={{ uri: recipe.imageUrl }}
+                    style={styles.recipeImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ) : (
+                  <View style={styles.recipeIconWrap}>
+                    <Icon name={recipe.icon} size={28} color={colors.reward.peachDark} />
+                  </View>
+                )}
                 <View style={styles.recipeInfo}>
-                  <Heading level={2} color={colors.text.primary}>
-                    {recipe.name}
-                  </Heading>
+                  <View style={styles.recipeNameRow}>
+                    <Heading level={2} color={colors.text.primary}>
+                      {recipe.name}
+                    </Heading>
+                    <SpeakerButton text={recipe.name} size={16} compact />
+                  </View>
                   <Caption>{recipe.country}</Caption>
                 </View>
               </View>
@@ -590,6 +637,12 @@ const styles = StyleSheet.create({
   recipeCard: {
     marginBottom: spacing.lg,
   },
+  recipeImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    marginRight: spacing.md,
+  },
   recipeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -605,6 +658,11 @@ const styles = StyleSheet.create({
   },
   recipeInfo: {
     flex: 1,
+  },
+  recipeNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   progressSection: {
     marginBottom: spacing.lg,

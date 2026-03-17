@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -106,6 +106,11 @@ export const ShopHubScreen: React.FC<ShopHubScreenProps> = ({ navigation }) => {
     >
       <FloatingParticles count={10} variant="mixed" opacity={0.2} speed="slow" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -207,14 +212,19 @@ export const ShopHubScreen: React.FC<ShopHubScreenProps> = ({ navigation }) => {
             </LinearGradient>
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 };
 
+const BOTTOM_NAV_PADDING = 88;
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: BOTTOM_NAV_PADDING },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding, paddingTop: spacing.sm, paddingBottom: spacing.md,

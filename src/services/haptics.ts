@@ -1,11 +1,16 @@
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
-import { useStore } from '../store/useStore';
+
+let _getStore: (() => { settings: { hapticFeedback?: boolean } }) | null = null;
+
+export function setHapticStoreAccessor(accessor: () => { settings: { hapticFeedback?: boolean } }) {
+  _getStore = accessor;
+}
 
 function isEnabled(): boolean {
   if (Platform.OS === 'web') return false;
-  const settings = useStore.getState().settings as { hapticFeedback?: boolean };
-  return settings.hapticFeedback !== false;
+  if (!_getStore) return true;
+  return _getStore().settings.hapticFeedback !== false;
 }
 
 export const hapticService = {

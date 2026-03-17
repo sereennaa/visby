@@ -165,6 +165,16 @@ export const colors = {
     backdrop: 'rgba(0, 0, 0, 0.4)',
     softBlack: 'rgba(0, 0, 0, 0.06)',
     warmGlow: 'rgba(255, 220, 130, 0.25)',
+    celebrationDark: 'rgba(45, 45, 58, 0.92)',
+    celebrationDeep: 'rgba(30, 28, 45, 0.96)',
+    celebrationPerfect: 'rgba(35, 20, 50, 0.95)',
+    celebrationPerfectDeep: 'rgba(15, 10, 30, 0.98)',
+    goldGlow: 'rgba(255, 215, 0, 0.25)',
+    goldSubtle: 'rgba(255, 215, 0, 0.15)',
+    goldFaint: 'rgba(255, 215, 0, 0.12)',
+    whiteSubtle: 'rgba(255, 255, 255, 0.08)',
+    whiteMuted: 'rgba(255, 255, 255, 0.4)',
+    whiteSoft: 'rgba(255, 255, 255, 0.6)',
   },
 
   semantic: {

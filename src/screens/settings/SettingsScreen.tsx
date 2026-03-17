@@ -18,6 +18,7 @@ import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
+import { hapticService } from '../../services/haptics';
 import { useStore } from '../../store/useStore';
 import { authService } from '../../services/auth';
 import { setupNotifications } from '../../services/notifications';
@@ -82,7 +83,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
   ) => (
     <TouchableOpacity
       style={styles.row}
-      onPress={onPress}
+      onPress={() => { hapticService.tap(); onPress(); }}
       activeOpacity={0.6}
       accessibilityRole={options?.toggle ? 'switch' : 'button'}
       accessibilityLabel={options?.toggle ? `Toggle ${label.toLowerCase()}` : label}
@@ -217,6 +218,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               toggle: true,
               toggleValue: (settings as { soundEffects?: boolean }).soundEffects ?? true,
             })}
+            <View style={styles.separator} />
+            {renderRow('volumeHigh', 'Read aloud', () => updateSettings({ readAloud: !((settings as { readAloud?: boolean }).readAloud ?? true) }), {
+              toggle: true,
+              toggleValue: (settings as { readAloud?: boolean }).readAloud ?? true,
+            })}
+            <Caption style={styles.settingHint}>Read words and phrases aloud for pronunciation practice</Caption>
           </Card>
 
           {/* Play time & focus */}
@@ -384,7 +391,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
         </Animated.View>
 
         {/* Info Modal */}
-        <Modal visible={!!infoModal} transparent animationType="none">
+        <Modal visible={!!infoModal} transparent animationType="fade">
           <Pressable style={styles.overlay} onPress={() => setInfoModal(null)}>
             <Animated.View entering={ZoomIn.duration(300).springify()}>
               <Pressable style={styles.modalCard}>
@@ -399,7 +406,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
         </Modal>
 
         {/* Parent PIN Modal */}
-        <Modal visible={showPinPrompt} transparent animationType="none">
+        <Modal visible={showPinPrompt} transparent animationType="fade">
           <Pressable style={styles.overlay} onPress={() => { setShowPinPrompt(false); setPendingAction(null); }}>
             <Animated.View entering={ZoomIn.duration(300).springify()}>
               <Pressable style={styles.modalCard}>
@@ -454,7 +461,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
         </Modal>
 
         {/* Logout Confirmation Modal */}
-        <Modal visible={showLogoutConfirm} transparent animationType="none">
+        <Modal visible={showLogoutConfirm} transparent animationType="fade">
           <Pressable style={styles.overlay} onPress={() => setShowLogoutConfirm(false)}>
             <Animated.View entering={ZoomIn.duration(300).springify()}>
               <Pressable style={styles.modalCard}>

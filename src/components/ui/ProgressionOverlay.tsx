@@ -14,6 +14,7 @@ import { hapticService } from '../../services/haptics';
 import type { StoryChapter } from '../../config/storyChapters';
 import { BADGE_DEFINITIONS, type BadgeDefinition } from '../../config/badges';
 import { AchievementCeremony } from '../effects/AchievementCeremony';
+import { BadgeReveal } from '../effects/BadgeReveal';
 
 const LEVEL_TITLES: Record<number, string> = {
   1: 'Novice Explorer',
@@ -179,7 +180,7 @@ export const ProgressionOverlay: React.FC = () => {
   return (
     <>
       {/* Chapter unlock modal */}
-      <Modal visible={!!chapterToShow} transparent animationType="none">
+      <Modal visible={!!chapterToShow} transparent animationType="fade">
         <View style={s.overlay}>
           <Animated.View entering={ZoomIn.duration(300).springify()} style={s.card}>
             <LinearGradient colors={[colors.primary.wisteriaLight, colors.primary.wisteriaDark]} style={s.iconCircle}>
@@ -196,13 +197,27 @@ export const ProgressionOverlay: React.FC = () => {
 
       {/* Queued ceremonies (level-up, stage-up, badges, streaks) */}
       {activeCeremony && (
-        <AchievementCeremony
-          icon={activeCeremony.icon}
-          title={activeCeremony.title}
-          subtitle={activeCeremony.subtitle}
-          auraReward={activeCeremony.auraReward}
-          onDismiss={dismissActiveCeremony}
-        />
+        activeCeremony.id.startsWith('badge_') ? (
+          <BadgeReveal
+            icon={activeCeremony.icon}
+            name={activeCeremony.subtitle || activeCeremony.title}
+            rarity={
+              (activeCeremony as any).rarity ||
+              (BADGE_DEFINITIONS.find((b: BadgeDefinition) => activeCeremony.id === `badge_${b.id}`)?.rarity) ||
+              'common'
+            }
+            auraReward={activeCeremony.auraReward}
+            onDismiss={dismissActiveCeremony}
+          />
+        ) : (
+          <AchievementCeremony
+            icon={activeCeremony.icon}
+            title={activeCeremony.title}
+            subtitle={activeCeremony.subtitle}
+            auraReward={activeCeremony.auraReward}
+            onDismiss={dismissActiveCeremony}
+          />
+        )
       )}
     </>
   );

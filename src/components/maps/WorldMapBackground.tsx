@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Svg, {
   Path,
   Defs,
@@ -13,6 +13,7 @@ import Svg, {
   Line,
   Polygon,
 } from 'react-native-svg';
+import { Text as RNText } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -86,6 +87,16 @@ const OCEAN_LABELS: { x: number; y: number; text: string; rotate: number }[] = [
   { x: 96, y: 40, text: 'Pacific', rotate: -5 },
 ];
 
+const CONTINENT_LABELS: { x: number; y: number; text: string; fontSize: number }[] = [
+  { x: 17, y: 28, text: 'North America', fontSize: 2.2 },
+  { x: 33, y: 62, text: 'South America', fontSize: 2 },
+  { x: 52, y: 21, text: 'Europe', fontSize: 1.8 },
+  { x: 54, y: 48, text: 'Africa', fontSize: 2.2 },
+  { x: 75, y: 24, text: 'Asia', fontSize: 2.5 },
+  { x: 88, y: 66, text: 'Oceania', fontSize: 1.8 },
+  { x: 50, y: 96, text: 'Antarctica', fontSize: 1.6 },
+];
+
 const SEA_CREATURES: { x: number; y: number; emoji: string; size: number }[] = [
   { x: 10, y: 70, emoji: '🐋', size: 3 },
   { x: 66, y: 75, emoji: '🐙', size: 2.5 },
@@ -101,8 +112,39 @@ type WorldMapBackgroundProps = {
   landStroke?: string;
 };
 
-const DriftingCloud = React.memo<{ startX: number; y: number; size: number; delay: number }>(
-  ({ startX, y, size, delay }) => {
+const BobbingCreature = React.memo<{ x: number; y: number; emoji: string; fontSize: number; mapWidth: number; mapHeight: number; delay: number }>(
+  ({ x, y, emoji, fontSize, mapWidth, mapHeight, delay }) => {
+    const bob = useSharedValue(0);
+    useEffect(() => {
+      bob.value = withRepeat(
+        withTiming(1, { duration: 2400 + delay * 800, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
+      );
+    }, []);
+    const style = useAnimatedStyle(() => ({
+      transform: [{ translateY: interpolate(bob.value, [0, 1], [-2, 2]) }],
+    }));
+    return (
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            left: (x / 100) * mapWidth - fontSize * 2,
+            top: (y / 100) * mapHeight - fontSize * 2,
+          },
+          style,
+        ]}
+        pointerEvents="none"
+      >
+        <RNText style={{ fontSize: fontSize * 4, opacity: 0.35 }}>{emoji}</RNText>
+      </Animated.View>
+    );
+  },
+);
+
+const DriftingCloud = React.memo<{ startX: number; y: number; size: number; delay: number; mapWidth: number }>(
+  ({ startX, y, size, delay, mapWidth }) => {
     const progress = useSharedValue(0);
 
     useEffect(() => {
@@ -114,7 +156,7 @@ const DriftingCloud = React.memo<{ startX: number; y: number; size: number; dela
     }, []);
 
     const style = useAnimatedStyle(() => ({
-      transform: [{ translateX: interpolate(progress.value, [0, 1], [-20, Dimensions.get('window').width + 20]) }],
+      transform: [{ translateX: interpolate(progress.value, [0, 1], [-20, mapWidth + 20]) }],
       opacity: interpolate(progress.value, [0, 0.1, 0.9, 1], [0, 0.25, 0.25, 0]),
     }));
 
@@ -192,18 +234,36 @@ export const WorldMapBackground: React.FC<WorldMapBackgroundProps> = ({
           />
         ))}
 
-        {/* Compass rose (bottom-right corner) */}
-        <G transform="translate(8, 88)">
-          <Circle cx="0" cy="0" r="5" fill="rgba(180,160,130,0.2)" stroke="rgba(160,140,110,0.4)" strokeWidth={0.3} />
-          <Polygon points="0,-4.5 0.8,0 0,1 -0.8,0" fill="#B8956A" />
-          <Polygon points="0,4.5 0.8,0 0,-1 -0.8,0" fill="#D4B896" />
-          <Polygon points="-4.5,0 0,0.8 1,0 0,-0.8" fill="#D4B896" />
-          <Polygon points="4.5,0 0,0.8 -1,0 0,-0.8" fill="#B8956A" />
-          <SvgText x="0" y="-5.8" textAnchor="middle" fontSize="2" fill="#8B7355" fontWeight="bold">N</SvgText>
-          <SvgText x="0" y="7.2" textAnchor="middle" fontSize="1.5" fill="#8B7355">S</SvgText>
-          <SvgText x="-6" y="0.5" textAnchor="middle" fontSize="1.5" fill="#8B7355">W</SvgText>
-          <SvgText x="6" y="0.5" textAnchor="middle" fontSize="1.5" fill="#8B7355">E</SvgText>
-        </G>
+        {/* Equator line */}
+        <Line x1="0" y1="50" x2="100" y2="50" stroke="rgba(180,100,80,0.15)" strokeWidth={0.25} strokeDasharray="2,1.5" />
+        <SvgText x="96" y="49" textAnchor="end" fontSize="1.3" fill="rgba(180,100,80,0.25)">Equator</SvgText>
+
+        {/* Continent labels */}
+        {CONTINENT_LABELS.map((label) => (
+          <SvgText
+            key={label.text}
+            x={label.x}
+            y={label.y}
+            textAnchor="middle"
+            fontSize={label.fontSize}
+            fill="rgba(120,100,70,0.3)"
+            fontWeight="bold"
+            letterSpacing={0.5}
+          >
+            {label.text}
+          </SvgText>
+        ))}
+
+        {/* Compass rose (bottom-left corner, absolute coords to avoid G transform NaN on web) */}
+        <Circle cx={8} cy={88} r={5} fill="rgba(180,160,130,0.2)" stroke="rgba(160,140,110,0.4)" strokeWidth={0.3} />
+        <Polygon points="8,83.5 8.8,88 8,89 7.2,88" fill="#B8956A" />
+        <Polygon points="8,92.5 8.8,88 8,87 7.2,88" fill="#D4B896" />
+        <Polygon points="3.5,88 8,88.8 9,88 8,87.2" fill="#D4B896" />
+        <Polygon points="12.5,88 8,88.8 7,88 8,87.2" fill="#B8956A" />
+        <SvgText x={8} y={82.2} textAnchor="middle" fontSize="2" fill="#8B7355" fontWeight="bold">N</SvgText>
+        <SvgText x={8} y={95.2} textAnchor="middle" fontSize="1.5" fill="#8B7355">S</SvgText>
+        <SvgText x={2} y={88.5} textAnchor="middle" fontSize="1.5" fill="#8B7355">W</SvgText>
+        <SvgText x={14} y={88.5} textAnchor="middle" fontSize="1.5" fill="#8B7355">E</SvgText>
 
         {/* Ocean labels in italic style */}
         {OCEAN_LABELS.map((label) => (
@@ -222,12 +282,7 @@ export const WorldMapBackground: React.FC<WorldMapBackgroundProps> = ({
           </SvgText>
         ))}
 
-        {/* Sea creatures and ships */}
-        {SEA_CREATURES.map((c, i) => (
-          <SvgText key={`sea_${i}`} x={c.x} y={c.y} fontSize={c.size} textAnchor="middle" opacity={0.35}>
-            {c.emoji}
-          </SvgText>
-        ))}
+        {/* Sea creatures rendered as bobbing overlay outside SVG */}
 
         {/* Landmark icons on countries */}
         {LANDMARK_ICONS.map((lm, i) => (
@@ -254,7 +309,12 @@ export const WorldMapBackground: React.FC<WorldMapBackgroundProps> = ({
 
       {/* Drifting cloud overlays */}
       {clouds.map((c, i) => (
-        <DriftingCloud key={i} {...c} />
+        <DriftingCloud key={i} {...c} mapWidth={width} />
+      ))}
+
+      {/* Bobbing sea creatures */}
+      {SEA_CREATURES.map((c, i) => (
+        <BobbingCreature key={`bob_${i}`} x={c.x} y={c.y} emoji={c.emoji} fontSize={c.size} mapWidth={width} mapHeight={height} delay={i} />
       ))}
     </View>
   );

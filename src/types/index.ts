@@ -74,6 +74,7 @@ export interface AppSettings {
   locationTracking: boolean;
   privateProfile: boolean;
   soundEffects: boolean;
+  readAloud: boolean;
   sessionTimerMinutes: 0 | 10 | 15 | 20;
   focusMode: boolean;
   quieterMode: boolean;

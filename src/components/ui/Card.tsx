@@ -15,6 +15,7 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  cancelAnimation,
   Easing,
   interpolate,
 } from 'react-native-reanimated';
@@ -58,6 +59,7 @@ export const Card: React.FC<CardProps> = ({
         true,
       );
     }
+    return () => { cancelAnimation(magicGlow); };
   }, [variant]);
 
   const animatedStyle = useAnimatedStyle(() => ({

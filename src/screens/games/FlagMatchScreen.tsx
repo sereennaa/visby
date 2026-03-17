@@ -24,6 +24,9 @@ import { COUNTRIES } from '../../config/constants';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { soundService } from '../../services/sound';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
+import { speechService } from '../../services/audio';
 import type { RootStackParamList } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -80,9 +83,13 @@ export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
   }, []);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
-    return () => timersRef.current.forEach(clearTimeout);
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      speechService.stop();
+    };
   }, []);
-  const [phase, setPhase] = useState<'playing' | 'result'>('playing');
+  const [phase, setPhase] = useState<'launching' | 'playing' | 'result'>('launching');
+  const [showCelebration, setShowCelebration] = useState(false);
   const [questions] = useState(() => generateQuestions(ROUNDS));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -101,12 +108,14 @@ export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
     if (index === question.correctIndex) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       soundService.playMatch();
+      setTimeout(() => speechService.speak(question.countryName), 350);
       setScore((s) => s + 1);
       const aura = 15;
       setTotalAura((a) => a + aura);
       addAura(aura);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setTimeout(() => speechService.speak(question.countryName), 350);
       shakeX.value = withSequence(
         withTiming(-8, { duration: 50 }),
         withTiming(8, { duration: 50 }),
@@ -126,6 +135,7 @@ export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
         if (pathNodeId) completePathNode(pathNodeId);
         const bonus = getGameOfTheDayBonusAura('FlagMatch');
         if (bonus > 0) addAura(bonus);
+        setShowCelebration(true);
         setPhase('result');
       } else {
         setCurrentIndex((i) => i + 1);
@@ -134,11 +144,32 @@ export const FlagMatchScreen: React.FC<Props> = ({ navigation, route }) => {
     }, 1000));
   }, [selected, question, currentIndex, questions.length]);
 
+  if (phase === 'launching') {
+    return (
+      <GameLaunchSequence
+        gameName="Flag Match"
+        gameIcon="flag"
+        rules="Match each flag to the correct country!"
+        onComplete={() => setPhase('playing')}
+      />
+    );
+  }
+
   if (phase === 'result') {
     const percent = Math.round((score / questions.length) * 100);
     const stars = percent >= 90 ? 3 : percent >= 60 ? 2 : percent >= 30 ? 1 : 0;
     return (
       <View style={styles.container}>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(score, questions.length)}
+            score={score}
+            maxScore={questions.length}
+            auraEarned={totalAura}
+            gameName="Flag Match"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
         <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={StyleSheet.absoluteFill} />
         <FloatingParticles count={8} variant="stars" opacity={0.15} speed="slow" />
         <SafeAreaView style={styles.safeArea}>

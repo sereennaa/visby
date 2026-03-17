@@ -32,7 +32,7 @@ export const ObjectDetailModal = React.memo<ObjectDetailModalProps>(({
 }) => {
   if (!object) return null;
   return (
-    <Modal visible={!!object} transparent animationType="none">
+    <Modal visible={!!object} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Animated.View entering={ZoomIn.duration(300).springify()} exiting={FadeOut.duration(200)}>
         <Pressable style={styles.contentWithImage} onPress={(e) => e.stopPropagation()}>
@@ -115,7 +115,7 @@ export const FurnitureInteractionModal = React.memo<FurnitureInteractionModalPro
   const totalAura = Math.round(aura * multiplier);
 
   return (
-    <Modal visible={!!interaction} transparent animationType="none">
+    <Modal visible={!!interaction} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Animated.View entering={ZoomIn.duration(300).springify()} exiting={FadeOut.duration(200)}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>
@@ -168,7 +168,7 @@ export const MicroEventModal = React.memo<MicroEventModalProps>(({
 }) => {
   if (!visible) return null;
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Animated.View entering={ZoomIn.duration(300).springify()}>
         <Pressable style={styles.microCard} onPress={(e) => e.stopPropagation()}>
@@ -207,7 +207,7 @@ export const GamesModal = React.memo<GamesModalProps>(({
     { key: 'TreasureHunt', name: 'Treasure Hunt', icon: 'compass' as IconName, desc: 'Find hidden items', color: colors.success.emerald },
   ];
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Animated.View entering={ZoomIn.duration(300).springify()}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>

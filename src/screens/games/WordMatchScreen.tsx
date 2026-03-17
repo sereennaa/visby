@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -37,6 +38,10 @@ import { analyticsService } from '../../services/analytics';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
+import { speechService, LANGUAGE_NAME_TO_CODE } from '../../services/audio';
 
 type WordMatchScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WordMatch'>;
@@ -47,39 +52,40 @@ interface WordPair {
   foreign: string;
   english: string;
   language: string;
+  imageUrl?: string;
 }
 
 const WORD_PAIRS: WordPair[] = [
-  { foreign: 'Bonjour', english: 'Hello', language: 'French' },
-  { foreign: 'Merci', english: 'Thank you', language: 'French' },
-  { foreign: 'Konnichiwa', english: 'Hello', language: 'Japanese' },
-  { foreign: 'Arigatou', english: 'Thank you', language: 'Japanese' },
-  { foreign: 'Gracias', english: 'Thank you', language: 'Spanish' },
-  { foreign: 'Hola', english: 'Hello', language: 'Spanish' },
-  { foreign: 'Danke', english: 'Thank you', language: 'German' },
-  { foreign: 'Guten Tag', english: 'Good day', language: 'German' },
-  { foreign: 'Ciao', english: 'Hello/Bye', language: 'Italian' },
-  { foreign: 'Grazie', english: 'Thank you', language: 'Italian' },
-  { foreign: 'Namaste', english: 'I bow to you', language: 'Hindi' },
-  { foreign: 'Annyeong', english: 'Hello', language: 'Korean' },
-  { foreign: 'Sawadee', english: 'Hello', language: 'Thai' },
-  { foreign: 'Obrigado', english: 'Thank you', language: 'Portuguese' },
-  { foreign: 'Shukran', english: 'Thank you', language: 'Arabic' },
-  { foreign: 'Xie Xie', english: 'Thank you', language: 'Chinese' },
-  { foreign: 'Ni Hao', english: 'Hello', language: 'Chinese' },
-  { foreign: 'Sayonara', english: 'Goodbye', language: 'Japanese' },
-  { foreign: 'Au Revoir', english: 'Goodbye', language: 'French' },
-  { foreign: 'Adiós', english: 'Goodbye', language: 'Spanish' },
-  { foreign: 'Oui', english: 'Yes', language: 'French' },
-  { foreign: 'Hai', english: 'Yes', language: 'Japanese' },
-  { foreign: 'Sí', english: 'Yes', language: 'Spanish' },
-  { foreign: 'Non', english: 'No', language: 'French' },
-  { foreign: 'Iie', english: 'No', language: 'Japanese' },
-  { foreign: 'Bitte', english: 'Please', language: 'German' },
-  { foreign: "S'il vous plaît", english: 'Please', language: 'French' },
-  { foreign: 'Por favor', english: 'Please', language: 'Spanish' },
-  { foreign: 'Sumimasen', english: 'Excuse me', language: 'Japanese' },
-  { foreign: 'Entschuldigung', english: 'Excuse me', language: 'German' },
+  { foreign: 'Bonjour', english: 'Hello', language: 'French', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { foreign: 'Merci', english: 'Thank you', language: 'French', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { foreign: 'Konnichiwa', english: 'Hello', language: 'Japanese', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
+  { foreign: 'Arigatou', english: 'Thank you', language: 'Japanese', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
+  { foreign: 'Gracias', english: 'Thank you', language: 'Spanish', imageUrl: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=600' },
+  { foreign: 'Hola', english: 'Hello', language: 'Spanish', imageUrl: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=600' },
+  { foreign: 'Danke', english: 'Thank you', language: 'German', imageUrl: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600' },
+  { foreign: 'Guten Tag', english: 'Good day', language: 'German', imageUrl: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600' },
+  { foreign: 'Ciao', english: 'Hello/Bye', language: 'Italian', imageUrl: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=600' },
+  { foreign: 'Grazie', english: 'Thank you', language: 'Italian', imageUrl: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=600' },
+  { foreign: 'Namaste', english: 'I bow to you', language: 'Hindi', imageUrl: 'https://images.unsplash.com/photo-1524496128540-801c43a8e2e8?w=600' },
+  { foreign: 'Annyeong', english: 'Hello', language: 'Korean', imageUrl: 'https://images.unsplash.com/photo-1583167616706-59fca7c3ae12?w=600' },
+  { foreign: 'Sawadee', english: 'Hello', language: 'Thai', imageUrl: 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=600' },
+  { foreign: 'Obrigado', english: 'Thank you', language: 'Portuguese', imageUrl: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=600' },
+  { foreign: 'Shukran', english: 'Thank you', language: 'Arabic', imageUrl: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=600' },
+  { foreign: 'Xie Xie', english: 'Thank you', language: 'Chinese', imageUrl: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=600' },
+  { foreign: 'Ni Hao', english: 'Hello', language: 'Chinese', imageUrl: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=600' },
+  { foreign: 'Sayonara', english: 'Goodbye', language: 'Japanese', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
+  { foreign: 'Au Revoir', english: 'Goodbye', language: 'French', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { foreign: 'Adiós', english: 'Goodbye', language: 'Spanish', imageUrl: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=600' },
+  { foreign: 'Oui', english: 'Yes', language: 'French', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { foreign: 'Hai', english: 'Yes', language: 'Japanese', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
+  { foreign: 'Sí', english: 'Yes', language: 'Spanish', imageUrl: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=600' },
+  { foreign: 'Non', english: 'No', language: 'French', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { foreign: 'Iie', english: 'No', language: 'Japanese', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
+  { foreign: 'Bitte', english: 'Please', language: 'German', imageUrl: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600' },
+  { foreign: "S'il vous plaît", english: 'Please', language: 'French', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { foreign: 'Por favor', english: 'Please', language: 'Spanish', imageUrl: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=600' },
+  { foreign: 'Sumimasen', english: 'Excuse me', language: 'Japanese', imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600' },
+  { foreign: 'Entschuldigung', english: 'Excuse me', language: 'German', imageUrl: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600' },
 ];
 
 const AURA_PER_MATCH = 5;
@@ -110,7 +116,8 @@ const ForeignCard: React.FC<{
   state: CardState;
   onPress: () => void;
   index: number;
-}> = ({ word, language, state, onPress, index }) => {
+  imageUrl?: string;
+}> = ({ word, language, state, onPress, index, imageUrl }) => {
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
 
@@ -178,14 +185,25 @@ const ForeignCard: React.FC<{
               <Icon name="check" size={16} color={colors.success.emerald} />
             </View>
           ) : null}
-          <Text
-            variant="body"
-            color={state === 'matched' ? colors.success.emerald : colors.text.primary}
-            style={styles.wordText}
-            numberOfLines={2}
-          >
-            {word}
-          </Text>
+          {imageUrl && (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.wordImage}
+              contentFit="cover"
+              transition={150}
+            />
+          )}
+          <View style={styles.wordRow}>
+            <Text
+              variant="body"
+              color={state === 'matched' ? colors.success.emerald : colors.text.primary}
+              style={styles.wordText}
+              numberOfLines={2}
+            >
+              {word}
+            </Text>
+            <SpeakerButton text={word} languageName={language} size={14} compact />
+          </View>
           <Caption
             color={state === 'matched' ? colors.success.honeydewDark : colors.text.muted}
             style={styles.languageLabel}
@@ -308,7 +326,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
   const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
   const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
   const getVisbyMood = useStore(s => s.getVisbyMood);
-  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
+
   const storyBeatsShown = useStore(s => s.storyBeatsShown);
   const markStoryBeatShown = useStore(s => s.markStoryBeatShown);
   const completePathNode = useStore(s => s.completePathNode);
@@ -337,12 +355,17 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [showAuraAt, setShowAuraAt] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [startTime] = useState(() => Date.now());
   const [endTime, setEndTime] = useState<number | null>(null);
   const isProcessingRef = useRef(false);
   const timersRef = useRef<NodeJS.Timeout[]>([]);
   useEffect(() => {
-    return () => timersRef.current.forEach(clearTimeout);
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      speechService.stop();
+    };
   }, []);
 
   const totalAttempts = matchedCount + wrongAttempts;
@@ -404,6 +427,13 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
         haptic(Haptics.ImpactFeedbackStyle.Medium);
         const { soundService } = require('../../services/sound');
         soundService.playMatch();
+        const matchedPair = foreignPair;
+        const langCode = LANGUAGE_NAME_TO_CODE[matchedPair.language];
+        if (langCode) {
+          timersRef.current.push(setTimeout(() => {
+            speechService.speakWord(matchedPair.foreign, langCode);
+          }, 400));
+        }
         setForeignStates((prev) =>
           prev.map((s, i) => (i === selectedForeign ? 'matched' : s)),
         );
@@ -434,10 +464,10 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
           if (finalAccuracy >= 100) {
             incrementGameStat('perfectWordMatches');
           }
-          const outcome = finalAccuracy >= 100 ? 'perfect' : 'won';
-          const line = getPostGameLine('WordMatch', outcome, getVisbyMood());
-          addVisbyChatMessage('visby', line);
-          timersRef.current.push(setTimeout(() => setIsFinished(true), 600));
+          timersRef.current.push(setTimeout(() => {
+            setIsFinished(true);
+            setShowCelebration(true);
+          }, 600));
         }
         timersRef.current.push(setTimeout(() => {
           isProcessingRef.current = false;
@@ -476,9 +506,22 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
     setWrongAttempts(0);
     setShowAuraAt(null);
     setIsFinished(false);
+    setShowCelebration(false);
     setEndTime(null);
     isProcessingRef.current = false;
+    setIsLaunching(true);
   }, []);
+
+  if (isLaunching) {
+    return (
+      <GameLaunchSequence
+        gameName="Word Match"
+        gameIcon="book"
+        rules="Match foreign words to their English translations!"
+        onComplete={() => setIsLaunching(false)}
+      />
+    );
+  }
 
   if (isFinished) {
     return (
@@ -570,6 +613,16 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
             />
           </Animated.View>
         </SafeAreaView>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(matchedCount, ROUND_SIZE)}
+            score={matchedCount}
+            maxScore={ROUND_SIZE}
+            auraEarned={auraEarned}
+            gameName="Word Match"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
       </LinearGradient>
     );
   }
@@ -639,6 +692,7 @@ export const WordMatchScreen: React.FC<WordMatchScreenProps> = ({ navigation, ro
                   state={foreignStates[i]}
                   onPress={() => handleForeignPress(i)}
                   index={i}
+                  imageUrl={pair.imageUrl}
                 />
               ))}
             </View>
@@ -782,10 +836,23 @@ const styles = StyleSheet.create({
   },
   foreignCard: {},
   englishCard: {},
+  wordImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginBottom: spacing.xs,
+  },
   matchedBadge: {
     position: 'absolute',
     top: spacing.xs,
     right: spacing.xs,
+  },
+  wordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   wordText: {
     textAlign: 'center',

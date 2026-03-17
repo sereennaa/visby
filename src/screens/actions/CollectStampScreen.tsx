@@ -319,7 +319,7 @@ export const CollectStampScreen: React.FC<CollectStampScreenProps> = ({
       </SafeAreaView>
 
       {/* Success Modal — dreamy celebration */}
-      <Modal visible={showSuccess} transparent animationType="none">
+      <Modal visible={showSuccess} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => {}}>
           <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
             <FloatingParticles variant="sparkle" count={12} speed="slow" opacity={0.9} />

@@ -1,24 +1,14 @@
-import React, { Suspense, useEffect } from 'react';
-import { View, StyleSheet, Platform, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import React, { Suspense, useCallback, useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { analyticsService } from '../services/analytics';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { BlurView } from 'expo-blur';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  FadeIn,
-} from 'react-native-reanimated';
 import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
-import { getShadowStyle } from '../theme/shadows';
-import { Icon, IconName } from '../components/ui/Icon';
 import { RootStackParamList, MainTabParamList, ExploreStackParamList } from '../types';
 import { useStore } from '../store/useStore';
-import { hapticService } from '../services/haptics';
+import { PersistentBottomNav } from '../components/navigation/PersistentBottomNav';
+import { VisbyLoader } from '../components/ui/VisbyLoader';
 
 import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -101,14 +91,14 @@ class ScreenErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <View style={styles.errorWrap}>
-          <Text style={styles.errorEmoji}>{'\u26A0\uFE0F'}</Text>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
-          <Text style={styles.errorMsg}>This screen ran into an issue.</Text>
+          <Text style={styles.errorEmoji}>{'🧭'}</Text>
+          <Text style={styles.errorTitle}>Visby tripped over a rock!</Text>
+          <Text style={styles.errorMsg}>Don't worry, let's dust off and try that again.</Text>
           <TouchableOpacity
             style={styles.errorBtn}
             onPress={() => this.setState({ hasError: false })}
           >
-            <Text style={styles.errorBtnText}>Retry</Text>
+            <Text style={styles.errorBtnText}>Try again</Text>
           </TouchableOpacity>
         </View>
       );
@@ -121,7 +111,7 @@ function SuspenseScreen(LazyComponent: React.LazyExoticComponent<any>) {
   return function WrappedScreen(props: any) {
     return (
       <ScreenErrorBoundary>
-        <Suspense fallback={<View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary.wisteria} /></View>}>
+        <Suspense fallback={<View style={styles.loadingWrap}><VisbyLoader compact /></View>}>
           <LazyComponent {...props} />
         </Suspense>
       </ScreenErrorBoundary>
@@ -178,40 +168,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const ExploreStackNav = createNativeStackNavigator<ExploreStackParamList>();
 
-const TabIcon = React.memo<{ focused: boolean; iconName: IconName; iconNameOutline: IconName }>(
-  ({ focused, iconName, iconNameOutline }) => {
-    const scale = useSharedValue(focused ? 1 : 0.85);
-    const indicatorWidth = useSharedValue(focused ? 20 : 0);
-    const indicatorOpacity = useSharedValue(focused ? 1 : 0);
-
-    useEffect(() => {
-      scale.value = withSpring(focused ? 1.1 : 0.9, { damping: 12, stiffness: 200 });
-      indicatorWidth.value = withSpring(focused ? 20 : 0, { damping: 14 });
-      indicatorOpacity.value = withTiming(focused ? 1 : 0, { duration: 200 });
-      if (focused) hapticService.selection();
-    }, [focused]);
-
-    const iconStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: scale.value }],
-    }));
-
-    const indicatorStyle = useAnimatedStyle(() => ({
-      width: indicatorWidth.value,
-      opacity: indicatorOpacity.value,
-    }));
-
-    return (
-      <View style={[styles.tabIcon, focused && styles.tabIconFocused]}>
-        {focused && <View style={styles.focusGlow} />}
-        <Animated.View style={iconStyle}>
-          <Icon name={focused ? iconName : iconNameOutline} size={24} color={focused ? colors.primary.wisteriaDark : colors.text.muted} />
-        </Animated.View>
-        <Animated.View style={[styles.focusIndicator, indicatorStyle]} />
-      </View>
-    );
-  },
-);
-
 const ExploreStackNavigator = () => (
   <ExploreStackNav.Navigator
     screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base.cream }, animation: 'slide_from_right' }}
@@ -220,8 +176,8 @@ const ExploreStackNavigator = () => (
     <ExploreStackNav.Screen name="ExploreHome" component={ExploreScreen} />
     <ExploreStackNav.Screen name="Map" component={MapScreen} />
     <ExploreStackNav.Screen name="WorldMap" component={WorldMapScreen} />
-    <ExploreStackNav.Screen name="CountryWorld" component={CountryWorldScreen} options={{ animation: 'fade_from_bottom' }} />
-    <ExploreStackNav.Screen name="CountryRoom" component={CountryRoomScreen} options={{ animation: 'fade_from_bottom' }} />
+    <ExploreStackNav.Screen name="CountryWorld" component={CountryWorldScreen} options={{ animation: 'fade_from_bottom', animationDuration: 300 }} />
+    <ExploreStackNav.Screen name="CountryRoom" component={CountryRoomScreen} options={{ animation: 'fade', animationDuration: 350 }} />
     <ExploreStackNav.Screen name="CountryMap" component={CountryMapScreen} />
     <ExploreStackNav.Screen name="PlaceStreet" component={PlaceStreetScreen} />
   </ExploreStackNav.Navigator>
@@ -231,131 +187,115 @@ const MainTabs = () => (
   <Tab.Navigator
     screenOptions={{
       headerShown: false,
-      tabBarStyle: styles.tabBar,
-      tabBarBackground: () =>
-        Platform.OS === 'ios' ? (
-          <BlurView intensity={60} tint="systemChromeMaterialLight" style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.tabBarFallbackBg, { pointerEvents: 'none' }]} />
-        ),
-      tabBarShowLabel: true,
-      tabBarLabelStyle: styles.tabBarLabel,
-      tabBarActiveTintColor: colors.primary.wisteriaDark,
-      tabBarInactiveTintColor: colors.text.muted,
+      tabBarStyle: { display: 'none' as const, height: 0 },
     }}
   >
-    <Tab.Screen name="Home" component={HomeScreen} options={{
-      tabBarLabel: 'Home', tabBarAccessibilityLabel: 'Home',
-      tabBarIcon: ({ focused }) => <TabIcon focused={focused} iconName="homeFilled" iconNameOutline="homeOutline" />,
-    }} />
-    <Tab.Screen name="Explore" component={ExploreStackNavigator} options={{
-      tabBarLabel: 'Explore', tabBarAccessibilityLabel: 'Explore',
-      tabBarIcon: ({ focused }) => <TabIcon focused={focused} iconName="compass" iconNameOutline="compassOutline" />,
-    }} />
-    <Tab.Screen name="Inbox" component={InboxScreen} options={{
-      tabBarLabel: 'Inbox', tabBarAccessibilityLabel: 'Inbox',
-      tabBarIcon: ({ focused }) => <TabIcon focused={focused} iconName="mail" iconNameOutline="mailOutline" />,
-    }} />
-    <Tab.Screen name="Profile" component={ProfileScreen} options={{
-      tabBarLabel: 'Profile', tabBarAccessibilityLabel: 'Profile',
-      tabBarIcon: ({ focused }) => <TabIcon focused={focused} iconName="person" iconNameOutline="personOutline" />,
-    }} />
+    <Tab.Screen name="Home" component={HomeScreen} />
+    <Tab.Screen name="Explore" component={ExploreStackNavigator} />
+    <Tab.Screen name="Inbox" component={InboxScreen} />
+    <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
 );
+
+const AUTH_SCREENS = new Set(['Welcome', 'Login', 'SignUp', 'ForgotPassword', 'Onboarding']);
+
+function getActiveTabFromState(state: any): keyof MainTabParamList {
+  const mainRoute = state?.routes?.find((r: any) => r.name === 'Main');
+  if (mainRoute?.state) {
+    const tabIndex = mainRoute.state.index ?? 0;
+    const tabRoute = mainRoute.state.routes?.[tabIndex];
+    if (tabRoute?.name) return tabRoute.name as keyof MainTabParamList;
+  }
+  return 'Home';
+}
 
 export const AppNavigator = () => {
   const isAuthenticated = useStore(s => s.isAuthenticated);
   const navigationRef = useNavigationContainerRef();
+  const [currentRoute, setCurrentRoute] = useState('');
+  const [activeTab, setActiveTab] = useState<keyof MainTabParamList>('Home');
+
+  const handleStateChange = useCallback(() => {
+    const route = navigationRef.getCurrentRoute();
+    if (route?.name) {
+      setCurrentRoute(route.name);
+      analyticsService.trackScreenView(route.name);
+    }
+    const state = navigationRef.getRootState();
+    setActiveTab(getActiveTabFromState(state));
+  }, [navigationRef]);
+
+  const showBottomNav = isAuthenticated && !AUTH_SCREENS.has(currentRoute);
 
   return (
-    <NavigationContainer
-      ref={navigationRef}
-      onStateChange={() => {
-        const currentRoute = navigationRef.getCurrentRoute();
-        if (currentRoute?.name) {
-          analyticsService.trackScreenView(currentRoute.name);
-        }
-      }}
-    >
-      <Stack.Navigator
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base.cream }, animation: 'slide_from_right' }}
-        initialRouteName={isAuthenticated ? 'Main' : 'Welcome'}
-      >
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Map" component={MapScreen} />
-        <Stack.Screen name="Stamps" component={StampsScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Bites" component={BitesScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Learn" component={LearnScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="StampDetail" component={StampDetailScreen} />
-        <Stack.Screen name="BiteDetail" component={BiteDetailScreen} />
-        <Stack.Screen name="LocationDetail" component={LocationDetailScreen} />
-        <Stack.Screen name="CollectStamp" component={CollectStampScreen} />
-        <Stack.Screen name="AddBite" component={AddBiteScreen} />
-        <Stack.Screen name="Avatar" component={AvatarScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Badges" component={BadgesScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
-        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-        <Stack.Screen name="Progress" component={ProgressScreen} />
-        <Stack.Screen name="SkillDetail" component={SkillDetailScreen} />
-        <Stack.Screen name="DiscoveryLog" component={DiscoveryLogScreen} />
-        <Stack.Screen name="Friends" component={FriendsScreen} />
-        <Stack.Screen name="AddFriend" component={AddFriendScreen} />
-        <Stack.Screen name="FriendProfile" component={FriendProfileScreen} />
-        <Stack.Screen name="LessonCategory" component={LessonCategoryScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="Lesson" component={LessonScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="Quiz" component={QuizScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="Flashcards" component={FlashcardsScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="WordMatch" component={WordMatchScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="MemoryCards" component={MemoryCardsScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="CookingGame" component={CookingGameScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="TreasureHunt" component={TreasureHuntScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="FlagMatch" component={FlagMatchScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="MapPin" component={MapPinScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="CultureDressUp" component={CultureDressUpScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="SortCategorize" component={SortCategorizeScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="StoryBuilder" component={StoryBuilderScreen} options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="LearningPath" component={LearningPathScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="CosmeticShop" component={CosmeticShopScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="FurnitureShop" component={FurnitureShopScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="AuraStore" component={AuraStoreScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="Membership" component={MembershipScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="ShopHub" component={ShopHubScreen} options={{ animation: 'slide_from_bottom' }} />
-      </Stack.Navigator>
+    <NavigationContainer ref={navigationRef} onStateChange={handleStateChange}>
+      <View style={styles.rootLayout}>
+        <View style={styles.stackWrap}>
+          <Stack.Navigator
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base.cream }, animation: 'slide_from_right' }}
+            initialRouteName={isAuthenticated ? 'Main' : 'Welcome'}
+          >
+            <Stack.Screen name="Welcome" component={WelcomeScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Map" component={MapScreen} />
+            <Stack.Screen name="Stamps" component={StampsScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Bites" component={BitesScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Learn" component={LearnScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="StampDetail" component={StampDetailScreen} />
+            <Stack.Screen name="BiteDetail" component={BiteDetailScreen} />
+            <Stack.Screen name="LocationDetail" component={LocationDetailScreen} />
+            <Stack.Screen name="CollectStamp" component={CollectStampScreen} />
+            <Stack.Screen name="AddBite" component={AddBiteScreen} />
+            <Stack.Screen name="Avatar" component={AvatarScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Badges" component={BadgesScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="Progress" component={ProgressScreen} />
+            <Stack.Screen name="SkillDetail" component={SkillDetailScreen} />
+            <Stack.Screen name="DiscoveryLog" component={DiscoveryLogScreen} />
+            <Stack.Screen name="Friends" component={FriendsScreen} />
+            <Stack.Screen name="AddFriend" component={AddFriendScreen} />
+            <Stack.Screen name="FriendProfile" component={FriendProfileScreen} />
+            <Stack.Screen name="LessonCategory" component={LessonCategoryScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="Lesson" component={LessonScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="Quiz" component={QuizScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="Flashcards" component={FlashcardsScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="WordMatch" component={WordMatchScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="MemoryCards" component={MemoryCardsScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="CookingGame" component={CookingGameScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="TreasureHunt" component={TreasureHuntScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="FlagMatch" component={FlagMatchScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="MapPin" component={MapPinScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="CultureDressUp" component={CultureDressUpScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="SortCategorize" component={SortCategorizeScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="StoryBuilder" component={StoryBuilderScreen} options={{ animation: 'fade_from_bottom', animationDuration: 400 }} />
+            <Stack.Screen name="LearningPath" component={LearningPathScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="CosmeticShop" component={CosmeticShopScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="FurnitureShop" component={FurnitureShopScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="AuraStore" component={AuraStoreScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="Membership" component={MembershipScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="ShopHub" component={ShopHubScreen} options={{ animation: 'slide_from_bottom' }} />
+          </Stack.Navigator>
+        </View>
+        {showBottomNav && (
+          <PersistentBottomNav navigationRef={navigationRef} activeTab={activeTab} />
+        )}
+      </View>
     </NavigationContainer>
   );
 };
 
 const styles = StyleSheet.create({
+  rootLayout: { flex: 1 },
+  stackWrap: { flex: 1 },
   loadingWrap: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     backgroundColor: colors.base.cream,
-  },
-  tabBar: {
-    position: 'absolute',
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(253, 251, 248, 0.92)',
-    borderTopWidth: 0, height: 88, paddingTop: spacing.sm, paddingBottom: spacing.lg + 4,
-    elevation: 16, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    ...getShadowStyle({ shadowColor: 'rgba(184, 165, 224, 0.2)', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 1, shadowRadius: 24 }),
-  },
-  tabBarFallbackBg: {
-    backgroundColor: 'rgba(253, 251, 248, 0.95)', borderTopLeftRadius: 28, borderTopRightRadius: 28,
-  },
-  tabBarLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 10, marginTop: 2, letterSpacing: 0.3 },
-  tabIcon: { alignItems: 'center', justifyContent: 'center', padding: spacing.xxs, position: 'relative' },
-  tabIconFocused: {},
-  focusGlow: {
-    position: 'absolute', width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(184, 165, 224, 0.12)', top: -6,
-  },
-  focusIndicator: {
-    width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary.wisteriaDark, marginTop: 4,
-    ...getShadowStyle({ shadowColor: colors.primary.wisteria, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6 }),
   },
   errorWrap: {
     flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: colors.base.cream,

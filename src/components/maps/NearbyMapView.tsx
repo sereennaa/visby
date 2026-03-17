@@ -15,8 +15,8 @@ const PLACE_DOT_SIZE = 24;
 const MAX_DISTANCE_KM = 5;
 
 /** Position a place on the map: angle from index, radius from distance (closer = nearer center). */
-function getPlacePosition(index: number, distanceKm: number): { xPercent: number; yPercent: number } {
-  const angle = (index / 6) * 2 * Math.PI - Math.PI / 2;
+function getPlacePosition(index: number, distanceKm: number, total: number): { xPercent: number; yPercent: number } {
+  const angle = (index / Math.max(total, 1)) * 2 * Math.PI - Math.PI / 2;
   const radiusPercent = 15 + Math.min((distanceKm / MAX_DISTANCE_KM) * 30, 30);
   const x = 50 + radiusPercent * Math.cos(angle);
   const y = 50 + radiusPercent * Math.sin(angle);
@@ -61,7 +61,7 @@ export const NearbyMapView: React.FC<NearbyMapViewProps> = ({ locations, onPlace
         </View>
         {/* Place dots */}
         {places.map((loc, index) => {
-          const { xPercent, yPercent } = getPlacePosition(index, loc.distanceKm);
+          const { xPercent, yPercent } = getPlacePosition(index, loc.distanceKm, places.length);
           const left = (xPercent / 100) * mapWidth - PLACE_DOT_SIZE / 2;
           const top = (yPercent / 100) * MAP_HEIGHT - PLACE_DOT_SIZE / 2;
           const typeInfo = STAMP_TYPES_INFO[loc.type as StampType] || STAMP_TYPES_INFO.landmark;

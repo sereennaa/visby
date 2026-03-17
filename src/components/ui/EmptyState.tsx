@@ -1,87 +1,70 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
-import { Text, Heading, Caption } from './Text';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  cancelAnimation,
+  Easing,
+} from 'react-native-reanimated';
+import { Text, Heading } from './Text';
 import { Button } from './Button';
-import { Icon, IconName } from './Icon';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
-export interface EmptyStateProps {
-  /** Icon name from Icon component */
-  icon: IconName;
-  /** Main heading */
+interface EmptyStateProps {
+  emoji: string;
   title: string;
-  /** Short explanation */
-  subtitle: string;
-  /** Primary button label; omit to hide button */
-  actionLabel?: string;
-  /** Primary button press */
-  onAction?: () => void;
-  /** Optional secondary action (e.g. "Explore nearby" link) */
-  secondaryLabel?: string;
-  onSecondary?: () => void;
-  /** Optional custom illustration (overrides icon) */
-  illustration?: React.ReactNode;
-  /** Container style when used inside a list or card */
+  message: string;
+  ctaLabel?: string;
+  onCta?: () => void;
   style?: ViewStyle;
-  /** Accessibility label for the empty state container */
-  accessibilityLabel?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  icon,
+  emoji,
   title,
-  subtitle,
-  actionLabel,
-  onAction,
-  secondaryLabel,
-  onSecondary,
-  illustration,
+  message,
+  ctaLabel,
+  onCta,
   style,
-  accessibilityLabel,
 }) => {
+  const bounce = useSharedValue(0);
+
+  useEffect(() => {
+    bounce.value = withRepeat(
+      withSequence(
+        withTiming(-8, { duration: 600, easing: Easing.out(Easing.cubic) }),
+        withTiming(0, { duration: 600, easing: Easing.in(Easing.bounce) }),
+      ),
+      -1,
+      false,
+    );
+    return () => { cancelAnimation(bounce); };
+  }, []);
+
+  const bounceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bounce.value }],
+  }));
+
   return (
-    <View
-      style={[styles.container, style]}
-      accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityRole="none"
-    >
-      {illustration != null ? (
-        <View style={styles.iconWrap}>{illustration}</View>
-      ) : (
-        <View style={styles.iconWrap}>
-          <Icon name={icon} size={spacing.icon.xxl} color={colors.primary.wisteria} />
-        </View>
-      )}
-      <Heading level={3} align="center" style={styles.title}>
-        {title}
-      </Heading>
-      <Caption align="center" color={colors.text.muted} style={styles.subtitle}>
-        {subtitle}
-      </Caption>
-      {actionLabel != null && onAction != null && (
+    <View style={[styles.container, style]}>
+      <Animated.Text style={[styles.emoji, bounceStyle]}>
+        {emoji}
+      </Animated.Text>
+      <Heading level={2} style={styles.title}>{title}</Heading>
+      <Text variant="body" color={colors.text.muted} style={styles.message}>
+        {message}
+      </Text>
+      {ctaLabel && onCta && (
         <Button
-          title={actionLabel}
-          onPress={onAction}
+          title={ctaLabel}
+          onPress={onCta}
           variant="primary"
-          size="md"
-          style={styles.primaryButton}
-          accessibilityLabel={actionLabel}
+          style={styles.cta}
         />
-      )}
-      {secondaryLabel != null && onSecondary != null && (
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={onSecondary}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel={secondaryLabel}
-        >
-          <Icon name="map" size={spacing.icon.sm} color={colors.primary.wisteriaDark} />
-          <Text variant="body" color={colors.primary.wisteriaDark}>
-            {secondaryLabel}
-          </Text>
-        </TouchableOpacity>
       )}
     </View>
   );
@@ -89,28 +72,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
+    padding: spacing.xxl,
+    gap: spacing.sm,
   },
-  iconWrap: {
+  emoji: {
+    fontSize: 56,
     marginBottom: spacing.sm,
   },
   title: {
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    marginBottom: spacing.lg,
     textAlign: 'center',
   },
-  primaryButton: {
-    marginBottom: spacing.md,
+  message: {
+    textAlign: 'center',
+    maxWidth: 280,
   },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  cta: {
+    marginTop: spacing.md,
   },
 });

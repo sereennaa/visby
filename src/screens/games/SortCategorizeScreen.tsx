@@ -20,6 +20,10 @@ import { useStore } from '../../store/useStore';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { analyticsService } from '../../services/analytics';
 import { soundService } from '../../services/sound';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
+import { speechService } from '../../services/audio';
 import type { RootStackParamList } from '../../types';
 
 interface SortItem {
@@ -119,7 +123,8 @@ export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => 
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
   const [challengeIndex, setChallengeIndex] = useState(0);
-  const [phase, setPhase] = useState<'playing' | 'result'>('playing');
+  const [phase, setPhase] = useState<'launching' | 'playing' | 'result'>('launching');
+  const [showCelebration, setShowCelebration] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SortItem | null>(null);
   const [sorted, setSorted] = useState<Record<string, string[]>>({});
   const [correctCount, setCorrectCount] = useState(0);
@@ -176,15 +181,37 @@ export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => 
         if (pathNodeId) completePathNode(pathNodeId);
         const bonus = getGameOfTheDayBonusAura('SortCategorize');
         if (bonus > 0) addAura(bonus);
+        setShowCelebration(true);
         setPhase('result');
       }, 500));
     }
   }, [selectedItem, sorted, challenge.items.length]);
 
+  if (phase === 'launching') {
+    return (
+      <GameLaunchSequence
+        gameName="Sort & Categorize"
+        gameIcon="grid"
+        rules="Sort each item into the correct category!"
+        onComplete={() => setPhase('playing')}
+      />
+    );
+  }
+
   if (phase === 'result') {
     const percent = Math.round((correctCount / challenge.items.length) * 100);
     return (
       <View style={styles.container}>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(correctCount, challenge.items.length)}
+            score={correctCount}
+            maxScore={challenge.items.length}
+            auraEarned={totalAura}
+            gameName="Sort & Categorize"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
         <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={StyleSheet.absoluteFill} />
         <SafeAreaView style={styles.safeArea}>
           <Animated.View entering={ZoomIn.duration(500)} style={styles.resultCard}>
@@ -223,7 +250,10 @@ export const SortCategorizeScreen: React.FC<Props> = ({ navigation, route }) => 
           </View>
         </View>
 
-        <Caption style={styles.subtitle}>{challenge.title}</Caption>
+        <View style={styles.subtitleRow}>
+          <Caption style={styles.subtitle}>{challenge.title}</Caption>
+          <SpeakerButton text={`${challenge.title}. Tap an item, then tap the category it belongs to. Categories: ${challenge.categories.map(c => c.name).join(', ')}`} compact />
+        </View>
         <Caption style={{ textAlign: 'center', color: colors.text.muted, marginBottom: spacing.sm }}>
           Tap an item, then tap the category it belongs to
         </Caption>
@@ -276,7 +306,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   scoreChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.reward.peachLight, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   scoreText: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.reward.amber },
-  subtitle: { textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.text.primary, marginBottom: spacing.xs },
+  subtitle: { textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.text.primary },
+  subtitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: spacing.xs },
   categoriesRow: { flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
   categoryBucket: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, borderRadius: 16, borderWidth: 2 },
   categoryName: { fontFamily: 'Nunito-Bold', fontSize: 14 },

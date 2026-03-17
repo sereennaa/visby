@@ -273,7 +273,7 @@ export const AuraStoreScreen: React.FC<AuraStoreScreenProps> = ({ navigation }) 
         </ScrollView>
       </SafeAreaView>
 
-      <Modal visible={buyModalVisible} transparent animationType="none" onRequestClose={() => setBuyModalVisible(false)}>
+      <Modal visible={buyModalVisible} transparent animationType="fade" onRequestClose={() => setBuyModalVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setBuyModalVisible(false)}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>

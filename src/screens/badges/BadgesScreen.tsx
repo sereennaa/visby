@@ -18,6 +18,7 @@ import { Icon, IconName } from '../../components/ui/Icon';
 import { useStore } from '../../store/useStore';
 import { BADGE_DEFINITIONS, BadgeDefinition } from '../../config/badges';
 import { getBadgeProgress, BadgeCheckContext } from '../../services/badges';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { RootStackParamList } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -138,6 +139,16 @@ export const BadgesScreen: React.FC<BadgesScreenProps> = ({ navigation }) => {
             </Text>
           </View>
         </Animated.View>
+
+        {badges.length === 0 && (
+          <EmptyState
+            emoji="🏅"
+            title="Your badge journey begins!"
+            message="Explore countries, play games, and learn new things to earn your first badge."
+            ctaLabel="Start exploring"
+            onCta={() => navigation.goBack()}
+          />
+        )}
 
         <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.badgeListWrap}>
         <FlatList

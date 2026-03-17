@@ -60,11 +60,15 @@ import { ObjectDetailModal, FurnitureInteractionModal, MicroEventModal, GamesMod
 import { LocationsModal } from '../../components/room/LocationsModal';
 import { DraggableFurniture, GridOverlay } from '../../components/room/DraggableFurniture';
 import { RoomTintOverlay, DynamicWindow } from '../../components/room/RoomAtmosphere';
+import { RoomObjectIllustration, getObjectIllustration } from '../../components/room/illustrations';
 import { FurnitureMicroAnim, getAnimTypeForInteraction } from '../../components/room/FurnitureMicroAnim';
 import { VisbyReactions, ReactionTrigger } from '../../components/visby/VisbyReactions';
 import { AchievementCeremony } from '../../components/effects/AchievementCeremony';
 import { calculateTraitLevels, getDominantTrait } from '../../config/visbyPersonality';
 import { getActiveSeasonalVisuals } from '../../config/seasonalEvents';
+import { RoomReveal, useRoomReveal } from '../../components/effects/RoomReveal';
+import { useDeviceParallax } from '../../hooks/useDeviceParallax';
+import { ambientSoundService } from '../../services/ambientSound';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AVATAR_SIZE = 84;
@@ -170,6 +174,26 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const currentRoom: HouseRoom | undefined = rooms[currentRoomIdx];
   const [roomDialogueLine, setRoomDialogueLine] = useState<string | null>(null);
 
+  const [reactionTrigger, setReactionTrigger] = useState<ReactionTrigger | null>(null);
+  const triggerReaction = useCallback((trigger: ReactionTrigger) => {
+    setReactionTrigger(null);
+    requestAnimationFrame(() => setReactionTrigger(trigger));
+  }, []);
+
+  const dominantTrait = useMemo(() => {
+    const traits = calculateTraitLevels({
+      bites: stamps?.length ?? 0,
+      lessonsCompleted: 0,
+      countriesVisited: user?.visitedCountries?.length ?? 0,
+      chatMessages: 0,
+      wordMatchGames: 0,
+      gamesPlayed: 0,
+      stampsCollected: stamps?.length ?? 0,
+      averageNeedLevel: visby ? (visby.hunger + visby.happiness + visby.energy + visby.knowledge) / 4 : 50,
+    });
+    return getDominantTrait(traits);
+  }, [stamps?.length, user?.visitedCountries?.length, visby]);
+
   useEffect(() => {
     if (!countryId || isViewingFriendHouse) return;
     recordSeasonalCountryEntry();
@@ -179,6 +203,21 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const [microEventAura, setMicroEventAura] = useState<number>(5);
   const [microEventIsRare, setMicroEventIsRare] = useState(false);
   const [discoveryToast, setDiscoveryToast] = useState<string | null>(null);
+
+  const { tiltX, tiltY } = useDeviceParallax(true);
+  const { showReveal, triggerReveal, completeReveal } = useRoomReveal();
+
+  useEffect(() => {
+    if (!currentRoom?.id || !countryId) return;
+    const roomKey = `${countryId}_${currentRoom.id}`;
+    triggerReveal(roomKey);
+  }, [currentRoom?.id, countryId]);
+
+  useEffect(() => {
+    if (!countryId || isViewingFriendHouse) return;
+    ambientSoundService.enterRoom(countryId, currentRoom?.id);
+    return () => { ambientSoundService.leaveRoom(); };
+  }, [countryId, currentRoom?.id, isViewingFriendHouse]);
 
   useEffect(() => {
     if (!currentRoom?.id || !countryId || isViewingFriendHouse) return;
@@ -249,17 +288,11 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
 
   const [visbyMood, setVisbyMood] = useState<string>('curious');
   const [visbyReaction, setVisbyReaction] = useState<string | undefined>(undefined);
-  const [reactionTrigger, setReactionTrigger] = useState<ReactionTrigger | null>(null);
   const [showRoomCelebration, setShowRoomCelebration] = useState(false);
   const [completedRoomIds, setCompletedRoomIds] = useState<Set<string>>(new Set());
 
   const roomEntranceScale = useSharedValue(0.95);
   const roomEntranceOpacity = useSharedValue(0.7);
-
-  const triggerReaction = useCallback((trigger: ReactionTrigger) => {
-    setReactionTrigger(null);
-    requestAnimationFrame(() => setReactionTrigger(trigger));
-  }, []);
 
   const setTempMood = useCallback((mood: string, durationMs = 3000) => {
     setVisbyMood(mood);
@@ -297,20 +330,6 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
     eyeColor: '#4A90D9',
     eyeShape: 'round',
   }, [visby?.appearance]);
-
-  const dominantTrait = useMemo(() => {
-    const traits = calculateTraitLevels({
-      bites: stamps?.length ?? 0,
-      lessonsCompleted: 0,
-      countriesVisited: user?.visitedCountries?.length ?? 0,
-      chatMessages: 0,
-      wordMatchGames: 0,
-      gamesPlayed: 0,
-      stampsCollected: stamps?.length ?? 0,
-      averageNeedLevel: visby ? (visby.hunger + visby.happiness + visby.energy + visby.knowledge) / 4 : 50,
-    });
-    return getDominantTrait(traits);
-  }, [stamps?.length, user?.visitedCountries?.length, visby]);
 
   const seasonalVisuals = useMemo(() => getActiveSeasonalVisuals(), []);
 
@@ -612,6 +631,14 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   return (
     <View style={styles.container}>
       <LinearGradient colors={[...atmosphere.immersiveBg]} style={StyleSheet.absoluteFill} locations={[0, 0.5, 1]} />
+      {showReveal && currentRoom && (
+        <RoomReveal
+          wallColor={currentRoom.wallColor}
+          roomName={currentRoom.name}
+          objectCount={currentRoom.objects?.length || 0}
+          onComplete={() => completeReveal(`${countryId}_${currentRoom.id}`)}
+        />
+      )}
       {showCountryIntro && country && (
         <Animated.View
           style={[styles.countryIntroOverlay, introScaleStyle, { pointerEvents: 'none' }]}
@@ -722,6 +749,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 const roomTotalInt = roomObjs.filter(o => o.interactive).length;
                 const roomDone = roomObjs.filter(o => o.interactive && interactedObjects.has(o.id)).length;
                 const isRoomComplete = completedRoomIds.has(room.id) || (roomTotalInt > 0 && roomDone >= roomTotalInt);
+                const progressPct = roomTotalInt > 0 ? (roomDone / roomTotalInt) * 100 : 0;
                 return (
                   <TouchableOpacity
                     key={room.id}
@@ -733,20 +761,31 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     onPress={() => goToRoom(idx)}
                     activeOpacity={0.85}
                   >
-                    <View style={[styles.roomCardSwatch, { backgroundColor: roomWall }]}>
-                      {isRoomComplete && (
-                        <View style={styles.roomCardTrophy}>
-                          <Icon name="trophy" size={10} color="#FFD700" />
+                    <LinearGradient
+                      colors={isActive
+                        ? [(country?.accentColor ?? colors.primary.wisteria) + '30', roomWall]
+                        : [roomWall, roomWall]}
+                      style={styles.roomCardGradient}
+                    >
+                      <View style={styles.roomCardTop}>
+                        <View style={[styles.roomCardIconCircle, isActive && { backgroundColor: (country?.accentColor ?? colors.primary.wisteria) + '25' }]}>
+                          <Icon name={room.icon as IconName} size={18} color={isActive ? colors.primary.wisteriaDark : colors.text.secondary} />
                         </View>
-                      )}
-                    </View>
-                    <View style={styles.roomCardContent}>
-                      <Icon name={room.icon as IconName} size={20} color={isActive ? colors.primary.wisteriaDark : colors.text.secondary} />
+                        {isRoomComplete ? (
+                          <View style={styles.roomCardCompleteBadge}>
+                            <Icon name="trophy" size={11} color="#FFD700" />
+                          </View>
+                        ) : roomTotalInt > 0 ? (
+                          <Text style={[styles.roomCardProgress, isActive && { color: colors.primary.wisteriaDark }]}>{roomDone}/{roomTotalInt}</Text>
+                        ) : null}
+                      </View>
                       <Text style={[styles.roomCardLabel, isActive && styles.roomCardLabelActive]} numberOfLines={1}>{room.name}</Text>
                       {roomTotalInt > 0 && (
-                        <Text style={styles.roomCardProgress}>{roomDone}/{roomTotalInt}</Text>
+                        <View style={styles.roomCardProgressBar}>
+                          <View style={[styles.roomCardProgressFill, { width: `${progressPct}%`, backgroundColor: isRoomComplete ? colors.success.emerald : (country?.accentColor ?? colors.primary.wisteria) }]} />
+                        </View>
                       )}
-                    </View>
+                    </LinearGradient>
                   </TouchableOpacity>
                 );
               })}
@@ -805,6 +844,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     width={SCREEN_WIDTH - spacing.md * 2}
                     height={WINDOW_STRIP_HEIGHT}
                     overrideSky={atmosphere.windowSky}
+                    countryId={countryId}
                   />
                   <View style={styles.windowCurtainLeft} />
                   <View style={styles.windowCurtainRight} />
@@ -821,30 +861,26 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                   />
                 </View>
 
-                {/* Wall */}
+                {/* Wall with optional background image */}
                 <LinearGradient
                   colors={[effectiveWallColor, effectiveWallColor, (country?.accentColor ?? colors.primary.wisteria) + '18']}
                   style={[styles.roomWall, { height: WALL_HEIGHT - WINDOW_STRIP_HEIGHT }]}
                   locations={[0, 0.7, 1]}
                 >
-                  {/* Wallpaper texture dots */}
-                  <View style={[styles.wallTextureOverlay, { pointerEvents: 'none' }]}>
-                    {Array.from({ length: TEXTURE_DOT_COUNT }).map((_, i) => (
-                      <View
-                        key={i}
-                        style={[
-                          styles.wallTextureDot,
-                          {
-                            left: `${8 + ((i * 37) % 84)}%` as any,
-                            top: `${10 + ((i * 53) % 80)}%` as any,
-                            width: 2 + (i % 3),
-                            height: 2 + (i % 3),
-                            borderRadius: (2 + (i % 3)) / 2,
-                          },
-                        ]}
+                  {currentRoom.roomImageUrl && (
+                    <View style={styles.roomBgImageWrap} pointerEvents="none">
+                      <Image
+                        source={{ uri: currentRoom.roomImageUrl }}
+                        style={styles.roomBgImage}
+                        resizeMode="cover"
+                        blurRadius={Platform.OS === 'web' ? 0 : 8}
                       />
-                    ))}
-                  </View>
+                      <LinearGradient
+                        colors={[effectiveWallColor + 'E8', effectiveWallColor + 'C0', effectiveWallColor + 'A0']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    </View>
+                  )}
 
                   {/* Corner shadow vignettes */}
                   <View style={[styles.wallCornerLeft, { pointerEvents: 'none' }]}>
@@ -864,14 +900,8 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     />
                   </View>
 
-                  {/* Wainscoting panels */}
-                  <View style={styles.wainscotingWrap}>
-                    {[0, 1, 2, 3, 4].map(i => (
-                      <View key={i} style={styles.wainscotPanel}>
-                        <View style={styles.wainscotPanelInner} />
-                      </View>
-                    ))}
-                  </View>
+                  {/* Country-themed accent strip */}
+                  <View style={[styles.accentStrip, { backgroundColor: (country?.accentColor ?? colors.primary.wisteria) + '15' }]} pointerEvents="none" />
                   {/* Chair rail */}
                   <View style={styles.wainscotChairRail} />
 
@@ -953,7 +983,15 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                           disabled={!isInteractive}
                           hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                         >
-                          {isInteractive && !wasInteracted ? (
+                          {getObjectIllustration(obj.id) ? (
+                            <RoomObjectIllustration
+                              objectId={obj.id}
+                              size={52}
+                              animated={isInteractive && !wasInteracted}
+                              interactive={isInteractive}
+                              discovered={wasInteracted}
+                            />
+                          ) : isInteractive && !wasInteracted ? (
                             <BreathingPulse>
                               <View style={[styles.roomObjectIconWrap, styles.roomObjectIconWrapGlow]}>
                                 <Icon name={obj.icon as IconName} size={34} color={colors.text.primary} />
@@ -965,9 +1003,9 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                             </View>
                           )}
                           <Text style={[styles.objectLabel, wasInteracted && styles.objectLabelDone]} numberOfLines={2}>{obj.label}</Text>
-                          {isInteractive && !wasInteracted && <View style={styles.interactiveDot} />}
-                          {isInteractive && wasInteracted && <Icon name="check" size={16} color={colors.success.emerald} style={styles.objectCheck} />}
-                          {isInteractive && !wasInteracted && (
+                          {!getObjectIllustration(obj.id) && isInteractive && !wasInteracted && <View style={styles.interactiveDot} />}
+                          {!getObjectIllustration(obj.id) && isInteractive && wasInteracted && <Icon name="check" size={16} color={colors.success.emerald} style={styles.objectCheck} />}
+                          {!getObjectIllustration(obj.id) && isInteractive && !wasInteracted && (
                             <View style={styles.objectSparkleHint}>
                               <Icon name="sparkles" size={10} color={colors.reward.gold} />
                             </View>
@@ -1221,47 +1259,62 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               </View>
             </TouchableOpacity>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionsChipsRow}>
-              <TouchableOpacity style={styles.actionChip} onPress={() => navigation.navigate('CountryMap', { countryId })}>
-                <Icon name="compass" size={18} color={colors.primary.wisteriaDark} />
-                <Text style={styles.actionChipLabel}>Map</Text>
+            <View style={styles.actionsGrid}>
+              <TouchableOpacity style={[styles.actionGridItem, { backgroundColor: colors.primary.wisteriaFaded + '40' }]} onPress={() => navigation.navigate('CountryMap', { countryId })} activeOpacity={0.8}>
+                <View style={[styles.actionGridIcon, { backgroundColor: colors.primary.wisteria + '20' }]}>
+                  <Icon name="compass" size={20} color={colors.primary.wisteriaDark} />
+                </View>
+                <Text style={styles.actionGridLabel}>Map</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionChip} onPress={() => setShowGamesModal(true)}>
-                <Icon name="sparkles" size={18} color={colors.reward.gold} />
-                <Text style={styles.actionChipLabel}>Mini-Games</Text>
+              <TouchableOpacity style={[styles.actionGridItem, { backgroundColor: 'rgba(255,215,0,0.08)' }]} onPress={() => setShowGamesModal(true)} activeOpacity={0.8}>
+                <View style={[styles.actionGridIcon, { backgroundColor: 'rgba(255,215,0,0.15)' }]}>
+                  <Icon name="sparkles" size={20} color={colors.reward.gold} />
+                </View>
+                <Text style={styles.actionGridLabel}>Games</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionChip} onPress={() => { if (facts.length > 0) { setFactIndex(0); openFact(facts[0]); } }}>
-                <Icon name="book" size={18} color={colors.calm.ocean} />
-                <Text style={styles.actionChipLabel}>Facts ({readFacts.size}/{facts.length})</Text>
+              <TouchableOpacity style={[styles.actionGridItem, { backgroundColor: colors.calm.skyLight + '40' }]} onPress={() => { if (facts.length > 0) { setFactIndex(0); openFact(facts[0]); } }} activeOpacity={0.8}>
+                <View style={[styles.actionGridIcon, { backgroundColor: colors.calm.ocean + '18' }]}>
+                  <Icon name="book" size={20} color={colors.calm.ocean} />
+                </View>
+                <Text style={styles.actionGridLabel}>Facts</Text>
+                <Text style={styles.actionGridBadge}>{readFacts.size}/{facts.length}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionChip} onPress={() => setShowKnowledgeMap(true)}>
-                <Icon name="brain" size={18} color={colors.primary.wisteria} />
-                <Text style={styles.actionChipLabel}>What I Know</Text>
+              <TouchableOpacity style={[styles.actionGridItem, { backgroundColor: colors.primary.wisteriaFaded + '25' }]} onPress={() => setShowKnowledgeMap(true)} activeOpacity={0.8}>
+                <View style={[styles.actionGridIcon, { backgroundColor: colors.primary.wisteria + '15' }]}>
+                  <Icon name="brain" size={20} color={colors.primary.wisteria} />
+                </View>
+                <Text style={styles.actionGridLabel}>Knowledge</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.actionChip}
+                style={[styles.actionGridItem, { backgroundColor: isOwner ? 'rgba(76,175,80,0.08)' : 'rgba(255,160,100,0.08)' }]}
                 onPress={() => {
                   if (isViewingFriendHouse) navigation.goBack();
                   else if (isOwner) setEditMode(true);
                   else navigation.navigate('CountryWorld');
                 }}
+                activeOpacity={0.8}
               >
-                <Icon
-                  name={isViewingFriendHouse ? 'chevronLeft' : isOwner ? 'edit' : 'home'}
-                  size={18}
-                  color={isViewingFriendHouse ? colors.text.secondary : isOwner ? colors.success.emerald : colors.reward.peachDark}
-                />
-                <Text style={styles.actionChipLabel}>
+                <View style={[styles.actionGridIcon, { backgroundColor: isOwner ? 'rgba(76,175,80,0.15)' : 'rgba(255,160,100,0.15)' }]}>
+                  <Icon
+                    name={isViewingFriendHouse ? 'chevronLeft' : isOwner ? 'edit' : 'home'}
+                    size={20}
+                    color={isOwner ? colors.success.emerald : colors.reward.peachDark}
+                  />
+                </View>
+                <Text style={styles.actionGridLabel}>
                   {isViewingFriendHouse ? 'Leave' : isOwner ? 'Decorate' : 'Get House'}
                 </Text>
               </TouchableOpacity>
               {locations.length > 0 && (
-                <TouchableOpacity style={styles.actionChip} onPress={() => setShowLocationsModal(true)}>
-                  <Icon name="landmark" size={18} color={colors.reward.peachDark} />
-                  <Text style={styles.actionChipLabel}>Stops ({visitedLocations.size}/{locations.length})</Text>
+                <TouchableOpacity style={[styles.actionGridItem, { backgroundColor: 'rgba(255,160,100,0.08)' }]} onPress={() => setShowLocationsModal(true)} activeOpacity={0.8}>
+                  <View style={[styles.actionGridIcon, { backgroundColor: 'rgba(255,160,100,0.15)' }]}>
+                    <Icon name="landmark" size={20} color={colors.reward.peachDark} />
+                  </View>
+                  <Text style={styles.actionGridLabel}>Stops</Text>
+                  <Text style={styles.actionGridBadge}>{visitedLocations.size}/{locations.length}</Text>
                 </TouchableOpacity>
               )}
-            </ScrollView>
+            </View>
 
             {!isViewingFriendHouse && country && (() => {
               const progress = getCountryStampProgress(stamps, countryId);
@@ -1309,77 +1362,144 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
             </View>
           </View>
 
-          {/* Fun Facts */}
+          {/* Discovery Cards */}
           <View style={styles.factsSection}>
-            <Text style={styles.sectionTitle}>Fun facts about {country.name}</Text>
+            <View style={styles.factsSectionHeader}>
+              <View style={[styles.factsSectionBadge, { backgroundColor: (country?.accentColor ?? colors.primary.wisteria) + '20' }]}>
+                <Icon name="compass" size={14} color={country?.accentColor ?? colors.primary.wisteria} />
+              </View>
+              <Text style={styles.sectionTitle}>Discover {country.name}</Text>
+              <Text style={styles.factsSectionCount}>{readFacts.size}/{facts.length}</Text>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.factsScroll}>
               {facts.map((fact, index) => {
                 const isRead = readFacts.has(fact.id);
                 return (
                   <TouchableOpacity
                     key={fact.id}
-                    style={[styles.factChip, { borderColor: (country?.accentColor ?? colors.primary.wisteria) + '60' }, isRead && styles.factChipRead]}
+                    style={[styles.discoveryCard, isRead && styles.discoveryCardRead]}
                     onPress={() => { setFactIndex(index); openFact(fact); }}
+                    activeOpacity={0.85}
                   >
-                    <Icon name={fact.icon as any} size={18} color={colors.primary.wisteriaDark} />
-                    <Text variant="caption" numberOfLines={1} style={isRead ? styles.factTextRead : undefined}>{fact.title}</Text>
-                    {isRead && <Icon name="check" size={14} color={colors.success.emerald} />}
+                    <LinearGradient
+                      colors={isRead
+                        ? [colors.success.honeydew, colors.surface.card]
+                        : [(country?.accentColor ?? colors.primary.wisteria) + '12', colors.surface.card]}
+                      style={styles.discoveryCardGradient}
+                    >
+                      <View style={styles.discoveryCardTop}>
+                        <View style={[styles.discoveryCardIconWrap, { backgroundColor: (country?.accentColor ?? colors.primary.wisteria) + '18' }]}>
+                          <Icon name={fact.icon as any} size={20} color={country?.accentColor ?? colors.primary.wisteriaDark} />
+                        </View>
+                        {isRead && (
+                          <View style={styles.discoveryCheckBadge}>
+                            <Icon name="check" size={12} color={colors.success.emerald} />
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.discoveryCardTitle, isRead && styles.discoveryCardTitleRead]} numberOfLines={2}>{fact.title}</Text>
+                      {!isRead && (
+                        <View style={styles.discoveryCardCta}>
+                          <Text style={[styles.discoveryCardCtaText, { color: country?.accentColor ?? colors.primary.wisteriaDark }]}>Tap to discover</Text>
+                          <Icon name="sparkles" size={10} color={colors.reward.gold} />
+                        </View>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           </View>
 
-          {/* Story Arc + Journey Tracker */}
+          {/* Travel Journal */}
           {currentRoom && (
             <View style={styles.journeySection}>
-              <View style={styles.storyArcRow}>
-                <Icon name="compass" size={18} color={country.accentColor} />
-                <Text style={styles.storyArcText}>
-                  Discovering {country.name} — Room {currentRoomIdx + 1}/{rooms.length}
-                </Text>
-              </View>
-              <View style={styles.storyArcBar}>
-                <View style={[styles.storyArcFill, { width: `${((currentRoomIdx + 1) / Math.max(rooms.length, 1)) * 100}%`, backgroundColor: country.accentColor }]} />
-              </View>
+              <LinearGradient
+                colors={[colors.base.parchment, colors.surface.lavender + '60', colors.base.cream]}
+                style={styles.journeyGradient}
+              >
+                <View style={styles.journeyHeader}>
+                  <View style={[styles.journeyBadge, { backgroundColor: country.accentColor + '20' }]}>
+                    <Icon name="compass" size={16} color={country.accentColor} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.journeyLabel}>Travel Journal</Text>
+                    <Text style={styles.journeySubLabel}>Discovering {country.name}</Text>
+                  </View>
+                </View>
 
-              <Text style={styles.journeyTitle}>
-                {completedRoomIds.has(currentRoom.id) || (totalInteractive > 0 && roomInteracted >= totalInteractive)
-                  ? `All discoveries made! Try the quiz next.`
-                  : `Explore ${currentRoom.name} — ${roomInteracted}/${totalInteractive} discoveries`}
-              </Text>
-              <View style={styles.journeyHints}>
-                {(() => {
-                  const hints: { icon: IconName; text: string; action?: () => void }[] = [];
-                  const undiscovered = currentRoom.objects.filter(o => o.interactive && !interactedObjects.has(o.id));
-                  if (undiscovered.length > 0) {
-                    hints.push({
-                      icon: 'sparkles',
-                      text: `Tap ${undiscovered[0].label} to discover something new`,
-                      action: () => handleObjectTap(undiscovered[0]),
-                    });
-                  }
-                  if (undiscovered.length > 1) {
-                    hints.push({ icon: 'compass', text: `${undiscovered.length} more objects to discover in this room` });
-                  }
-                  if (hints.length === 0) {
-                    hints.push({ icon: 'trophy', text: 'Amazing! You\'ve explored everything here.' });
-                  }
-                  return hints.slice(0, 3).map((hint, i) => (
-                    <TouchableOpacity
-                      key={i}
-                      style={styles.journeyHintRow}
-                      onPress={hint.action}
-                      activeOpacity={hint.action ? 0.7 : 1}
-                      disabled={!hint.action}
-                    >
-                      <Icon name={hint.icon} size={16} color={colors.reward.gold} />
-                      <Text style={styles.journeyHintText}>{hint.text}</Text>
-                      {hint.action && <Icon name="chevronRight" size={14} color={colors.text.muted} />}
-                    </TouchableOpacity>
-                  ));
-                })()}
-              </View>
+                {/* Room stamps */}
+                <View style={styles.journeyStamps}>
+                  {rooms.map((room, idx) => {
+                    const roomObjs = room.objects ?? [];
+                    const rTotal = roomObjs.filter(o => o.interactive).length;
+                    const rDone = roomObjs.filter(o => o.interactive && interactedObjects.has(o.id)).length;
+                    const isComplete = completedRoomIds.has(room.id) || (rTotal > 0 && rDone >= rTotal);
+                    const isCurrent = idx === currentRoomIdx;
+                    return (
+                      <TouchableOpacity
+                        key={room.id}
+                        style={[styles.journeyStamp, isCurrent && styles.journeyStampCurrent, isComplete && styles.journeyStampComplete]}
+                        onPress={() => goToRoom(idx)}
+                        activeOpacity={0.8}
+                      >
+                        {isComplete ? (
+                          <Icon name="check" size={14} color={colors.success.emerald} />
+                        ) : (
+                          <Text style={[styles.journeyStampNum, isCurrent && { color: colors.primary.wisteriaDark }]}>{idx + 1}</Text>
+                        )}
+                        <Text style={[styles.journeyStampName, isCurrent && { color: colors.primary.wisteriaDark }]} numberOfLines={1}>{room.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Current room progress */}
+                <View style={styles.journeyProgress}>
+                  <Text style={styles.journeyTitle}>
+                    {completedRoomIds.has(currentRoom.id) || (totalInteractive > 0 && roomInteracted >= totalInteractive)
+                      ? 'All discoveries made!'
+                      : `${currentRoom.name} — ${roomInteracted}/${totalInteractive} discoveries`}
+                  </Text>
+                  <View style={styles.journeyProgressBar}>
+                    <View style={[styles.journeyProgressFill, { width: `${totalInteractive > 0 ? (roomInteracted / totalInteractive) * 100 : 0}%`, backgroundColor: country.accentColor }]} />
+                  </View>
+                </View>
+
+                {/* Hints */}
+                <View style={styles.journeyHints}>
+                  {(() => {
+                    const hints: { icon: IconName; text: string; action?: () => void }[] = [];
+                    const undiscovered = currentRoom.objects.filter(o => o.interactive && !interactedObjects.has(o.id));
+                    if (undiscovered.length > 0) {
+                      hints.push({
+                        icon: 'sparkles',
+                        text: `Tap ${undiscovered[0].label} to discover something new`,
+                        action: () => handleObjectTap(undiscovered[0]),
+                      });
+                    }
+                    if (undiscovered.length > 1) {
+                      hints.push({ icon: 'compass', text: `${undiscovered.length} more to discover in this room` });
+                    }
+                    if (hints.length === 0) {
+                      hints.push({ icon: 'trophy', text: 'You\'ve explored everything here!' });
+                    }
+                    return hints.slice(0, 2).map((hint, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={styles.journeyHintRow}
+                        onPress={hint.action}
+                        activeOpacity={hint.action ? 0.7 : 1}
+                        disabled={!hint.action}
+                      >
+                        <Icon name={hint.icon} size={14} color={colors.reward.gold} />
+                        <Text style={styles.journeyHintText}>{hint.text}</Text>
+                        {hint.action && <Icon name="chevronRight" size={14} color={colors.text.muted} />}
+                      </TouchableOpacity>
+                    ));
+                  })()}
+                </View>
+              </LinearGradient>
             </View>
           )}
         </ScrollView>
@@ -1691,9 +1811,9 @@ const styles = StyleSheet.create({
   placeCompleteTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary },
   placeCompleteSub: { fontFamily: 'Nunito-Medium', fontSize: 12, color: colors.text.secondary, marginTop: 2 },
 
-  roomCardsRow: { paddingHorizontal: spacing.md, gap: spacing.sm, paddingVertical: spacing.sm },
+  roomCardsRow: { paddingHorizontal: spacing.md, gap: 10, paddingVertical: spacing.sm },
   roomCard: {
-    width: 96, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface.card,
+    width: 112, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface.card,
     borderWidth: 2, borderColor: 'transparent',
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 2px 6px rgba(0,0,0,0.08)' }
@@ -1702,12 +1822,21 @@ const styles = StyleSheet.create({
   roomCardActive: {
     borderColor: colors.primary.wisteria,
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 2px 8px rgba(184,165,224,0.4)' }
-      : { shadowColor: colors.primary.wisteria, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 }),
+      ? { boxShadow: '0px 2px 10px rgba(184,165,224,0.45)' }
+      : { shadowColor: colors.primary.wisteria, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 }),
   },
-  roomCardSwatch: { height: 36, width: '100%' },
-  roomCardContent: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 8 },
-  roomCardLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, flex: 1 },
+  roomCardGradient: { padding: 10, gap: 6, minHeight: 82 },
+  roomCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  roomCardIconCircle: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  roomCardCompleteBadge: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: 'rgba(255,215,0,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  roomCardLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.text.secondary },
   roomCardLabelActive: { color: colors.primary.wisteriaDark, fontFamily: 'Nunito-Bold' },
   roomCardComplete: {
     borderColor: '#FFD700',
@@ -1716,15 +1845,15 @@ const styles = StyleSheet.create({
       ? { boxShadow: '0px 0px 8px rgba(255,215,0,0.25)' }
       : { shadowColor: '#FFD700', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8 }),
   },
-  roomCardTrophy: {
-    position: 'absolute', top: 2, right: 2,
-    width: 16, height: 16, borderRadius: 8,
-    backgroundColor: 'rgba(255,215,0,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
   roomCardProgress: {
-    fontSize: 9, fontFamily: 'Nunito-SemiBold',
-    color: colors.text.muted, marginTop: 1,
+    fontSize: 10, fontFamily: 'Nunito-Bold',
+    color: colors.text.muted,
+  },
+  roomCardProgressBar: {
+    height: 3, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.06)', overflow: 'hidden',
+  },
+  roomCardProgressFill: {
+    height: '100%', borderRadius: 1.5,
   },
   roomCardLocked: { opacity: 0.7, borderStyle: 'dashed' as any, borderWidth: 1.5, borderColor: 'rgba(184,165,224,0.3)' },
   roomUnlockPrice: { flexDirection: 'row', alignItems: 'center', gap: 2 },
@@ -1744,7 +1873,17 @@ const styles = StyleSheet.create({
       ? { boxShadow: '0px 4px 16px rgba(0,0,0,0.14)' }
       : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 16, elevation: 8 }),
   },
-  roomWall: { paddingTop: spacing.xs },
+  roomWall: { paddingTop: spacing.xs, position: 'relative' as const },
+  roomBgImageWrap: {
+    ...StyleSheet.absoluteFillObject, overflow: 'hidden', zIndex: 0,
+  },
+  roomBgImage: {
+    width: '100%', height: '100%', opacity: 0.35,
+    ...(Platform.OS === 'web' ? { filter: 'blur(8px)' } as any : {}),
+  },
+  accentStrip: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 4,
+  },
   roomWindowStrip: {
     width: '100%', borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
     overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'center',
@@ -2041,12 +2180,18 @@ const styles = StyleSheet.create({
   heroQuizText: { flex: 1 },
   heroQuizLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 17, color: colors.text.primary },
   heroQuizSub: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.text.secondary, marginTop: 2 },
-  actionsChipsRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
-  actionChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 14,
-    backgroundColor: colors.surface.card, borderRadius: 16, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+  actionsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: spacing.xs,
   },
-  actionChipLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.primary },
+  actionGridItem: {
+    width: '31%' as any, borderRadius: 14, padding: 10, alignItems: 'center', gap: 6,
+    minHeight: 76,
+  },
+  actionGridIcon: {
+    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+  },
+  actionGridLabel: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.text.primary, textAlign: 'center' },
+  actionGridBadge: { fontFamily: 'Nunito-SemiBold', fontSize: 9, color: colors.text.muted },
   collectionGoalCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
@@ -2071,35 +2216,75 @@ const styles = StyleSheet.create({
   chatInRoomBtnText: { fontSize: 13, fontFamily: 'Nunito-SemiBold', color: colors.primary.wisteriaDark },
 
   factsSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
-  sectionTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary, marginBottom: 8 },
-  factsScroll: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
-  factChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 2, backgroundColor: colors.surface.cardWarm,
+  factsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  factsSectionBadge: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  factsSectionCount: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.text.muted, marginLeft: 'auto' as any },
+  sectionTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary },
+  factsScroll: { gap: 10, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  discoveryCard: {
+    width: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface.card,
+    borderWidth: 1.5, borderColor: 'rgba(184,165,224,0.15)',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 8px rgba(0,0,0,0.06)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }),
   },
-  factChipRead: { backgroundColor: colors.success.honeydew, borderColor: colors.success.emerald + '50', borderStyle: 'dashed' as any },
-  factTextRead: { color: colors.text.muted },
+  discoveryCardRead: {
+    borderColor: colors.success.emerald + '30',
+  },
+  discoveryCardGradient: { padding: 12, gap: 8, minHeight: 110 },
+  discoveryCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  discoveryCardIconWrap: {
+    width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center',
+  },
+  discoveryCheckBadge: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: colors.success.honeydew, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.success.emerald + '40',
+  },
+  discoveryCardTitle: {
+    fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.text.primary, lineHeight: 17,
+  },
+  discoveryCardTitleRead: { color: colors.text.secondary },
+  discoveryCardCta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 'auto' as any },
+  discoveryCardCtaText: { fontFamily: 'Nunito-SemiBold', fontSize: 10 },
   journeySection: {
     marginHorizontal: spacing.lg, marginTop: spacing.sm, marginBottom: spacing.xl,
-    padding: spacing.lg, backgroundColor: colors.surface.lavender, borderRadius: 20,
+    borderRadius: 20, overflow: 'hidden',
     borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 12px rgba(0,0,0,0.06)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 }),
   },
-  storyArcRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs,
+  journeyGradient: { padding: spacing.lg, gap: spacing.md },
+  journeyHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  journeyBadge: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  journeyLabel: { fontFamily: 'Baloo2-Bold', fontSize: 15, color: colors.text.primary },
+  journeySubLabel: { fontFamily: 'Nunito-Medium', fontSize: 11, color: colors.text.secondary },
+  journeyStamps: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  journeyStamp: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 6, paddingHorizontal: 10, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.6)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
   },
-  storyArcText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.secondary },
-  storyArcBar: {
-    height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: spacing.md,
+  journeyStampCurrent: {
+    backgroundColor: colors.primary.wisteriaFaded + '40', borderColor: colors.primary.wisteria + '40',
   },
-  storyArcFill: { height: '100%', borderRadius: 2, minWidth: 4 },
-  journeyTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary, marginBottom: spacing.sm },
-  journeyHints: { gap: spacing.xs },
+  journeyStampComplete: {
+    backgroundColor: colors.success.honeydew, borderColor: colors.success.emerald + '30',
+  },
+  journeyStampNum: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.text.muted },
+  journeyStampName: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.text.secondary, maxWidth: 60 },
+  journeyProgress: { gap: 6 },
+  journeyTitle: { fontFamily: 'Baloo2-Bold', fontSize: 14, color: colors.text.primary },
+  journeyProgressBar: { height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.06)', overflow: 'hidden' },
+  journeyProgressFill: { height: '100%', borderRadius: 2, minWidth: 4 },
+  journeyHints: { gap: 6 },
   journeyHintRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface.card, borderRadius: 14, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 8, paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 12,
   },
-  journeyHintText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.text.primary, flex: 1 },
+  journeyHintText: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.text.primary, flex: 1 },
 
   discoveryToast: {
     position: 'absolute', top: spacing.xl + 50, left: spacing.lg, right: spacing.lg,

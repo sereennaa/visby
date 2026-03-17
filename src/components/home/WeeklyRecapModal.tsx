@@ -28,7 +28,7 @@ export const WeeklyRecapModal: React.FC<WeeklyRecapModalProps> = ({ visible, onC
   const stats = getWeeklyRecapStats();
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>

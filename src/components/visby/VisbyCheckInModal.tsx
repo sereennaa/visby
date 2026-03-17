@@ -53,7 +53,7 @@ const NEED_INFO: NeedInfo[] = [
     key: 'happiness', icon: 'sparkles', label: 'Joy', color: colors.accent.coral, bgColor: colors.accent.blush,
     hint: 'Bored!', description: 'Explore countries, learn new things, and play mini-games — your Visby loves adventure!',
     actions: [
-      { label: 'Explore a country', icon: 'globe', screen: 'WorldMap' as any },
+      { label: 'Explore a country', icon: 'globe', screen: 'Main', params: { screen: 'Explore', params: { screen: 'WorldMap' } } },
       { label: 'Treasure Hunt', icon: 'compass', screen: 'TreasureHunt' },
     ],
   },
@@ -455,7 +455,7 @@ export const VisbyCheckInModal: React.FC<Props> = ({ visible, onClose }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showGifts, setShowGifts] = useState(false);
   const [activeHint, setActiveHint] = useState<NeedKey | null>(null);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [ttsEnabled, setTtsEnabled] = useState(false);
   const [visbyReaction, setVisbyReaction] = useState<'sparkle' | 'love' | 'happy_wiggle' | undefined>();
   const scrollRef = useRef<ScrollView>(null);
   const visbyMood = useStore((s) => s.getVisbyMood());

@@ -512,6 +512,7 @@ export const useStore = create<AppStore>()(
         locationTracking: true,
         privateProfile: false,
         soundEffects: true,
+        readAloud: true,
         sessionTimerMinutes: 0,
         focusMode: false,
         quieterMode: false,
@@ -2103,5 +2104,8 @@ export const useStore = create<AppStore>()(
     }
   )
 );
+
+import { setHapticStoreAccessor } from '../services/haptics';
+setHapticStoreAccessor(() => useStore.getState());
 
 export default useStore;

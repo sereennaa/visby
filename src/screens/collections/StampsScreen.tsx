@@ -27,6 +27,8 @@ import { useStore } from '../../store/useStore';
 import { STAMP_TYPES_INFO, COUNTRIES } from '../../config/constants';
 import { getStampProgressByCountry } from '../../config/collectionGoals';
 import { RootStackParamList, Stamp, StampType } from '../../types';
+import { StampBook } from '../../components/effects/StampBook';
+import { hapticService } from '../../services/haptics';
 
 const { width: PASSPORT_WIDTH } = Dimensions.get('window');
 
@@ -181,7 +183,7 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
   const stamps = useStore(s => s.stamps);
   const isLoading = useStore(s => s.isLoading);
   const [selectedType, setSelectedType] = useState<StampType | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'passport' | 'grid' | 'list'>('passport');
+  const [viewMode, setViewMode] = useState<'passport' | 'stampbook' | 'grid' | 'list'>('passport');
 
   const stampsByCountry = useMemo(() => {
     const map: Record<string, { country: typeof COUNTRIES[0]; stamps: Stamp[] }> = {};
@@ -264,16 +266,17 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
           <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={() => {
-                const modes: ('passport' | 'grid' | 'list')[] = ['passport', 'grid', 'list'];
+                hapticService.selection();
+                const modes: ('passport' | 'stampbook' | 'grid' | 'list')[] = ['passport', 'stampbook', 'grid', 'list'];
                 const nextIdx = (modes.indexOf(viewMode) + 1) % modes.length;
                 setViewMode(modes[nextIdx]);
               }}
               style={styles.viewToggle}
               accessibilityRole="button"
-              accessibilityLabel={`Switch to ${viewMode === 'passport' ? 'grid' : viewMode === 'grid' ? 'list' : 'passport'} view`}
+              accessibilityLabel={`Switch view mode`}
             >
               <Icon
-                name={viewMode === 'passport' ? 'book' : viewMode === 'grid' ? 'list' : 'grid'}
+                name={viewMode === 'passport' ? 'book' : viewMode === 'stampbook' ? 'grid' : viewMode === 'grid' ? 'list' : 'grid'}
                 size={20}
                 color={colors.text.secondary}
               />
@@ -401,7 +404,21 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
         />
 
         {/* Stamps Views */}
-        {viewMode === 'passport' && !isLoading && stamps.length > 0 ? (
+        {viewMode === 'stampbook' && !isLoading && stamps.length > 0 ? (
+          <StampBook
+            stamps={stamps.map((s) => {
+              const country = COUNTRIES.find((c) => c.id === s.countryId);
+              return {
+                id: s.id,
+                name: s.city || s.name || s.countryId,
+                country: country?.name ?? s.country,
+                countryEmoji: country?.flagEmoji ?? '',
+                type: s.type,
+                collectedAt: new Date(s.collectedAt),
+              };
+            })}
+          />
+        ) : viewMode === 'passport' && !isLoading && stamps.length > 0 ? (
           <ScrollView style={styles.passportScroll} contentContainerStyle={styles.passportContent} showsVerticalScrollIndicator={false}>
             <View style={styles.passportCover}>
               <LinearGradient colors={['#2D1B4E', '#1A0F3C']} style={styles.passportCoverGradient}>

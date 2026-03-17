@@ -6,12 +6,13 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  withDelay,
   cancelAnimation,
   Easing,
   interpolate,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Path, Ellipse } from 'react-native-svg';
+import Svg, { Circle, Path, Ellipse, Line } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 
 type TimePhase = 'morning' | 'afternoon' | 'evening' | 'night';
@@ -75,24 +76,229 @@ export function getTimeTint(): { color: string; opacity: number } {
   return { color: config.tintColor, opacity: config.tintOpacity };
 }
 
+export type WeatherEffect = 'none' | 'rain' | 'aurora' | 'shooting_star' | 'sun_rays' | 'thunderstorm';
+
 interface DynamicWindowProps {
   width: number;
   height: number;
   overrideSky?: readonly (string | undefined)[];
+  weather?: WeatherEffect;
+  countryId?: string;
 }
 
-export const DynamicWindow: React.FC<DynamicWindowProps> = ({ width, height, overrideSky }) => {
+const RAIN_DROPS = 14;
+const AURORA_BANDS = 5;
+
+const RainDrops: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+      {Array.from({ length: RAIN_DROPS }, (_, i) => (
+        <RainDrop key={i} index={i} width={width} height={height} />
+      ))}
+    </View>
+  );
+};
+
+const RainDrop: React.FC<{ index: number; width: number; height: number }> = ({ index, width, height }) => {
+  const progress = useSharedValue(0);
+  const x = Math.random() * width;
+  const speed = 600 + Math.random() * 400;
+  const delay = Math.random() * 800;
+
+  useEffect(() => {
+    progress.value = withDelay(delay, withRepeat(
+      withTiming(1, { duration: speed, easing: Easing.linear }),
+      -1,
+      false,
+    ));
+    return () => cancelAnimation(progress);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: x,
+    top: interpolate(progress.value, [0, 1], [-8, height + 8]),
+    width: 1.5,
+    height: 8,
+    borderRadius: 1,
+    backgroundColor: 'rgba(180, 210, 240, 0.5)',
+    opacity: interpolate(progress.value, [0, 0.1, 0.9, 1], [0, 0.6, 0.6, 0]),
+  }));
+
+  return <Animated.View style={style} />;
+};
+
+const AuroraBorealis: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+      {Array.from({ length: AURORA_BANDS }, (_, i) => (
+        <AuroraBand key={i} index={i} width={width} height={height} />
+      ))}
+    </View>
+  );
+};
+
+const AuroraBand: React.FC<{ index: number; width: number; height: number }> = ({ index, width, height }) => {
+  const sway = useSharedValue(0);
+  const auroraColors = ['#43E97B', '#38D9A9', '#5B9EE1', '#7B68EE', '#9B59B6'];
+  const color = auroraColors[index % auroraColors.length];
+  const baseY = height * 0.15 + index * (height * 0.12);
+
+  useEffect(() => {
+    sway.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3000 + index * 500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-1, { duration: 3000 + index * 500, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(sway);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: -10,
+    top: baseY + sway.value * 6,
+    width: width + 20,
+    height: 12 + index * 2,
+    borderRadius: 6,
+    backgroundColor: color,
+    opacity: 0.15 + (index % 2) * 0.05,
+    transform: [{ scaleX: interpolate(sway.value, [-1, 1], [0.9, 1.1]) }],
+  }));
+
+  return <Animated.View style={style} />;
+};
+
+const ShootingStar: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+  const progress = useSharedValue(0);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const trigger = () => {
+      setVisible(true);
+      progress.value = 0;
+      progress.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) });
+      setTimeout(() => setVisible(false), 900);
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() < 0.3) trigger();
+    }, 8000);
+
+    const initialDelay = setTimeout(() => {
+      if (Math.random() < 0.5) trigger();
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(initialDelay);
+      cancelAnimation(progress);
+    };
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: interpolate(progress.value, [0, 1], [width * 0.2, width * 0.8]),
+    top: interpolate(progress.value, [0, 1], [height * 0.1, height * 0.6]),
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#FFFFFF',
+    opacity: visible ? interpolate(progress.value, [0, 0.2, 0.6, 1], [0, 1, 0.5, 0]) : 0,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: -6, height: -3 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  }));
+
+  return <Animated.View style={style} />;
+};
+
+const SunRays: React.FC<{ width: number; height: number; sunY: number }> = ({ width, height, sunY }) => {
+  const rayPulse = useSharedValue(0);
+
+  useEffect(() => {
+    rayPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(rayPulse);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: interpolate(rayPulse.value, [0, 1], [0.03, 0.08]),
+  }));
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
+      <LinearGradient
+        colors={['rgba(255, 220, 100, 0.2)', 'rgba(255, 220, 100, 0)']}
+        start={{ x: 0.7, y: 0 }}
+        end={{ x: 0.3, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
+  );
+};
+
+const ThunderstormFlash: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+  const flashOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    const triggerFlash = () => {
+      flashOpacity.value = withSequence(
+        withTiming(0.6, { duration: 50 }),
+        withTiming(0, { duration: 100 }),
+        withTiming(0.3, { duration: 50 }),
+        withTiming(0, { duration: 200 }),
+      );
+    };
+
+    const interval = setInterval(() => {
+      if (Math.random() < 0.2) triggerFlash();
+    }, 6000);
+
+    return () => {
+      clearInterval(interval);
+      cancelAnimation(flashOpacity);
+    };
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(255, 255, 255, ${flashOpacity.value})`,
+  }));
+
+  return <Animated.View style={[StyleSheet.absoluteFill, style]} pointerEvents="none" />;
+};
+
+function getAutoWeather(phase: TimePhase, countryId?: string): WeatherEffect {
+  if (countryId === 'no' && phase === 'night') return 'aurora';
+  if (phase === 'night') return 'shooting_star';
+  if (phase === 'evening') return 'sun_rays';
+  if (countryId === 'gb') return 'rain';
+  return 'none';
+}
+
+export const DynamicWindow: React.FC<DynamicWindowProps> = ({ width, height, overrideSky, weather, countryId }) => {
   const phase = getTimePhase();
   const config = SKY_CONFIGS[phase];
   const sky = overrideSky
     ? [overrideSky[0] || config.gradient[0], overrideSky[1] || config.gradient[1], overrideSky[2] || config.gradient[2]]
     : config.gradient;
 
+  const effectiveWeather = weather || getAutoWeather(phase, countryId);
+
   const cloudDrift = useSharedValue(0);
   const starTwinkle = useSharedValue(0);
 
   useEffect(() => {
-    if (config.showClouds) {
+    if (config.showClouds || effectiveWeather === 'rain' || effectiveWeather === 'thunderstorm') {
       cloudDrift.value = withRepeat(
         withTiming(1, { duration: 20000, easing: Easing.linear }),
         -1, false,
@@ -158,15 +364,27 @@ export const DynamicWindow: React.FC<DynamicWindowProps> = ({ width, height, ove
         </Animated.View>
       )}
 
-      {config.showClouds && (
+      {(config.showClouds || effectiveWeather === 'rain' || effectiveWeather === 'thunderstorm') && (
         <Animated.View style={[StyleSheet.absoluteFill, cloudStyle]}>
           <Svg width={width} height={height}>
-            <Ellipse cx={width * 0.3} cy={height * 0.3} rx={20} ry={8} fill="#FFFFFF" opacity={0.5} />
-            <Ellipse cx={width * 0.3 + 10} cy={height * 0.3 - 4} rx={14} ry={6} fill="#FFFFFF" opacity={0.4} />
+            <Ellipse cx={width * 0.3} cy={height * 0.3} rx={20} ry={8} fill="#FFFFFF" opacity={effectiveWeather === 'rain' ? 0.6 : 0.5} />
+            <Ellipse cx={width * 0.3 + 10} cy={height * 0.3 - 4} rx={14} ry={6} fill="#FFFFFF" opacity={effectiveWeather === 'rain' ? 0.5 : 0.4} />
             <Ellipse cx={width * 0.7} cy={height * 0.5} rx={18} ry={7} fill="#FFFFFF" opacity={0.4} />
             <Ellipse cx={width * 0.7 + 8} cy={height * 0.5 - 3} rx={12} ry={5} fill="#FFFFFF" opacity={0.3} />
           </Svg>
         </Animated.View>
+      )}
+
+      {/* Weather effects */}
+      {effectiveWeather === 'rain' && <RainDrops width={width} height={height} />}
+      {effectiveWeather === 'aurora' && <AuroraBorealis width={width} height={height} />}
+      {effectiveWeather === 'shooting_star' && <ShootingStar width={width} height={height} />}
+      {effectiveWeather === 'sun_rays' && config.showSun && <SunRays width={width} height={height} sunY={config.sunY} />}
+      {effectiveWeather === 'thunderstorm' && (
+        <>
+          <RainDrops width={width} height={height} />
+          <ThunderstormFlash width={width} height={height} />
+        </>
       )}
     </View>
   );

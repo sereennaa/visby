@@ -7,6 +7,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -35,6 +36,9 @@ import { analyticsService } from '../../services/analytics';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { getPostGameLine } from '../../config/visbyLines';
 import { RootStackParamList } from '../../types';
+import { speechService } from '../../services/audio';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 
 type MemoryCardsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'MemoryCards'>;
@@ -46,29 +50,30 @@ interface MemoryPair {
   text: string;
   match: string;
   icon: IconName;
+  imageUrl?: string;
 }
 
 const MEMORY_PAIRS: MemoryPair[] = [
-  { id: 'eiffel', text: 'Eiffel Tower', match: 'Paris, France', icon: 'landmark' },
-  { id: 'sushi', text: 'Sushi', match: 'Japan', icon: 'food' },
-  { id: 'pyramids', text: 'Pyramids', match: 'Egypt', icon: 'landmark' },
-  { id: 'colosseum', text: 'Colosseum', match: 'Rome, Italy', icon: 'castle' },
-  { id: 'sakura', text: 'Cherry Blossoms', match: 'Sakura, Japan', icon: 'nature' },
-  { id: 'carnival', text: 'Carnival', match: 'Rio, Brazil', icon: 'sparkles' },
-  { id: 'wall', text: 'Great Wall', match: 'China', icon: 'landmark' },
-  { id: 'kimchi', text: 'Kimchi', match: 'Korea', icon: 'food' },
-  { id: 'taj', text: 'Taj Mahal', match: 'India', icon: 'temple' },
-  { id: 'fjord', text: 'Fjords', match: 'Norway', icon: 'mountain' },
-  { id: 'machu', text: 'Machu Picchu', match: 'Peru', icon: 'mountain' },
-  { id: 'opera', text: 'Opera House', match: 'Sydney, Australia', icon: 'landmark' },
-  { id: 'tulips', text: 'Tulips', match: 'Netherlands', icon: 'nature' },
-  { id: 'pizza', text: 'Pizza', match: 'Italy', icon: 'food' },
-  { id: 'flamenco', text: 'Flamenco', match: 'Spain', icon: 'culture' },
-  { id: 'vikings', text: 'Vikings', match: 'Scandinavia', icon: 'viking' },
-  { id: 'tango', text: 'Tango', match: 'Argentina', icon: 'culture' },
-  { id: 'sphinx', text: 'Sphinx', match: 'Egypt', icon: 'landmark' },
-  { id: 'tea', text: 'Tea Ceremony', match: 'Japan', icon: 'cafe' },
-  { id: 'pasta', text: 'Pasta', match: 'Italy', icon: 'food' },
+  { id: 'eiffel', text: 'Eiffel Tower', match: 'Paris, France', icon: 'landmark', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600' },
+  { id: 'sushi', text: 'Sushi', match: 'Japan', icon: 'food', imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600' },
+  { id: 'pyramids', text: 'Pyramids', match: 'Egypt', icon: 'landmark', imageUrl: 'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?w=600' },
+  { id: 'colosseum', text: 'Colosseum', match: 'Rome, Italy', icon: 'castle', imageUrl: 'https://images.unsplash.com/photo-1552832238-c57a64f85ad4?w=600' },
+  { id: 'sakura', text: 'Cherry Blossoms', match: 'Sakura, Japan', icon: 'nature', imageUrl: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600' },
+  { id: 'carnival', text: 'Carnival', match: 'Rio, Brazil', icon: 'sparkles', imageUrl: 'https://images.unsplash.com/photo-1551649001-7a2482d98d05?w=600' },
+  { id: 'wall', text: 'Great Wall', match: 'China', icon: 'landmark', imageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=600' },
+  { id: 'kimchi', text: 'Kimchi', match: 'Korea', icon: 'food', imageUrl: 'https://images.unsplash.com/photo-1607301405390-d831c242f59b?w=600' },
+  { id: 'taj', text: 'Taj Mahal', match: 'India', icon: 'temple', imageUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=600' },
+  { id: 'fjord', text: 'Fjords', match: 'Norway', icon: 'mountain', imageUrl: 'https://images.unsplash.com/photo-1507272931001-fc06c17e4f43?w=600' },
+  { id: 'machu', text: 'Machu Picchu', match: 'Peru', icon: 'mountain', imageUrl: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=600' },
+  { id: 'opera', text: 'Opera House', match: 'Sydney, Australia', icon: 'landmark', imageUrl: 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=600' },
+  { id: 'tulips', text: 'Tulips', match: 'Netherlands', icon: 'nature', imageUrl: 'https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=600' },
+  { id: 'pizza', text: 'Pizza', match: 'Italy', icon: 'food', imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600' },
+  { id: 'flamenco', text: 'Flamenco', match: 'Spain', icon: 'culture', imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600' },
+  { id: 'vikings', text: 'Vikings', match: 'Scandinavia', icon: 'viking', imageUrl: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=600' },
+  { id: 'tango', text: 'Tango', match: 'Argentina', icon: 'culture', imageUrl: 'https://images.unsplash.com/photo-1545959570-a94084071b5f?w=600' },
+  { id: 'sphinx', text: 'Sphinx', match: 'Egypt', icon: 'landmark', imageUrl: 'https://images.unsplash.com/photo-1568322445389-f64b0f5c7a28?w=600' },
+  { id: 'tea', text: 'Tea Ceremony', match: 'Japan', icon: 'cafe', imageUrl: 'https://images.unsplash.com/photo-1545048702-79362596cdc9?w=600' },
+  { id: 'pasta', text: 'Pasta', match: 'Italy', icon: 'food', imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=600' },
 ];
 
 const PAIRS_PER_GAME = 6;
@@ -92,14 +97,15 @@ interface GameCard {
   content: string;
   icon: IconName;
   side: 'a' | 'b';
+  imageUrl?: string;
 }
 
 function buildDeck(): GameCard[] {
   const selected = shuffle(MEMORY_PAIRS).slice(0, PAIRS_PER_GAME);
   const cards: GameCard[] = [];
   selected.forEach((pair) => {
-    cards.push({ uid: `${pair.id}-a`, pairId: pair.id, content: pair.text, icon: pair.icon, side: 'a' });
-    cards.push({ uid: `${pair.id}-b`, pairId: pair.id, content: pair.match, icon: pair.icon, side: 'b' });
+    cards.push({ uid: `${pair.id}-a`, pairId: pair.id, content: pair.text, icon: pair.icon, side: 'a', imageUrl: pair.imageUrl });
+    cards.push({ uid: `${pair.id}-b`, pairId: pair.id, content: pair.match, icon: pair.icon, side: 'b', imageUrl: pair.imageUrl });
   });
   return shuffle(cards);
 }
@@ -191,7 +197,16 @@ const MemoryCard: React.FC<{
 
         {/* Face-up */}
         <Animated.View style={[styles.memoryCard, styles.cardFaceUp, backAnimStyle, glowStyle]}>
-          <Icon name={card.icon} size={22} color={state === 'matched' ? colors.success.emerald : colors.primary.wisteriaDark} />
+          {card.imageUrl ? (
+            <Image
+              source={{ uri: card.imageUrl }}
+              style={styles.cardImage}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : (
+            <Icon name={card.icon} size={22} color={state === 'matched' ? colors.success.emerald : colors.primary.wisteriaDark} />
+          )}
           <Text
             variant="bodySmall"
             color={state === 'matched' ? colors.success.emerald : colors.text.primary}
@@ -219,7 +234,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
   const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
   const setAdventureGamePlayed = useStore(s => s.setAdventureGamePlayed);
   const getVisbyMood = useStore(s => s.getVisbyMood);
-  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
+
   const completePathNode = useStore(s => s.completePathNode);
 
   React.useEffect(() => {
@@ -233,6 +248,8 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
   const [moves, setMoves] = useState(0);
   const [matchedPairs, setMatchedPairs] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [startTime] = useState(() => Date.now());
   const [endTime, setEndTime] = useState<number | null>(null);
   const isProcessingRef = useRef(false);
@@ -241,6 +258,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
   useEffect(() => {
     return () => {
       if (flipBackTimerRef.current) clearTimeout(flipBackTimerRef.current);
+      speechService.stop();
     };
   }, []);
 
@@ -296,6 +314,7 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
         haptic(Haptics.ImpactFeedbackStyle.Medium);
         const { soundService } = require('../../services/sound');
         soundService.playMatch();
+        setTimeout(() => speechService.speak(secondCard.content), 300);
         const matchStates = [...newStates];
         matchStates[firstFlip] = 'matched';
         matchStates[index] = 'matched';
@@ -324,9 +343,10 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
           setAdventureGamePlayed();
           if (pathNodeId) completePathNode(pathNodeId);
           addSkillPoints('culture', 3);
-          const outcome = finalMoves <= 15 ? 'perfect' : 'won';
-          addVisbyChatMessage('visby', getPostGameLine('MemoryCards', outcome, getVisbyMood()));
-          setTimeout(() => setIsFinished(true), 500);
+          setTimeout(() => {
+            setIsFinished(true);
+            setShowCelebration(true);
+          }, 500);
         }
       } else {
         flipBackTimerRef.current = setTimeout(() => {
@@ -351,8 +371,10 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
     setMoves(0);
     setMatchedPairs(0);
     setIsFinished(false);
+    setShowCelebration(false);
     setEndTime(null);
     isProcessingRef.current = false;
+    setIsLaunching(true);
   }, []);
 
   const [elapsed, setElapsed] = useState(0);
@@ -363,6 +385,17 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
     }, 1000);
     return () => clearInterval(interval);
   }, [startTime, isFinished]);
+
+  if (isLaunching) {
+    return (
+      <GameLaunchSequence
+        gameName="Memory Cards"
+        gameIcon="help"
+        rules="Match pairs of cards by flipping them over!"
+        onComplete={() => setIsLaunching(false)}
+      />
+    );
+  }
 
   if (isFinished) {
     return (
@@ -463,6 +496,16 @@ export const MemoryCardsScreen: React.FC<MemoryCardsScreenProps> = ({ navigation
             />
           </Animated.View>
         </SafeAreaView>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(matchedPairs, PAIRS_PER_GAME)}
+            score={matchedPairs}
+            maxScore={PAIRS_PER_GAME}
+            auraEarned={auraEarned}
+            gameName="Memory Cards"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
       </LinearGradient>
     );
   }
@@ -682,6 +725,11 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 3 },
     }),
+  },
+  cardImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
   },
   cardText: {
     marginTop: spacing.xs,

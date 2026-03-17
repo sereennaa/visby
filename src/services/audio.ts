@@ -19,56 +19,11 @@ async function ensureAudioMode() {
   }
 }
 
-// ─── AMBIENT SOUND DEFINITIONS ───
-
-interface AmbientTrack {
-  countryId: string;
-  name: string;
-  url: string;
-}
-
-const AMBIENT_TRACKS: AmbientTrack[] = [
-  { countryId: 'jp', name: 'Japanese Garden', url: 'https://assets.mixkit.co/active_storage/sfx/212-japanese-garden.mp3' },
-  { countryId: 'fr', name: 'Paris Cafe', url: 'https://assets.mixkit.co/active_storage/sfx/213-cafe-ambience.mp3' },
-  { countryId: 'mx', name: 'Mexican Fiesta', url: 'https://assets.mixkit.co/active_storage/sfx/214-fiesta.mp3' },
-  { countryId: 'it', name: 'Italian Piazza', url: 'https://assets.mixkit.co/active_storage/sfx/215-piazza.mp3' },
-  { countryId: 'gb', name: 'London Rain', url: 'https://assets.mixkit.co/active_storage/sfx/216-rain.mp3' },
-  { countryId: 'br', name: 'Brazilian Beach', url: 'https://assets.mixkit.co/active_storage/sfx/217-beach.mp3' },
-];
-
-const ROOM_AMBIENT_MAP: Record<string, Record<string, { description: string; volume: number }>> = {
-  jp: {
-    living: { description: 'Japanese garden - water and birds', volume: 0.15 },
-    kitchen: { description: 'Kitchen sounds - sizzling and chopsticks', volume: 0.12 },
-    garden: { description: 'Zen garden - wind chimes and water', volume: 0.18 },
-    study: { description: 'Paper sliding and soft wind', volume: 0.1 },
-  },
-  fr: {
-    living: { description: 'Parisian cafe - soft chatter and clinking', volume: 0.15 },
-    kitchen: { description: 'French kitchen - simmering and chopping', volume: 0.12 },
-    garden: { description: 'French garden - birds and fountain', volume: 0.18 },
-    study: { description: 'Library quiet - pages turning', volume: 0.1 },
-  },
-  no: {
-    living: { description: 'Crackling fire and distant wind', volume: 0.18 },
-    kitchen: { description: 'Hearty cooking and wooden utensils', volume: 0.12 },
-    garden: { description: 'Northern wind and aurora hum', volume: 0.15 },
-    study: { description: 'Viking tales - soft drumming', volume: 0.1 },
-  },
-};
-
-export function getAmbientForRoom(countryId: string, roomId: string): string {
-  const countryRooms = ROOM_AMBIENT_MAP[countryId];
-  if (countryRooms?.[roomId]) {
-    return countryRooms[roomId].description;
-  }
-  const track = AMBIENT_TRACKS.find((t) => t.countryId === countryId);
-  return track?.name ?? '';
-}
+// Ambient sound is now managed by ambientSoundService (src/services/ambientSound.ts).
+// This module retains background music and TTS only.
 
 const BACKGROUND_MUSIC_URL = 'https://assets.mixkit.co/active_storage/sfx/2515-game-music.mp3';
 
-let currentAmbientPlayer: any = null;
 let currentMusicPlayer: any = null;
 
 function isSoundEnabled(): boolean {
@@ -76,43 +31,7 @@ function isSoundEnabled(): boolean {
   return settings.soundEffects !== false;
 }
 
-function isAmbientEnabled(): boolean {
-  const settings = useStore.getState().settings as { ambientSound?: boolean };
-  return settings.ambientSound === true;
-}
-
-// ─── AMBIENT SOUNDS ───
-
 export const audioService = {
-  async playAmbientForCountry(countryId: string): Promise<void> {
-    if (!isAmbientEnabled()) return;
-    await this.stopAmbient();
-
-    const track = AMBIENT_TRACKS.find((t) => t.countryId === countryId);
-    if (!track) return;
-
-    try {
-      await ensureAudioMode();
-      currentAmbientPlayer = createAudioPlayer(track.url);
-      currentAmbientPlayer.loop = true;
-      currentAmbientPlayer.volume = 0.3;
-      currentAmbientPlayer.play();
-    } catch {
-      // ignore
-    }
-  },
-
-  async stopAmbient(): Promise<void> {
-    if (currentAmbientPlayer) {
-      try {
-        currentAmbientPlayer.release();
-      } catch {
-        // ignore
-      }
-      currentAmbientPlayer = null;
-    }
-  },
-
   async playBackgroundMusic(): Promise<void> {
     if (!isSoundEnabled()) return;
     await this.stopMusic();
@@ -140,12 +59,7 @@ export const audioService = {
   },
 
   stopAll(): void {
-    this.stopAmbient();
     this.stopMusic();
-  },
-
-  getAmbientTrackName(countryId: string): string | null {
-    return AMBIENT_TRACKS.find((t) => t.countryId === countryId)?.name || null;
   },
 };
 
@@ -172,23 +86,61 @@ const LANGUAGE_CODES: Record<string, string> = {
   vn: 'vi-VN',
 };
 
+export const LANGUAGE_NAME_TO_CODE: Record<string, string> = {
+  French: 'fr-FR',
+  Japanese: 'ja-JP',
+  Spanish: 'es-MX',
+  German: 'de-DE',
+  Italian: 'it-IT',
+  Hindi: 'hi-IN',
+  Korean: 'ko-KR',
+  Thai: 'th-TH',
+  Portuguese: 'pt-BR',
+  Arabic: 'ar-MA',
+  Chinese: 'zh-CN',
+  Norwegian: 'nb-NO',
+  Turkish: 'tr-TR',
+  Greek: 'el-GR',
+  Vietnamese: 'vi-VN',
+  Swahili: 'sw-KE',
+};
+
+function isReadAloudEnabled(): boolean {
+  const settings = useStore.getState().settings as { readAloud?: boolean };
+  return settings.readAloud !== false;
+}
+
 export const speechService = {
-  speak(text: string, countryId?: string): void {
-    if (!isSoundEnabled()) return;
+  speak(text: string, countryId?: string, onDone?: () => void): void {
+    if (!isSoundEnabled() || !isReadAloudEnabled()) {
+      onDone?.();
+      return;
+    }
+    Speech.stop();
     const language = countryId ? LANGUAGE_CODES[countryId] : undefined;
     Speech.speak(text, {
       language: language || 'en-US',
       rate: 0.85,
       pitch: 1.1,
+      onDone: () => onDone?.(),
+      onStopped: () => onDone?.(),
+      onError: () => onDone?.(),
     });
   },
 
-  speakWord(word: string, language: string): void {
-    if (!isSoundEnabled()) return;
+  speakWord(word: string, language: string, onDone?: () => void): void {
+    if (!isSoundEnabled() || !isReadAloudEnabled()) {
+      onDone?.();
+      return;
+    }
+    Speech.stop();
     Speech.speak(word, {
       language,
       rate: 0.75,
       pitch: 1.0,
+      onDone: () => onDone?.(),
+      onStopped: () => onDone?.(),
+      onError: () => onDone?.(),
     });
   },
 
@@ -207,4 +159,10 @@ export const speechService = {
   getLanguageCode(countryId: string): string | undefined {
     return LANGUAGE_CODES[countryId];
   },
+
+  hasLanguageCode(countryId: string): boolean {
+    return countryId in LANGUAGE_CODES;
+  },
+
+  isReadAloudEnabled,
 };

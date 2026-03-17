@@ -22,7 +22,9 @@ import { RootStackParamList, Stamp } from '../../types';
 import { LESSON_CONTENT } from '../../config/learningContent';
 import { analyticsService } from '../../services/analytics';
 import { AURA_REWARDS, COUNTRIES } from '../../config/constants';
-import { getPostLessonLine } from '../../config/visbyLines';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
+import { speechService } from '../../services/audio';
+
 import { getNodeById } from '../../config/learningPaths';
 
 type RecallPrompt = {
@@ -149,14 +151,15 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
   const { lessonId } = route.params;
   const pathNodeId = route.params.pathNodeId;
   const lesson = LESSON_CONTENT[lessonId] || DEFAULT_CONTENT;
+  const rawCountryPrefix = lessonId.includes('_') ? lessonId.split('_')[0] : undefined;
+  const lessonCountryId = rawCountryPrefix && speechService.hasLanguageCode(rawCountryPrefix) ? rawCountryPrefix : undefined;
+  const isLanguageLesson = lessonId.startsWith('lang') || lessonId.startsWith('slang') || !!lessonCountryId;
   const addAura = useStore(s => s.addAura);
   const updateLessonProgress = useStore(s => s.updateLessonProgress);
   const completeLessonToday = useStore(s => s.completeLessonToday);
   const checkAndAwardBadges = useStore(s => s.checkAndAwardBadges);
   const studyWithVisby = useStore(s => s.studyWithVisby);
   const addSkillPoints = useStore(s => s.addSkillPoints);
-  const getVisbyMood = useStore(s => s.getVisbyMood);
-  const addVisbyChatMessage = useStore(s => s.addVisbyChatMessage);
   const completePathNode = useStore(s => s.completePathNode);
   const checkDailyMissionCompletion = useStore(s => s.checkDailyMissionCompletion);
   const checkQuests = useStore(s => s.checkQuests);
@@ -200,7 +203,6 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
         addSkillPoints('language', 3);
         addSkillPoints('culture', 2);
       }
-      addVisbyChatMessage('visby', getPostLessonLine(getVisbyMood()));
       const pathNode = pathNodeId ? getNodeById(pathNodeId) : null;
       if (pathNode?.countryId && pathNode?.skillCategory) {
         const country = COUNTRIES.find(c => c.id === pathNode.countryId);
@@ -381,6 +383,11 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({ navigation, route })
                 <Text variant="bodyLarge" align="center" style={styles.slideText}>
                   {slide.text}
                 </Text>
+                {isLanguageLesson && (
+                  <View style={styles.slideSpeakerRow}>
+                    <SpeakerButton text={slide.text} countryId={lessonCountryId} size={22} />
+                  </View>
+                )}
               </View>
             )}
           </Card>
@@ -462,6 +469,10 @@ const styles = StyleSheet.create({
   },
   slideText: {
     lineHeight: 26,
+  },
+  slideSpeakerRow: {
+    alignItems: 'center',
+    marginTop: spacing.md,
   },
   recallContent: {
     alignItems: 'center',

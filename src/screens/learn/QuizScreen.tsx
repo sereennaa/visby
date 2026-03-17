@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming, FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -21,6 +22,7 @@ import { RootStackParamList, SkillProgress, Stamp } from '../../types';
 import { getAdaptiveQuiz, getAdaptiveMixedQuiz, getRandomQuiz, getDiscoveryQuizQuestions, QuizQuestion } from '../../config/learningContent';
 import { getNodeById } from '../../config/learningPaths';
 import { COUNTRIES } from '../../config/constants';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
 
 type QuizScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Quiz'>;
@@ -332,10 +334,22 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ navigation, route }) => 
         {/* Question */}
         <View style={styles.questionContainer}>
           <Card style={styles.questionCard}>
+            {question.imageUrl && (
+              <Image
+                source={{ uri: question.imageUrl }}
+                style={styles.questionImage}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+              />
+            )}
             <View style={styles.questionBadge}>
               <Icon name="quiz" size={24} color={colors.primary.wisteriaDark} />
             </View>
-            <Heading level={2} style={styles.questionText}>{question.question}</Heading>
+            <View style={styles.questionRow}>
+              <Heading level={2} style={styles.questionText}>{question.question}</Heading>
+              <SpeakerButton text={question.question} size={20} />
+            </View>
           </Card>
 
           {/* Options */}
@@ -455,6 +469,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xl,
     marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  questionImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginBottom: spacing.md,
   },
   questionBadge: {
     width: 48,
@@ -465,8 +486,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
+  questionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   questionText: {
     textAlign: 'center',
+    flex: 1,
   },
   optionsContainer: {
     gap: spacing.sm,

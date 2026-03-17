@@ -124,6 +124,20 @@ const PictureFrameSvg = ({ w, h }: { w: number; h: number }) => (
   </Svg>
 );
 
+/** Vintage shop / wall sign (e.g. Fish & Chips Sign). */
+const SignSvg = ({ w, h }: { w: number; h: number }) => (
+  <Svg width={w} height={h} viewBox="0 0 100 80">
+    <Line x1="28" y1="8" x2="28" y2="18" stroke="#8B7355" strokeWidth="1.5" />
+    <Line x1="72" y1="8" x2="72" y2="18" stroke="#8B7355" strokeWidth="1.5" />
+    <Rect x="12" y="18" width="76" height="54" rx="6" fill="#6B5344" stroke="#5D4037" strokeWidth="2" />
+    <Rect x="16" y="22" width="68" height="46" rx="4" fill="#8D6E63" stroke="#5D4037" strokeWidth="0.8" />
+    <Rect x="20" y="26" width="60" height="38" rx="3" fill="#FFF8E7" stroke="#D4C4B0" strokeWidth="0.6" />
+    <Rect x="24" y="30" width="52" height="8" rx="1" fill="#2E7D32" opacity={0.9} />
+    <Rect x="24" y="42" width="52" height="6" rx="1" fill="#558B2F" opacity={0.7} />
+    <Rect x="30" y="52" width="40" height="4" rx="1" fill="#8D6E63" opacity={0.5} />
+  </Svg>
+);
+
 const ClockSvg = ({ w, h }: { w: number; h: number }) => (
   <Svg width={w} height={h} viewBox="0 0 100 80">
     <Circle cx="50" cy="40" r="30" fill="#F5F0E8" stroke="#A88A68" strokeWidth="2.5" />
@@ -493,7 +507,8 @@ function resolveSvg(item: FurnitureItem | undefined, interactionType?: Furniture
     if (id.includes('rug') || id.includes('sarape') || id.includes('throw') || id.includes('tartan')) return 'rug';
     if (id.includes('globe')) return 'globe';
     if (id.includes('candle')) return 'candle';
-    if (id.includes('frame') || id.includes('painting') || id.includes('picture') || id.includes('impressionist') || id.includes('sign')) return 'picture';
+    if (id.includes('fish_chips_sign') || (id.includes('sign') && item.category === 'wall')) return 'sign';
+    if (id.includes('frame') || id.includes('painting') || id.includes('picture') || id.includes('impressionist')) return 'picture';
     if (id.includes('mirror')) return 'mirror';
     if (id.includes('shelf') || id.includes('rack') || id.includes('nook')) return 'shelf';
     if (id.includes('screen') || id.includes('shoji')) return 'picture';
@@ -514,6 +529,7 @@ const SVG_MAP: Record<string, React.FC<{ w: number; h: number }>> = {
   bookshelf: BookshelfSvg,
   toy: ToyBoxSvg,
   picture: PictureFrameSvg,
+  sign: SignSvg,
   clock: ClockSvg,
   vase: VaseSvg,
   lamp: LampSvg,

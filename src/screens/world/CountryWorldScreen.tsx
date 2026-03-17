@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,7 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated, { ZoomIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,6 +23,8 @@ import { COUNTRIES } from '../../config/constants';
 import { COUNTRY_SOUVENIRS, COSMETICS_CATALOG, isCosmeticLocked } from '../../config/cosmetics';
 import { ExploreStackParamList, UserHouse } from '../../types';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { CountryArrivalCinematic } from '../../components/effects/CountryArrivalCinematic';
+import { HousePurchaseCeremony } from '../../components/effects/HousePurchaseCeremony';
 
 type CountryWorldScreenProps = {
   navigation: NativeStackNavigationProp<ExploreStackParamList, 'CountryWorld'>;
@@ -71,6 +73,19 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
     souvenirName: string;
     unlockedCount: number;
   }>({ visible: false, countryName: '', souvenirName: '', unlockedCount: 0 });
+  const [arrivalCinematic, setArrivalCinematic] = useState<{
+    visible: boolean;
+    countryId: string;
+    countryName: string;
+    countryEmoji: string;
+    isFirstVisit: boolean;
+  }>({ visible: false, countryId: '', countryName: '', countryEmoji: '', isFirstVisit: true });
+  const [houseCeremony, setHouseCeremony] = useState<{
+    visible: boolean;
+    countryName: string;
+    countryEmoji: string;
+    countryId: string;
+  }>({ visible: false, countryName: '', countryEmoji: '', countryId: '' });
 
   const unlockedItemCountByCountry = useMemo(() => {
     const map: Record<string, number> = {};
@@ -93,6 +108,12 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
   const showConfirm = (title: string, message: string, confirmText: string, onConfirm: () => void) => {
     setModal({ visible: true, title, message, confirmText, onConfirm });
   };
+
+  const pendingSouvenirRef = useRef<{
+    countryName: string;
+    souvenirName: string;
+    unlockedCount: number;
+  } | null>(null);
 
   const handleVisit = (countryId: string) => {
     const country = COUNTRIES.find((c) => c.id === countryId);
@@ -129,7 +150,23 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
           incrementCountriesVisited();
           const grantedSouvenir = visitCountry(countryId);
           setModal((m) => ({ ...m, visible: false }));
-          if (grantedSouvenir && souvenir) {
+
+          if (isFirstVisit) {
+            if (grantedSouvenir && souvenir) {
+              pendingSouvenirRef.current = {
+                countryName: country.name,
+                souvenirName: souvenir.name,
+                unlockedCount: unlockCount,
+              };
+            }
+            setArrivalCinematic({
+              visible: true,
+              countryId,
+              countryName: country.name,
+              countryEmoji: country.flagEmoji,
+              isFirstVisit: true,
+            });
+          } else if (grantedSouvenir && souvenir) {
             setSouvenirModal({
               visible: true,
               countryName: country.name,
@@ -167,7 +204,12 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
         if (spendAura(cost)) {
           setModal((m) => ({ ...m, visible: false }));
           setHouseName('');
-          setNameModal({ visible: true, countryId, countryName: country.name });
+          setHouseCeremony({
+            visible: true,
+            countryId,
+            countryName: country.name,
+            countryEmoji: country.flagEmoji,
+          });
         } else {
           setModal((m) => ({ ...m, visible: false }));
         }
@@ -263,13 +305,13 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
             </Card>
           )}
 
-          {COUNTRIES.map((country) => {
+          {COUNTRIES.map((country, idx) => {
             const owned = hasHouse(country.id);
             const visited = visitedCountries.includes(country.id);
             const itemCount = getUnlockedItemCount(country.id);
             return (
+              <Animated.View key={country.id} entering={FadeInDown.delay(idx * 50).duration(350)}>
               <Card
-                key={country.id}
                 variant="elevated"
                 style={{...styles.countryCard, borderLeftColor: country.accentColor, borderLeftWidth: 4 }}
               >
@@ -336,6 +378,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
                   </View>
                 </View>
               </Card>
+              </Animated.View>
             );
           })}
           <View style={styles.footer}>
@@ -347,7 +390,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       </SafeAreaView>
 
       {/* Confirm Modal */}
-      <Modal visible={modal.visible} transparent animationType="none">
+      <Modal visible={modal.visible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setModal((m) => ({ ...m, visible: false }))}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
@@ -363,7 +406,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       </Modal>
 
       {/* Info Modal */}
-      <Modal visible={infoModal.visible} transparent animationType="none">
+      <Modal visible={infoModal.visible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setInfoModal((m) => ({ ...m, visible: false }))}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
@@ -378,7 +421,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       </Modal>
 
       {/* Name Your House Modal */}
-      <Modal visible={nameModal.visible} transparent animationType="none">
+      <Modal visible={nameModal.visible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
@@ -405,7 +448,7 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
       </Modal>
 
       {/* Souvenir Reward Modal */}
-      <Modal visible={souvenirModal.visible} transparent animationType="none">
+      <Modal visible={souvenirModal.visible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.souvenirContent} onPress={(e) => e.stopPropagation()}>
@@ -453,6 +496,45 @@ export const CountryWorldScreen: React.FC<CountryWorldScreenProps> = ({ navigati
           </Animated.View>
         </Pressable>
       </Modal>
+      {arrivalCinematic.visible && (
+        <CountryArrivalCinematic
+          countryName={arrivalCinematic.countryName}
+          countryEmoji={arrivalCinematic.countryEmoji}
+          accentColor={COUNTRIES.find(c => c.id === arrivalCinematic.countryId)?.accentColor ?? colors.primary.wisteria}
+          isFirstVisit={arrivalCinematic.isFirstVisit}
+          onComplete={() => {
+            const cid = arrivalCinematic.countryId;
+            setArrivalCinematic((s) => ({ ...s, visible: false }));
+            const pending = pendingSouvenirRef.current;
+            if (pending) {
+              pendingSouvenirRef.current = null;
+              setSouvenirModal({
+                visible: true,
+                countryName: pending.countryName,
+                souvenirName: pending.souvenirName,
+                unlockedCount: pending.unlockedCount,
+              });
+            } else {
+              navigation.navigate('CountryRoom', { countryId: cid });
+            }
+          }}
+        />
+      )}
+      {houseCeremony.visible && (
+        <HousePurchaseCeremony
+          countryName={houseCeremony.countryName}
+          countryEmoji={houseCeremony.countryEmoji}
+          accentColor={COUNTRIES.find(c => c.id === houseCeremony.countryId)?.accentColor}
+          onDismiss={() => {
+            setHouseCeremony((s) => ({ ...s, visible: false }));
+            navigation.navigate('CountryRoom', { countryId: houseCeremony.countryId });
+          }}
+          onNameHouse={() => {
+            setHouseCeremony((s) => ({ ...s, visible: false }));
+            setNameModal({ visible: true, countryId: houseCeremony.countryId, countryName: houseCeremony.countryName });
+          }}
+        />
+      )}
     </LinearGradient>
   );
 };

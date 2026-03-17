@@ -98,7 +98,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   return (
     <>
       <View ref={anchorRef} style={styles.anchor} collapsable={false} />
-      <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleDismiss}>
           <Animated.View
             style={[

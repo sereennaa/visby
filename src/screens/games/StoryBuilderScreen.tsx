@@ -21,6 +21,9 @@ import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { analyticsService } from '../../services/analytics';
 import { soundService } from '../../services/sound';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
 import type { RootStackParamList } from '../../types';
 
 interface StoryTemplate {
@@ -134,7 +137,8 @@ export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
     return () => timersRef.current.forEach(clearTimeout);
   }, []);
   const [storyIndex, setStoryIndex] = useState(0);
-  const [phase, setPhase] = useState<'playing' | 'complete' | 'result'>('playing');
+  const [phase, setPhase] = useState<'launching' | 'playing' | 'complete' | 'result'>('launching');
+  const [showCelebration, setShowCelebration] = useState(false);
   const [blankIndex, setBlankIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
@@ -175,6 +179,7 @@ export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
       if (pathNodeId) completePathNode(pathNodeId);
       const bonus = getGameOfTheDayBonusAura('StoryBuilder');
       if (bonus > 0) addAura(bonus);
+      setShowCelebration(true);
       timersRef.current.push(setTimeout(() => setPhase('complete'), 600));
     } else {
       timersRef.current.push(setTimeout(() => setBlankIndex((i) => i + 1), 600));
@@ -211,6 +216,16 @@ export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
   if (phase === 'complete') {
     return (
       <View style={styles.container}>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(correctCount, blanks.length)}
+            score={correctCount}
+            maxScore={blanks.length}
+            auraEarned={totalAura}
+            gameName="Story Builder"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
         <LinearGradient colors={[colors.reward.peachLight, colors.base.cream]} style={StyleSheet.absoluteFill} />
         <FloatingParticles count={8} variant="stars" opacity={0.15} speed="slow" />
         <SafeAreaView style={styles.safeArea}>
@@ -264,6 +279,16 @@ export const StoryBuilderScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <ScrollView style={styles.storyScroll} contentContainerStyle={styles.storyContainer}>
           <View style={styles.storyBlock}>{renderStory()}</View>
+          <View style={styles.storySpeaker}>
+            <SpeakerButton
+              text={story.segments.reduce<{ text: string; idx: number }>((acc, seg) => {
+                if (!seg.blank) return { ...acc, text: acc.text + seg.text };
+                const word = answers[acc.idx] ?? seg.blank.answer;
+                return { text: acc.text + word, idx: acc.idx + 1 };
+              }, { text: '', idx: 0 }).text}
+              countryId={story.countryId}
+            />
+          </View>
         </ScrollView>
 
         {currentBlank && (
@@ -301,6 +326,7 @@ const styles = StyleSheet.create({
   storyScroll: { flex: 1 },
   storyContainer: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   storyBlock: { flexDirection: 'row', flexWrap: 'wrap' },
+  storySpeaker: { alignItems: 'flex-start', marginTop: spacing.sm },
   storyText: { fontFamily: 'Nunito-Medium', fontSize: 17, color: colors.text.primary, lineHeight: 28 },
   blankActive: { color: colors.primary.wisteriaDark, fontFamily: 'Nunito-Bold', textDecorationLine: 'underline' },
   blankEmpty: { color: colors.text.light },

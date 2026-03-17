@@ -1492,7 +1492,7 @@ export const WORLD_DISHES: WorldDish[] = [
     region: 'North America',
     category: 'main_dish',
     emoji: '🍖',
-    imageUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecf0?w=600&fit=crop',
     originStory: 'American BBQ ribs trace back to Indigenous and African cooking traditions. Enslaved people in the South slow-cooked tough cuts over wood smoke, transforming them into tender, flavorful meals.',
     culturalSignificance: 'BBQ is a regional identity across America—Kansas City, Memphis, Texas, and the Carolinas all claim their style is the best and the original.',
     funFact: 'The four major BBQ regions each have a signature sauce: Kansas City (thick & sweet), Texas (no sauce needed), Carolina (vinegar-based), Memphis (dry rub).',
@@ -1787,6 +1787,7 @@ export interface CookingGameRecipe {
   correctIngredients: string[];
   wrongIngredients: string[];
   icon: string;
+  imageUrl?: string;
   isDiscovery?: boolean;
 }
 
@@ -1817,6 +1818,7 @@ export function getDiscoveryCookingRecipes(discoveredDishIds: string[]): Cooking
       correctIngredients: correct,
       wrongIngredients: wrong,
       icon: 'food',
+      imageUrl: dish.imageUrl,
       isDiscovery: true,
     });
   }

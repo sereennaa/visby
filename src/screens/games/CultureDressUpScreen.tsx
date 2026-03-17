@@ -23,6 +23,9 @@ import { analyticsService } from '../../services/analytics';
 import { COUNTRIES } from '../../config/constants';
 import { getGameOfTheDayBonusAura } from '../../config/gameOfTheDay';
 import { soundService } from '../../services/sound';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
+import { GameLaunchSequence } from '../../components/effects/GameLaunchSequence';
+import { GameCelebration, getCelebrationTier } from '../../components/effects/GameCelebration';
 import type { RootStackParamList } from '../../types';
 
 interface CulturalOutfit {
@@ -78,6 +81,8 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [showFact, setShowFact] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const quizQuestions = useMemo(() => {
     return [...CULTURAL_OUTFITS].sort(() => Math.random() - 0.5).slice(0, 6).map((outfit) => {
@@ -101,6 +106,7 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
     setPhase('quiz');
     setQuizIndex(0);
     setQuizScore(0);
+    setShowCelebration(false);
   };
 
   const handleQuizAnswer = (index: number) => {
@@ -125,6 +131,7 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
         if (pathNodeId) completePathNode(pathNodeId);
         const bonus = getGameOfTheDayBonusAura('CultureDressUp');
         if (bonus > 0) addAura(bonus);
+        setShowCelebration(true);
       }
       setQuizIndex((i) => i + 1);
     }, 800));
@@ -133,6 +140,17 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
   const defaultAppearance = visby?.appearance || {
     skinTone: '#FFAD6B', hairColor: '#B8875A', hairStyle: 'default', eyeColor: '#2A1A0A', eyeShape: 'round',
   };
+
+  if (isLaunching) {
+    return (
+      <GameLaunchSequence
+        gameName="Culture Dress-Up"
+        gameIcon="culture"
+        rules="Dress up Visby and test your cultural knowledge!"
+        onComplete={() => setIsLaunching(false)}
+      />
+    );
+  }
 
   if (phase === 'quiz' && quizIndex >= quizQuestions.length) {
     return (
@@ -146,10 +164,20 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
               <Icon name="sparkles" size={20} color={colors.reward.gold} />
               <Text style={styles.resultAura}>+{quizScore * 15} Aura</Text>
             </View>
-            <Button title="Dress Up More" onPress={() => setPhase('browse')} variant="primary" size="lg" fullWidth style={{ marginTop: spacing.lg }} />
+            <Button title="Dress Up More" onPress={() => { setPhase('browse'); setShowCelebration(false); }} variant="primary" size="lg" fullWidth style={{ marginTop: spacing.lg }} />
             <Button title="Done" onPress={() => navigation.goBack()} variant="ghost" size="md" style={{ marginTop: spacing.sm }} />
           </Animated.View>
         </SafeAreaView>
+        {showCelebration && (
+          <GameCelebration
+            tier={getCelebrationTier(quizScore, quizQuestions.length)}
+            score={quizScore}
+            maxScore={quizQuestions.length}
+            auraEarned={quizScore * 15}
+            gameName="Culture Dress-Up"
+            onDismiss={() => setShowCelebration(false)}
+          />
+        )}
       </View>
     );
   }
@@ -227,7 +255,10 @@ export const CultureDressUpScreen: React.FC<Props> = ({ navigation, route }) => 
 
         {showFact && (
           <Animated.View entering={FadeInUp.duration(300)} style={styles.factCard}>
-            <Icon name="sparkles" size={16} color={colors.primary.wisteriaDark} />
+            <View style={styles.factHeader}>
+              <Icon name="sparkles" size={16} color={colors.primary.wisteriaDark} />
+              <SpeakerButton text={selectedOutfit.funFact} countryId={selectedOutfit.countryId} size={16} compact />
+            </View>
             <Text style={styles.factText}>{selectedOutfit.funFact}</Text>
           </Animated.View>
         )}
@@ -264,8 +295,9 @@ const styles = StyleSheet.create({
   previewCircle: { alignItems: 'center', justifyContent: 'center' },
   outfitName: { fontFamily: 'Baloo2-SemiBold', fontSize: 20, color: colors.text.primary, marginTop: spacing.sm },
   outfitNameQuiz: { fontFamily: 'Baloo2-SemiBold', fontSize: 18, color: colors.text.primary, marginTop: spacing.sm, marginBottom: spacing.md },
-  factCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primary.wisteriaFaded, marginHorizontal: spacing.md, padding: spacing.md, borderRadius: 16 },
-  factText: { flex: 1, fontFamily: 'Nunito-Medium', fontSize: 14, color: colors.primary.wisteriaDark, lineHeight: 20 },
+  factCard: { backgroundColor: colors.primary.wisteriaFaded, marginHorizontal: spacing.md, padding: spacing.md, borderRadius: 16, gap: spacing.xs },
+  factHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  factText: { fontFamily: 'Nunito-Medium', fontSize: 14, color: colors.primary.wisteriaDark, lineHeight: 20 },
   outfitScroll: { marginTop: spacing.md, maxHeight: 50 },
   outfitScrollContent: { paddingHorizontal: spacing.md, gap: spacing.sm },
   outfitChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.surface.card, borderWidth: 2, borderColor: 'transparent' },

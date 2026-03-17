@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import { useStore } from '../../store/useStore';
 import { RootStackParamList } from '../../types';
 import { getFlashcardDeckWithDiscoveries, getAllFlashcardsMixedWithDiscoveries, FlashcardItem, FLASHCARD_DECKS } from '../../config/learningContent';
 import { AURA_REWARDS } from '../../config/constants';
+import { SpeakerButton } from '../../components/ui/SpeakerButton';
 
 type FlashcardsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Flashcards'>;
@@ -38,12 +40,16 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
   const deckMeta = deckId ? FLASHCARD_DECKS.find(d => d.id === deckId) : undefined;
   const [cards] = useState<FlashcardItem[]>(() => {
     const discoveredIds = bites.filter(b => b.worldDishId).map(b => b.worldDishId!);
-    const loaded = deckId
+    return deckId
       ? getFlashcardDeckWithDiscoveries(deckId, discoveredIds)
       : getAllFlashcardsMixedWithDiscoveries(discoveredIds, 12);
-    initFlashcardSR(loaded.map((c) => c.id));
-    return loaded;
   });
+
+  useEffect(() => {
+    if (cards.length > 0) {
+      initFlashcardSR(cards.map((c) => c.id));
+    }
+  }, [cards, initFlashcardSR]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [knewCount, setKnewCount] = useState(0);
@@ -205,12 +211,25 @@ export const FlashcardsScreen: React.FC<FlashcardsScreenProps> = ({ navigation, 
                 }
                 style={styles.flashcardGradient}
               >
-                <View style={styles.flashcardIconWrap}>
-                  <Icon name="flashcard" size={64} color={colors.primary.wisteriaDark} />
-                </View>
+                {card.imageUrl ? (
+                  <Image
+                    source={{ uri: card.imageUrl }}
+                    style={styles.flashcardImage}
+                    contentFit="cover"
+                    transition={200}
+                    placeholder={{ blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }}
+                  />
+                ) : (
+                  <View style={styles.flashcardIconWrap}>
+                    <Icon name="flashcard" size={64} color={colors.primary.wisteriaDark} />
+                  </View>
+                )}
                 <Heading level={1} style={styles.flashcardText}>
                   {isFlipped ? card.back : card.front}
                 </Heading>
+                <View style={styles.flashcardSpeaker}>
+                  <SpeakerButton text={isFlipped ? card.back : card.front} size={22} />
+                </View>
                 <View style={styles.flipHint}>
                   <Icon name="flashcard" size={16} color={colors.text.muted} />
                   <Caption>{isFlipped ? 'Tap to see front' : 'Tap to reveal'}</Caption>
@@ -300,9 +319,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     alignItems: 'center',
   },
+  flashcardImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    marginBottom: spacing.lg,
+    alignSelf: 'center',
+  },
   flashcardText: {
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  flashcardSpeaker: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   flipHint: {
     flexDirection: 'row',

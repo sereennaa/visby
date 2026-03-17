@@ -435,7 +435,7 @@ export const CosmeticShopScreen: React.FC<CosmeticShopScreenProps> = ({ navigati
       </SafeAreaView>
 
       {/* Buy Modal */}
-      <Modal visible={buyModalVisible} transparent animationType="none" onRequestClose={() => setBuyModalVisible(false)}>
+      <Modal visible={buyModalVisible} transparent animationType="fade" onRequestClose={() => setBuyModalVisible(false)}>
         <Pressable style={styles.overlay} onPress={() => setBuyModalVisible(false)}>
           <Animated.View entering={ZoomIn.duration(300).springify()}>
           <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>

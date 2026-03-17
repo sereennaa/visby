@@ -56,6 +56,31 @@ function MiniGlobe({ size, visitedIds }: { size: number; visitedIds: string[] })
   );
 }
 
+function ProgressRing({ size, progress, strokeWidth = 4 }: { size: number; progress: number; strokeWidth?: number }) {
+  const r = (size - strokeWidth) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const filled = circumference * (progress / 100);
+  return (
+    <Svg width={size} height={size} style={{ position: 'absolute' }}>
+      <Circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.journey.progressTrack} strokeWidth={strokeWidth} />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke={colors.journey.progressFill}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={`${filled} ${circumference - filled}`}
+        rotation={-90}
+        origin={`${cx}, ${cy}`}
+      />
+    </Svg>
+  );
+}
+
 function CompassWatermark() {
   return (
     <View style={[styles.compassWrap, { pointerEvents: 'none' }]}>
@@ -111,7 +136,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
             </Caption>
           </Animated.View>
 
-          {/* Hero: Visit the World */}
+          {/* Hero: Visit the World — passport/travel-journal card */}
           <Animated.View entering={FadeInDown.duration(500).delay(150)} style={{ position: 'relative' as const }}>
             {visitedCountries.length === 0 && (
               <Tooltip
@@ -127,53 +152,66 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
               accessibilityLabel="Visit the World"
             >
               <LinearGradient
-                colors={[colors.primary.wisteriaFaded, colors.surface.lavender, colors.calm.skyLight]}
+                colors={[colors.base.parchment, '#F5EDE0', colors.base.cream]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.heroGradient}
               >
+                <FloatingParticles count={3} variant="mixed" opacity={0.12} speed="slow" />
+
                 <View style={styles.heroTop}>
                   <View style={styles.heroTextCol}>
                     <Text style={styles.heroLabel}>Visit the World</Text>
-                    <Caption style={styles.heroSub}>
+                    <Caption style={styles.heroSubItalic}>Your journey around the world</Caption>
+                    <Text style={styles.heroProgress}>
                       {visitedCountries.length > 0
-                        ? `${visitedCountries.length} of ${totalCountries} countries explored`
+                        ? `${visitedCountries.length}/${totalCountries} countries explored`
                         : 'Start your first adventure'}
-                    </Caption>
-                    {visitedCountries.length > 0 && (
-                      <View style={styles.heroProgressWrap}>
-                        <View style={styles.heroProgressTrack}>
-                          <View style={[styles.heroProgressFill, { width: `${Math.max(progressPct, 4)}%` }]} />
-                        </View>
-                        <Text style={styles.heroProgressPct}>{progressPct}%</Text>
-                      </View>
-                    )}
+                    </Text>
                   </View>
+
                   <View style={styles.heroGlobeWrap}>
-                    <MiniGlobe size={72} visitedIds={visitedCountries} />
+                    <ProgressRing size={108} progress={progressPct} strokeWidth={4} />
+                    <View style={styles.heroGlobeInner}>
+                      <MiniGlobe size={100} visitedIds={visitedCountries} />
+                    </View>
                   </View>
                 </View>
 
                 {visitedFlags.length > 0 && (
                   <View style={styles.heroFlagsRow}>
                     {visitedFlags.map((flag, i) => (
-                      <Text key={i} style={styles.heroFlag}>{flag}</Text>
+                      <View key={i} style={[styles.heroFlagCircle, i > 0 && { marginLeft: -6 }]}>
+                        <Text style={styles.heroFlag}>{flag}</Text>
+                      </View>
                     ))}
                     {visitedCountries.length > 8 && (
-                      <Text style={styles.heroFlagMore}>+{visitedCountries.length - 8}</Text>
+                      <View style={[styles.heroFlagCircle, { marginLeft: -6, backgroundColor: colors.primary.wisteriaFaded }]}>
+                        <Text style={styles.heroFlagMore}>+{visitedCountries.length - 8}</Text>
+                      </View>
                     )}
                   </View>
                 )}
 
                 <View style={styles.heroArrowRow}>
                   <Text style={styles.heroArrowLabel}>See all countries</Text>
-                  <Icon name="chevronRight" size={18} color={colors.primary.wisteriaDark} />
+                  <Icon name="chevronRight" size={18} color={colors.journey.mapCompass} />
+                </View>
+
+                {/* Compass decoration bottom-left */}
+                <View style={styles.heroCompassDecor} pointerEvents="none">
+                  <Svg width={40} height={40}>
+                    <Circle cx={20} cy={20} r={16} fill="none" stroke={colors.journey.mapCompass} strokeWidth={0.6} opacity={0.15} />
+                    <Line x1={20} y1={5} x2={20} y2={35} stroke={colors.journey.mapCompass} strokeWidth={0.4} opacity={0.1} />
+                    <Line x1={5} y1={20} x2={35} y2={20} stroke={colors.journey.mapCompass} strokeWidth={0.4} opacity={0.1} />
+                    <Path d="M20,6 L21.5,17 L20,20 L18.5,17 Z" fill={colors.journey.mapCompass} opacity={0.18} />
+                  </Svg>
                 </View>
               </LinearGradient>
             </AnimatedPressable>
           </Animated.View>
 
-          {/* Next destination suggestion */}
+          {/* Next destination — postcard style */}
           {nextCountry && (
             <Animated.View entering={FadeInRight.duration(400).delay(250)}>
               <AnimatedPressable
@@ -181,14 +219,31 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
                 onPress={() => navigation.navigate('CountryWorld')}
                 scaleDown={0.97}
               >
-                <View style={styles.nextDestIcon}>
-                  <Text style={styles.nextDestFlag}>{nextCountry.flagEmoji}</Text>
-                </View>
-                <View style={styles.nextDestText}>
-                  <Caption style={styles.nextDestLabel}>Next destination</Caption>
-                  <Text style={styles.nextDestName}>{nextCountry.name}</Text>
-                </View>
-                <Icon name="chevronRight" size={18} color={colors.text.muted} />
+                <LinearGradient
+                  colors={[nextCountry.accentColor + '18', nextCountry.accentColor + '08', colors.surface.card]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.nextDestGradient}
+                >
+                  <View style={styles.nextDestLeft}>
+                    <Text style={styles.nextDestFlag}>{nextCountry.flagEmoji}</Text>
+                  </View>
+                  <View style={styles.nextDestCenter}>
+                    <Text style={styles.nextDestLabel}>Next Adventure</Text>
+                    <Text style={styles.nextDestName}>{nextCountry.name}</Text>
+                    <Caption style={styles.nextDestDesc} numberOfLines={2}>
+                      {nextCountry.description}
+                    </Caption>
+                  </View>
+                  <View style={styles.nextDestCTA}>
+                    <LinearGradient
+                      colors={[colors.primary.wisteria, colors.primary.wisteriaDark]}
+                      style={styles.nextDestButton}
+                    >
+                      <Text style={styles.nextDestButtonText}>Start Exploring</Text>
+                    </LinearGradient>
+                  </View>
+                </LinearGradient>
               </AnimatedPressable>
             </Animated.View>
           )}
@@ -200,7 +255,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Map cards row */}
+          {/* Map cards row — equal width, side by side */}
           <Animated.View entering={FadeInDown.duration(400).delay(300)} style={styles.mapRow}>
             <AnimatedPressable
               style={styles.mapCard}
@@ -210,11 +265,11 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
               accessibilityLabel="World map"
             >
               <LinearGradient
-                colors={[colors.calm.skyLight, colors.calm.sky]}
+                colors={[colors.primary.wisteriaFaded, colors.surface.lavender]}
                 style={styles.mapCardGradient}
               >
-                <View style={[styles.mapCardIconWrap, { backgroundColor: colors.calm.ocean + '20' }]}>
-                  <Icon name="map" size={24} color={colors.calm.ocean} />
+                <View style={[styles.mapCardIconWrap, { backgroundColor: colors.primary.wisteria + '25' }]}>
+                  <Icon name="map" size={24} color={colors.primary.wisteriaDark} />
                 </View>
                 <Text style={styles.mapCardLabel}>World Map</Text>
                 <Caption style={styles.mapCardSub}>Where you've been</Caption>
@@ -229,11 +284,11 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
               accessibilityLabel="Nearby Map"
             >
               <LinearGradient
-                colors={[colors.base.parchment, colors.calm.skyLight]}
+                colors={[colors.calm.skyLight, colors.calm.sky + '40']}
                 style={styles.mapCardGradient}
               >
-                <View style={[styles.mapCardIconWrap, { backgroundColor: colors.primary.wisteria + '20' }]}>
-                  <Icon name="compass" size={24} color={colors.primary.wisteriaDark} />
+                <View style={[styles.mapCardIconWrap, { backgroundColor: colors.calm.ocean + '25' }]}>
+                  <Icon name="compass" size={24} color={colors.calm.ocean} />
                 </View>
                 <Text style={styles.mapCardLabel}>Nearby</Text>
                 <Caption style={styles.mapCardSub}>Explore your area</Caption>
@@ -241,17 +296,28 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
             </AnimatedPressable>
           </Animated.View>
 
-          {/* Quick actions */}
-          <Animated.View entering={FadeInDown.duration(400).delay(380)} style={styles.quickRow}>
+          {/* Quick actions — full-width cards */}
+          <Animated.View entering={FadeInDown.duration(400).delay(380)} style={styles.quickCol}>
             <AnimatedPressable
               style={styles.quickAction}
               onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('Learn')}
               scaleDown={0.96}
             >
-              <View style={[styles.quickIconWrap, { backgroundColor: colors.reward.peachLight }]}>
-                <Icon name="book" size={20} color={colors.reward.peachDark} />
-              </View>
-              <Text style={styles.quickLabel}>Start learning</Text>
+              <LinearGradient
+                colors={[colors.reward.peachLight + '80', colors.reward.peachLight + '30']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.quickActionGradient}
+              >
+                <View style={[styles.quickIconCircle, { backgroundColor: colors.reward.peachLight }]}>
+                  <Icon name="book" size={22} color={colors.reward.peachDark} />
+                </View>
+                <View style={styles.quickTextWrap}>
+                  <Text style={styles.quickTitle}>Start Learning</Text>
+                  <Caption style={styles.quickSub}>Lessons, quizzes & flashcards</Caption>
+                </View>
+                <Icon name="chevronRight" size={18} color={colors.text.muted} />
+              </LinearGradient>
             </AnimatedPressable>
 
             <AnimatedPressable
@@ -259,14 +325,25 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
               onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('AddBite')}
               scaleDown={0.96}
             >
-              <View style={[styles.quickIconWrap, { backgroundColor: colors.accent.blush }]}>
-                <Icon name="bowl" size={20} color={colors.accent.coral} />
-              </View>
-              <Text style={styles.quickLabel}>Discover a Dish</Text>
+              <LinearGradient
+                colors={[colors.accent.blush + '80', colors.accent.blush + '30']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.quickActionGradient}
+              >
+                <View style={[styles.quickIconCircle, { backgroundColor: colors.accent.blush }]}>
+                  <Icon name="bowl" size={22} color={colors.accent.coral} />
+                </View>
+                <View style={styles.quickTextWrap}>
+                  <Text style={styles.quickTitle}>Discover a Dish</Text>
+                  <Caption style={styles.quickSub}>Try world foods & earn aura</Caption>
+                </View>
+                <Icon name="chevronRight" size={18} color={colors.text.muted} />
+              </LinearGradient>
             </AnimatedPressable>
           </Animated.View>
 
-          {/* My houses */}
+          {/* My houses — postcard-style chips */}
           {userHouses.length > 0 && (
             <Animated.View entering={FadeInDown.duration(400).delay(440)}>
               <View style={styles.housesSection}>
@@ -278,12 +355,15 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
                     return (
                       <AnimatedPressable
                         key={house.countryId}
-                        style={styles.houseChip}
+                        style={[styles.houseChip, { borderColor: c.accentColor + '55' }]}
                         onPress={() => navigation.navigate('CountryRoom', { countryId: house.countryId })}
                         scaleDown={0.96}
                       >
                         <Text style={styles.houseFlag}>{c.flagEmoji}</Text>
-                        <Text style={styles.houseName}>{c.name}</Text>
+                        <View style={styles.houseTextWrap}>
+                          <Text style={styles.houseName}>{house.houseName || c.name}</Text>
+                          <Caption style={styles.houseCountry}>{c.name}</Caption>
+                        </View>
                       </AnimatedPressable>
                     );
                   })}
@@ -299,7 +379,6 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ navigation }) => {
   );
 };
 
-const HERO_INNER_PAD = 18;
 const MAP_CARD_W = (SCREEN_WIDTH - spacing.screenPadding * 2 - 12) / 2;
 
 const styles = StyleSheet.create({
@@ -308,7 +387,7 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: 120,
+    paddingBottom: spacing.xxl,
   },
   header: {
     marginTop: spacing.md,
@@ -326,17 +405,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  // Hero card
+  // ─── Hero card (passport / travel-journal) ───
   heroCard: {
     borderRadius: 22,
     overflow: 'hidden',
     marginBottom: spacing.md,
   },
   heroGradient: {
-    padding: HERO_INNER_PAD,
+    padding: 20,
+    paddingBottom: 18,
     borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.journey.cardBorder,
+    borderWidth: 1.2,
+    borderColor: colors.journey.mapCompass + '30',
+    overflow: 'hidden',
   },
   heroTop: {
     flexDirection: 'row',
@@ -346,116 +427,138 @@ const styles = StyleSheet.create({
   heroTextCol: {
     flex: 1,
     paddingRight: spacing.md,
+    paddingTop: 4,
   },
   heroLabel: {
     fontFamily: 'Baloo2-Bold',
-    fontSize: 20,
+    fontSize: 22,
     color: colors.text.primary,
   },
-  heroSub: {
+  heroSubItalic: {
     marginTop: 2,
     fontSize: 12,
+    fontStyle: 'italic',
+    color: colors.journey.mapCompass,
     lineHeight: 17,
   },
-  heroProgressWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  heroProgress: {
+    fontFamily: 'Nunito-SemiBold',
+    fontSize: 13,
+    color: colors.text.secondary,
     marginTop: 10,
   },
-  heroProgressTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.journey.progressTrack,
-    overflow: 'hidden',
-  },
-  heroProgressFill: {
-    height: '100%',
-    borderRadius: 3,
-    backgroundColor: colors.journey.progressFill,
-  },
-  heroProgressPct: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 12,
-    color: colors.primary.wisteriaDark,
-    minWidth: 32,
-    textAlign: 'right',
-  },
   heroGlobeWrap: {
-    width: 76,
-    height: 76,
+    width: 108,
+    height: 108,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroGlobeInner: {
+    position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroFlagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 12,
+    marginTop: 14,
+  },
+  heroFlagCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.base.cream,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroFlag: {
-    fontSize: 18,
+    fontSize: 16,
   },
   heroFlagMore: {
     fontFamily: 'Nunito-Bold',
-    fontSize: 12,
-    color: colors.text.muted,
-    marginLeft: 2,
+    fontSize: 10,
+    color: colors.primary.wisteriaDark,
   },
   heroArrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: 8,
+    marginTop: 10,
     gap: 4,
   },
   heroArrowLabel: {
     fontFamily: 'Nunito-SemiBold',
     fontSize: 13,
-    color: colors.primary.wisteriaDark,
+    color: colors.journey.mapCompass,
+  },
+  heroCompassDecor: {
+    position: 'absolute',
+    left: 10,
+    bottom: 8,
+    opacity: 0.7,
   },
 
-  // Next destination
+  // ─── Next destination (postcard) ───
   nextDestCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface.cardWarm,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.journey.cardBorder,
+    borderRadius: 18,
+    overflow: 'hidden',
     marginBottom: spacing.lg,
   },
-  nextDestIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.base.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
+  nextDestGradient: {
+    padding: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.journey.cardBorder,
   },
-  nextDestFlag: {
-    fontSize: 20,
+  nextDestLeft: {
+    position: 'absolute',
+    left: 16,
+    top: 16,
   },
-  nextDestText: { flex: 1 },
+  nextDestFlag: {
+    fontSize: 32,
+  },
+  nextDestCenter: {
+    marginLeft: 48,
+  },
   nextDestLabel: {
-    fontSize: 10,
+    fontFamily: 'Nunito-Bold',
+    fontSize: 11,
+    color: colors.reward.amber,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    color: colors.text.muted,
+    letterSpacing: 0.8,
   },
   nextDestName: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 15,
+    fontFamily: 'Baloo2-Bold',
+    fontSize: 18,
     color: colors.text.primary,
+    marginTop: 1,
+  },
+  nextDestDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  nextDestCTA: {
+    marginTop: 12,
+    marginLeft: 48,
+    alignSelf: 'flex-start',
+  },
+  nextDestButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  nextDestButtonText: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 13,
+    color: colors.text.inverse,
   },
 
-  // Divider
+  // ─── Divider ───
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -475,14 +578,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  // Map cards
+  // ─── Map cards (equal width, side by side) ───
   mapRow: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: spacing.md,
   },
   mapCard: {
-    width: MAP_CARD_W,
+    flex: 1,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -494,16 +597,16 @@ const styles = StyleSheet.create({
     minHeight: 130,
   },
   mapCardIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   mapCardLabel: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 15,
+    fontFamily: 'Baloo2-Bold',
+    fontSize: 16,
     color: colors.text.primary,
   },
   mapCardSub: {
@@ -512,39 +615,47 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
   },
 
-  // Quick actions
-  quickRow: {
-    flexDirection: 'row',
-    gap: 12,
+  // ─── Quick actions (full-width cards) ───
+  quickCol: {
+    gap: 10,
     marginBottom: spacing.lg,
   },
   quickAction: {
-    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  quickActionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface.card,
+    paddingHorizontal: 14,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.journey.cardBorder,
   },
-  quickIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  quickIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickLabel: {
-    fontFamily: 'Nunito-SemiBold',
-    fontSize: 13,
-    color: colors.text.primary,
+  quickTextWrap: {
     flex: 1,
+    marginLeft: 12,
+  },
+  quickTitle: {
+    fontFamily: 'Nunito-Bold',
+    fontSize: 14,
+    color: colors.text.primary,
+  },
+  quickSub: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    marginTop: 1,
   },
 
-  // My houses
+  // ─── My houses (postcard chips) ───
   housesSection: {
     marginBottom: spacing.md,
   },
@@ -557,26 +668,34 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   housesScroll: {
-    gap: spacing.sm,
+    gap: 10,
   },
   houseChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: colors.primary.wisteriaFaded,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.journey.cardBorder,
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    minWidth: 140,
   },
   houseFlag: {
-    fontSize: 18,
+    fontSize: 22,
+  },
+  houseTextWrap: {
+    flexShrink: 1,
   },
   houseName: {
-    fontFamily: 'Nunito-SemiBold',
+    fontFamily: 'Nunito-Bold',
     fontSize: 13,
-    color: colors.primary.wisteriaDark,
+    color: colors.text.primary,
+  },
+  houseCountry: {
+    fontSize: 10,
+    color: colors.text.muted,
+    marginTop: 1,
   },
 
   bottomSpacer: {

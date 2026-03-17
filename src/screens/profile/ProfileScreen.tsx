@@ -549,7 +549,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </ScrollView>
 
         {/* Logout Confirmation Modal */}
-        <Modal visible={showLogoutConfirm} transparent animationType="none">
+        <Modal visible={showLogoutConfirm} transparent animationType="fade">
           <Pressable style={styles.overlay} onPress={() => setShowLogoutConfirm(false)}>
             <Animated.View entering={ZoomIn.duration(300).springify()}>
               <Pressable style={styles.modalCard}>

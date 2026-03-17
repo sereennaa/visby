@@ -13,6 +13,16 @@ const SOUNDS = {
   chime: 'https://assets.mixkit.co/active_storage/sfx/2309-notification.mp3',
   whoosh: 'https://assets.mixkit.co/active_storage/sfx/2514-whoosh.mp3',
   streak: 'https://assets.mixkit.co/active_storage/sfx/2019-achievement.mp3',
+  collect: 'https://assets.mixkit.co/active_storage/sfx/2013-bonus.mp3',
+  error: 'https://assets.mixkit.co/active_storage/sfx/2955-wrong.mp3',
+  levelUp: 'https://assets.mixkit.co/active_storage/sfx/1997-achievement.mp3',
+  navigate: 'https://assets.mixkit.co/active_storage/sfx/2568-click.mp3',
+  reveal: 'https://assets.mixkit.co/active_storage/sfx/2018-magical.mp3',
+  countdown: 'https://assets.mixkit.co/active_storage/sfx/2571-tick.mp3',
+  auraGain: 'https://assets.mixkit.co/active_storage/sfx/2003-coin.mp3',
+  unwrap: 'https://assets.mixkit.co/active_storage/sfx/2016-unlock.mp3',
+  stamp: 'https://assets.mixkit.co/active_storage/sfx/2572-stamp.mp3',
+  arrival: 'https://assets.mixkit.co/active_storage/sfx/2017-magic-reveal.mp3',
 } as const;
 
 let audioModeSet = false;
@@ -117,5 +127,41 @@ export const soundService = {
   playTap() {
     if (!isSoundEnabled()) return;
     playUrl(SOUNDS.tap);
+  },
+  playCollect() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.collect);
+  },
+  playError() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.error);
+  },
+  playNavigate() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.navigate);
+  },
+  playReveal() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.reveal);
+  },
+  playCountdown() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.countdown);
+  },
+  playAuraGain() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.auraGain);
+  },
+  playUnwrap() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.unwrap);
+  },
+  playStamp() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.stamp);
+  },
+  playArrival() {
+    if (!isSoundEnabled()) return;
+    playUrl(SOUNDS.arrival);
   },
 };

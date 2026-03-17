@@ -122,7 +122,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
   if (!visible || !fact) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Animated.View entering={ZoomIn.duration(300).springify()}>
         <Animated.View style={[styles.card, cardAnimatedStyle]}>

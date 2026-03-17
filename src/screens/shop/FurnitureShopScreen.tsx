@@ -13,17 +13,21 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp, FadeInRight, ZoomIn } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Text, Heading, Caption } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';
 import { Icon, IconName } from '../../components/ui/Icon';
+import { ProgressBar } from '../../components/ui/ProgressBar';
 import { FloatingParticles } from '../../components/effects/FloatingParticles';
+import { NewItemShimmer } from '../../components/effects/NewItemShimmer';
 import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
 import { RoomPreviewMini } from '../../components/shop/RoomPreviewMini';
 import { RarityWrapper } from '../../components/shop/RarityEffects';
 import { PurchaseCelebration } from '../../components/shop/PurchaseCelebration';
+import { hapticService } from '../../services/haptics';
+import { soundService } from '../../services/sound';
 import { useStore } from '../../store/useStore';
 import { RootStackParamList, FurnitureItem, FurnitureSet } from '../../types';
 import {
@@ -37,9 +41,16 @@ import {
 
 const GAP = 12;
 const NUM_COLS = 2;
+const BOTTOM_NAV_PADDING = 88;
+const ESTIMATED_ROW_HEIGHT = 210;
 
 type Tab = 'Furniture' | 'Wallpaper' | 'Flooring';
 const TABS: Tab[] = ['Furniture', 'Wallpaper', 'Flooring'];
+
+type FilterOption = 'all' | 'owned' | 'not_owned';
+type SortOption = 'default' | 'price_low' | 'price_high' | 'rarity';
+
+const RARITY_ORDER: Record<string, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
 
 const RARITY_COLORS: Record<string, string> = {
   common: '#9E9E9E', uncommon: '#4CAF50', rare: '#2196F3', epic: '#9C27B0', legendary: '#FF9800',
@@ -61,9 +72,12 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
   const addBondPoints = useStore(s => s.addBondPoints);
   const userHouses = useStore(s => s.userHouses);
   const [activeTab, setActiveTab] = useState<Tab>('Furniture');
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('default');
   const [infoModal, setInfoModal] = useState<{ title: string; message: string } | null>(null);
   const [detailItem, setDetailItem] = useState<FurnitureItem | null>(null);
   const [celebrationItem, setCelebrationItem] = useState<FurnitureItem | null>(null);
+  const [celebrationSet, setCelebrationSet] = useState<FurnitureSet | null>(null);
   const aura = user?.aura ?? 0;
   const visitedCountries = user?.visitedCountries ?? [];
   const availableFurniture = useMemo(() => getAvailableFurniture(visitedCountries), [visitedCountries]);
@@ -80,6 +94,7 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
   const primaryRoom = primaryHouse?.roomCustomizations?.['living'];
 
   const isOwned = useCallback((id: string) => ownedFurniture.includes(id), [ownedFurniture]);
+  const newestCountry = visitedCountries.length > 0 ? visitedCountries[visitedCountries.length - 1] : null;
 
   const handleBuyFurniture = useCallback(
     (item: FurnitureItem) => {
@@ -90,6 +105,8 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
       }
       const success = buyFurniture(item.id, item.price);
       if (success) {
+        hapticService.success();
+        soundService.playCollect();
         addBondPoints(3, 'purchase_furniture');
         setCelebrationItem(item);
       } else {
@@ -106,9 +123,12 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
     }
     const success = spendAura(fset.bundlePrice);
     if (!success) return;
+    hapticService.success();
+    soundService.playMissionComplete();
     const newOwned = [...new Set([...ownedFurniture, ...fset.items])];
     useStore.setState({ ownedFurniture: newOwned });
     addBondPoints(8, 'purchase_furniture_set');
+    setCelebrationSet(fset);
   }, [aura, ownedFurniture, spendAura, addBondPoints]);
 
   const renderFurnitureItem = useCallback(
@@ -116,12 +136,14 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
       const owned = isOwned(item.id);
       const rarityColor = RARITY_COLORS[item.rarity] ?? '#9E9E9E';
       const originName = item.countryOrigin ? COUNTRY_ORIGIN_NAMES[item.countryOrigin] ?? item.countryOrigin : null;
+      const isNew = !owned && !!item.countryOrigin && item.countryOrigin === newestCountry;
       return (
         <Animated.View entering={FadeInUp.delay(Math.min(index, 8) * 50).duration(350).springify()}>
+        <NewItemShimmer isNew={isNew} style={{ width: cardW }}>
         <RarityWrapper rarity={item.rarity} style={{ width: cardW }}>
           <TouchableOpacity
             style={styles.itemCard}
-            onPress={() => setDetailItem(item)}
+            onPress={() => { hapticService.tap(); setDetailItem(item); }}
             activeOpacity={0.9}
           >
             <View style={styles.itemIconWrap}>
@@ -153,43 +175,57 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
             )}
           </TouchableOpacity>
         </RarityWrapper>
+        </NewItemShimmer>
         </Animated.View>
       );
     },
-    [cardW, isOwned, handleBuyFurniture],
+    [cardW, isOwned, handleBuyFurniture, newestCountry],
   );
 
-  const sortedFurniture = useMemo(
-    () =>
-      [...availableFurniture].sort((a, b) => {
+  const sortedFurniture = useMemo(() => {
+    let items = [...availableFurniture];
+    if (filterBy === 'owned') items = items.filter(i => ownedFurniture.includes(i.id));
+    else if (filterBy === 'not_owned') items = items.filter(i => !ownedFurniture.includes(i.id));
+
+    if (sortBy === 'price_low') items.sort((a, b) => a.price - b.price);
+    else if (sortBy === 'price_high') items.sort((a, b) => b.price - a.price);
+    else if (sortBy === 'rarity') items.sort((a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0));
+    else {
+      items.sort((a, b) => {
         const aOwned = ownedFurniture.includes(a.id) ? 1 : 0;
         const bOwned = ownedFurniture.includes(b.id) ? 1 : 0;
         if (aOwned !== bOwned) return aOwned - bOwned;
         return a.price - b.price;
-      }),
-    [availableFurniture, ownedFurniture],
-  );
+      });
+    }
+    return items;
+  }, [availableFurniture, ownedFurniture, filterBy, sortBy]);
 
-  const renderSetCard = (fset: FurnitureSet) => {
+  const ownedCount = useMemo(() => availableFurniture.filter(i => ownedFurniture.includes(i.id)).length, [availableFurniture, ownedFurniture]);
+  const totalCount = availableFurniture.length;
+
+  const renderSetCard = (fset: FurnitureSet, index: number) => {
     const allOwned = fset.items.every((id) => ownedFurniture.includes(id));
     const originName = fset.countryOrigin ? COUNTRY_ORIGIN_NAMES[fset.countryOrigin] ?? fset.countryOrigin : null;
     return (
-      <TouchableOpacity key={fset.id} style={styles.setCard} activeOpacity={0.9} onPress={() => handleBuySet(fset)}>
-        <LinearGradient colors={['#F5F0FF', '#FFF6EE']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.setGradient}>
-          <Text variant="h3" numberOfLines={1} style={styles.setName}>{fset.name}</Text>
-          {originName && <Caption style={styles.setOrigin}>{originName}</Caption>}
-          <Caption numberOfLines={2} style={styles.setDesc}>{fset.description}</Caption>
-          <Text variant="caption" color={colors.text.muted} style={styles.setCount}>{fset.items.length} pieces</Text>
-          {allOwned ? (
-            <View style={styles.ownedBadge}><Icon name="check" size={12} color="#4CAF50" /><Text style={styles.ownedText}>Complete</Text></View>
-          ) : (
-            <View style={styles.setPriceRow}>
-              <Icon name="sparkles" size={13} color={colors.reward.gold} />
-              <Text variant="h3" color={colors.reward.amber}>{fset.bundlePrice}</Text>
-            </View>
-          )}
-        </LinearGradient>
-      </TouchableOpacity>
+      <Animated.View key={fset.id} entering={FadeInRight.delay(Math.min(index, 5) * 80).duration(400).springify().damping(15)}>
+        <TouchableOpacity style={styles.setCard} activeOpacity={0.9} onPress={() => handleBuySet(fset)}>
+          <LinearGradient colors={['#F5F0FF', '#FFF6EE']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.setGradient}>
+            <Text variant="h3" numberOfLines={1} style={styles.setName}>{fset.name}</Text>
+            {originName && <Caption style={styles.setOrigin}>{originName}</Caption>}
+            <Caption numberOfLines={2} style={styles.setDesc}>{fset.description}</Caption>
+            <Text variant="caption" color={colors.text.muted} style={styles.setCount}>{fset.items.length} pieces</Text>
+            {allOwned ? (
+              <View style={styles.ownedBadge}><Icon name="check" size={12} color="#4CAF50" /><Text style={styles.ownedText}>Complete</Text></View>
+            ) : (
+              <View style={styles.setPriceRow}>
+                <Icon name="sparkles" size={13} color={colors.reward.gold} />
+                <Text variant="h3" color={colors.reward.amber}>{fset.bundlePrice}</Text>
+              </View>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
@@ -198,16 +234,59 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
       {FURNITURE_SETS.length > 0 && (
         <View style={styles.setsSection}>
           <View style={styles.sectionHeader}>
-            <Icon name="gift" size={16} color={colors.primary.wisteriaDark} />
-            <Text variant="h3">Furniture Sets</Text>
+            <Icon name="gift" size={18} color={colors.primary.wisteriaDark} />
+            <Text variant="h3" style={styles.sectionTitle}>Curated sets</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.setsScroll}>
-            {FURNITURE_SETS.map(renderSetCard)}
+            {FURNITURE_SETS.map((fset, i) => renderSetCard(fset, i))}
           </ScrollView>
         </View>
       )}
+
+      {/* Filter / Sort bar */}
+      <View style={styles.filterBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          {(['all', 'not_owned', 'owned'] as FilterOption[]).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filterBy === f && styles.filterChipActive]}
+              onPress={() => { hapticService.tap(); setFilterBy(f); }}
+              activeOpacity={0.8}
+            >
+              <Text variant="caption" color={filterBy === f ? '#FFFFFF' : colors.text.secondary} style={styles.filterChipText}>
+                {f === 'all' ? 'All' : f === 'not_owned' ? 'Available' : 'Owned'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <View style={styles.sortDivider} />
+          {(['default', 'price_low', 'price_high', 'rarity'] as SortOption[]).map((s) => (
+            <TouchableOpacity
+              key={s}
+              style={[styles.filterChip, sortBy === s && styles.filterChipActive]}
+              onPress={() => { hapticService.tap(); setSortBy(s); }}
+              activeOpacity={0.8}
+            >
+              <Text variant="caption" color={sortBy === s ? '#FFFFFF' : colors.text.secondary} style={styles.filterChipText}>
+                {s === 'default' ? 'Default' : s === 'price_low' ? 'Price \u2191' : s === 'price_high' ? 'Price \u2193' : 'Rarity'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Collection progress */}
+      {totalCount > 0 && (
+        <View style={styles.progressRow}>
+          <View style={styles.progressLabel}>
+            <Icon name="home" size={14} color={colors.primary.wisteriaDark} />
+            <Caption color={colors.text.secondary}>You own {ownedCount} of {totalCount} pieces</Caption>
+          </View>
+          <ProgressBar progress={(ownedCount / totalCount) * 100} variant="aura" height={6} />
+        </View>
+      )}
+
       {visitedCountries.length < 2 && (
-        <Text style={styles.unlockHint}>Visit new places in the World to unlock traditional furniture!</Text>
+        <Text style={styles.unlockHint}>Explore the world to unlock more beautiful furniture!</Text>
       )}
     </>
   );
@@ -229,6 +308,7 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
           <View style={styles.headerCenter}>
             <Text variant="caption" color={colors.primary.wisteriaDark} style={styles.headerSub}>The Workshop</Text>
             <Heading level={2}>Furniture</Heading>
+            <Caption color={colors.text.muted} style={styles.headerTagline}>Decorate your space</Caption>
           </View>
           <View style={styles.auraChip}>
             <Icon name="sparkles" size={14} color={colors.reward.gold} />
@@ -236,12 +316,12 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.tabBar, { paddingRight: spacing.screenPadding }]}>
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => { hapticService.selection(); setActiveTab(tab); }}
               activeOpacity={0.8}
             >
               <Icon
@@ -256,6 +336,7 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
 
         {activeTab === 'Furniture' && (
           <FlatList
+            style={styles.list}
             data={sortedFurniture}
             keyExtractor={(item) => item.id}
             renderItem={renderFurnitureItem}
@@ -264,6 +345,18 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
             columnWrapperStyle={styles.gridRow}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={FurnitureListHeader}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Icon name="compass" size={40} color={colors.primary.wisteriaFaded} />
+                <Text variant="body" style={styles.emptyStateTitle}>No furniture yet</Text>
+                <Caption color={colors.text.muted} style={styles.emptyStateSub}>Explore the world to unlock more beautiful pieces!</Caption>
+              </View>
+            )}
+            getItemLayout={(_, index) => ({
+              length: ESTIMATED_ROW_HEIGHT,
+              offset: ESTIMATED_ROW_HEIGHT * Math.floor(index / NUM_COLS),
+              index,
+            })}
             initialNumToRender={8}
             maxToRenderPerBatch={6}
             windowSize={5}
@@ -272,37 +365,65 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
         )}
 
         {activeTab === 'Wallpaper' && (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.swatchContent}>
-            <Text style={styles.swatchHint}>Apply wallpapers in your house rooms via Decorate mode.</Text>
-            <View style={styles.swatchGrid}>
-              {WALLPAPER_OPTIONS.map((opt) => (
-                <View key={opt.id} style={styles.swatchCard}>
-                  <RoomPreviewMini width={80} height={60} wallColor={opt.color} floorColor="#D4C5A0" />
-                  <Text style={styles.swatchName}>{opt.name}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <Animated.View key="wallpaper-tab" entering={FadeIn.duration(250)} style={styles.list}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.swatchContent}>
+              <View style={styles.sectionHeader}>
+                <Icon name="edit" size={16} color={colors.primary.wisteriaDark} />
+                <Text variant="h3" style={styles.sectionTitle}>Wallpapers</Text>
+              </View>
+              <Text style={styles.swatchHint}>Apply wallpapers in your house rooms via Decorate mode.</Text>
+              <View style={styles.swatchGrid}>
+                {WALLPAPER_OPTIONS.map((opt) => {
+                  const isActive = primaryRoom?.wallColor === opt.color;
+                  return (
+                    <TouchableOpacity key={opt.id} style={[styles.swatchCard, isActive && styles.swatchCardActive]} onPress={() => hapticService.tap()} activeOpacity={0.85}>
+                      <RoomPreviewMini width={100} height={80} wallColor={opt.color} floorColor="#D4C5A0" />
+                      <Text style={styles.swatchName}>{opt.name}</Text>
+                      {isActive && (
+                        <View style={styles.activeBadge}>
+                          <Icon name="check" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </Animated.View>
         )}
 
         {activeTab === 'Flooring' && (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.swatchContent}>
-            <Text style={styles.swatchHint}>Apply flooring in your house rooms via Decorate mode.</Text>
-            <View style={styles.swatchGrid}>
-              {FLOORING_OPTIONS.map((opt) => (
-                <View key={opt.id} style={styles.swatchCard}>
-                  <RoomPreviewMini width={80} height={60} wallColor="#FAF0E6" floorColor={opt.color} />
-                  <Text style={styles.swatchName}>{opt.name}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <Animated.View key="flooring-tab" entering={FadeIn.duration(250)} style={styles.list}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.swatchContent}>
+              <View style={styles.sectionHeader}>
+                <Icon name="culture" size={16} color={colors.primary.wisteriaDark} />
+                <Text variant="h3" style={styles.sectionTitle}>Flooring</Text>
+              </View>
+              <Text style={styles.swatchHint}>Apply flooring in your house rooms via Decorate mode.</Text>
+              <View style={styles.swatchGrid}>
+                {FLOORING_OPTIONS.map((opt) => {
+                  const isActive = primaryRoom?.floorColor === opt.color;
+                  return (
+                    <TouchableOpacity key={opt.id} style={[styles.swatchCard, isActive && styles.swatchCardActive]} onPress={() => hapticService.tap()} activeOpacity={0.85}>
+                      <RoomPreviewMini width={100} height={80} wallColor="#FAF0E6" floorColor={opt.color} />
+                      <Text style={styles.swatchName}>{opt.name}</Text>
+                      {isActive && (
+                        <View style={styles.activeBadge}>
+                          <Icon name="check" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </Animated.View>
         )}
       </SafeAreaView>
 
       {/* Enhanced Detail Modal */}
       {detailItem && (
-        <Modal visible transparent animationType="none">
+        <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalOverlay} onPress={() => setDetailItem(null)}>
             <Animated.View entering={ZoomIn.duration(300).springify()} style={{ width: '100%', alignItems: 'center' }}>
             <Pressable style={styles.detailModalCard} onPress={(e) => e.stopPropagation()}>
@@ -341,7 +462,7 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
 
               {/* Room preview */}
               <View style={styles.roomPreviewSection}>
-                <Caption style={styles.roomPreviewLabel}>How it looks</Caption>
+                <Caption style={styles.roomPreviewLabel}>How it looks in your room</Caption>
                 <RoomPreviewMini
                   width={200}
                   height={120}
@@ -373,7 +494,7 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
       )}
 
       {infoModal && (
-        <Modal visible transparent animationType="none">
+        <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalOverlay} onPress={() => setInfoModal(null)}>
             <Animated.View entering={ZoomIn.duration(300).springify()} style={{ width: '100%', alignItems: 'center' }}>
             <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
@@ -400,6 +521,17 @@ export const FurnitureShopScreen: React.FC<FurnitureShopScreenProps> = ({ naviga
           onDismiss={() => setCelebrationItem(null)}
         />
       )}
+
+      {celebrationSet && (
+        <PurchaseCelebration
+          visible={!!celebrationSet}
+          itemName={celebrationSet.name}
+          rarity="rare"
+          appearance={appearance}
+          equipped={equipped}
+          onDismiss={() => setCelebrationSet(null)}
+        />
+      )}
     </View>
   );
 };
@@ -413,6 +545,7 @@ const styles = StyleSheet.create({
   },
   headerCenter: { alignItems: 'center' },
   headerSub: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 1 },
+  headerTagline: { fontSize: 12, marginTop: 2 },
   backBtn: { padding: spacing.xs },
   auraChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -434,26 +567,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     paddingHorizontal: spacing.screenPadding, marginBottom: spacing.sm,
   },
-  setsScroll: { paddingHorizontal: spacing.screenPadding, gap: 12 },
-  setCard: { width: 200, borderRadius: 18, overflow: 'hidden' },
-  setGradient: { padding: spacing.md, borderRadius: 18, gap: 4 },
+  sectionTitle: { fontFamily: 'Nunito-Bold', color: colors.primary.wisteriaDark },
+  setsScroll: { paddingHorizontal: spacing.screenPadding, paddingRight: spacing.screenPadding, gap: 12 },
+  setCard: {
+    width: 200, borderRadius: 20, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.25)',
+    shadowColor: colors.shadow.colored, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 14, elevation: 4,
+  },
+  setGradient: { padding: spacing.md, borderRadius: 20, gap: 4 },
   setName: { marginBottom: 2 },
   setOrigin: { fontSize: 10 },
   setDesc: { lineHeight: 15, fontSize: 11 },
   setCount: { fontSize: 10 },
   setPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  filterBar: { marginBottom: spacing.sm },
+  filterScroll: { paddingHorizontal: spacing.screenPadding, gap: 6, alignItems: 'center' },
+  filterChip: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.7)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
+  },
+  filterChipActive: { backgroundColor: colors.primary.wisteria, borderColor: colors.primary.wisteriaDark },
+  filterChipText: { fontSize: 11, fontWeight: '600' as const },
+  sortDivider: { width: 1, height: 20, backgroundColor: 'rgba(0,0,0,0.1)', marginHorizontal: 4 },
+  progressRow: {
+    paddingHorizontal: spacing.screenPadding, marginBottom: spacing.md, gap: spacing.xs,
+  },
+  progressLabel: {
+    flexDirection: 'row' as const, alignItems: 'center' as const, gap: spacing.xs,
+  },
   unlockHint: {
     fontFamily: 'Nunito-Medium', fontSize: 12, color: colors.text.secondary,
     textAlign: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.xs,
   },
-  gridContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxl * 3, paddingTop: spacing.xs },
+  emptyState: {
+    alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl * 2, paddingHorizontal: spacing.xl,
+  },
+  emptyStateTitle: { fontFamily: 'Nunito-Bold', marginBottom: spacing.xs, textAlign: 'center' },
+  emptyStateSub: { textAlign: 'center', lineHeight: 20 },
+  list: { flex: 1 },
+  gridContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: BOTTOM_NAV_PADDING, paddingTop: spacing.xs },
   gridRow: { gap: GAP, marginBottom: GAP },
   itemCard: {
-    flex: 1, alignItems: 'center', padding: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.2)',
+    flex: 1, alignItems: 'center', padding: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(184, 165, 224, 0.3)',
+    shadowColor: colors.shadow.colored, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 8, elevation: 2,
   },
   itemIconWrap: {
-    width: 64, height: 56, borderRadius: 16, backgroundColor: colors.base.cream,
+    width: 64, height: 56, borderRadius: 18, backgroundColor: colors.base.cream,
     justifyContent: 'center', alignItems: 'center', marginBottom: 6, overflow: 'hidden',
   },
   itemName: { fontFamily: 'Baloo2-SemiBold', fontSize: 13, color: colors.text.primary, textAlign: 'center' },
@@ -475,13 +635,24 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: 16, backgroundColor: colors.reward.peach, borderRadius: 14,
   },
   buyBtnText: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.reward.gold },
-  swatchContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxl * 3, paddingTop: spacing.xs },
+  swatchContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: BOTTOM_NAV_PADDING, paddingTop: spacing.xs },
   swatchHint: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.text.muted, textAlign: 'center', marginBottom: spacing.md },
   swatchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, justifyContent: 'center' },
-  swatchCard: { alignItems: 'center', gap: 4 },
+  swatchCard: {
+    alignItems: 'center', gap: 4, padding: spacing.xs, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: 'rgba(184, 165, 224, 0.2)',
+    position: 'relative',
+  },
+  swatchCardActive: {
+    borderColor: colors.primary.wisteria, borderWidth: 2,
+  },
+  activeBadge: {
+    position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 9,
+    backgroundColor: colors.primary.wisteria, alignItems: 'center', justifyContent: 'center',
+  },
   swatchName: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.text.secondary, textAlign: 'center' },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.58)',
     justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
   },
   modalCard: {
@@ -489,8 +660,9 @@ const styles = StyleSheet.create({
     width: '100%', maxWidth: 340, alignItems: 'center',
   },
   detailModalCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 24, padding: spacing.xl,
+    backgroundColor: '#FFFFFF', borderRadius: 28, padding: spacing.xl,
     width: '100%', maxWidth: 360, alignItems: 'center',
+    shadowColor: colors.shadow.colored, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 24, elevation: 8,
   },
   detailVisualWrap: {
     width: 100, height: 80, borderRadius: 20, backgroundColor: colors.primary.wisteriaFaded,

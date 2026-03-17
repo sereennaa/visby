@@ -118,6 +118,23 @@ export const COSMETICS_CATALOG: ShopCosmetic[] = [
   { id: 'fox', name: 'Fox', description: 'A clever red fox that scouts the path ahead', type: 'companion', rarity: 'uncommon', price: 180, icon: 'flash' },
   { id: 'butterfly_swarm', name: 'Butterfly Swarm', description: 'A magical cloud of colorful butterflies', type: 'companion', rarity: 'common', price: 60, icon: 'sparkles' },
   { id: 'golden_eagle', name: 'Golden Eagle', description: 'Majestic raptor soaring above your shoulder', type: 'companion', rarity: 'epic', price: 600, icon: 'star', isFeatured: true },
+
+  // ===================== SEASONAL EVENT EXCLUSIVES =====================
+  { id: 'sakura_hat', name: 'Sakura Hat', description: 'Delicate cherry-blossom crown for spring', type: 'hat', rarity: 'rare', price: 0, icon: 'nature', seasonalEvent: 'cherry_blossom' },
+  { id: 'blossom_outfit', name: 'Blossom Outfit', description: 'Soft pink kimono adorned with petals', type: 'outfit', rarity: 'rare', price: 0, icon: 'shirt', seasonalEvent: 'cherry_blossom' },
+  { id: 'sunglasses', name: 'Cool Sunglasses', description: 'Stylish shades for sunny summer days', type: 'accessory', rarity: 'uncommon', price: 0, icon: 'star', seasonalEvent: 'summer_explorer' },
+  { id: 'beach_outfit', name: 'Beach Outfit', description: 'Breezy tropical outfit for the coast', type: 'outfit', rarity: 'uncommon', price: 0, icon: 'shirt', seasonalEvent: 'summer_explorer' },
+  { id: 'surfboard_accessory', name: 'Surfboard', description: 'A rad surfboard to carry on your back', type: 'accessory', rarity: 'rare', price: 0, icon: 'sparkles', seasonalEvent: 'summer_explorer' },
+  { id: 'harvest_hat', name: 'Harvest Hat', description: 'Woven straw hat with autumn leaves', type: 'hat', rarity: 'uncommon', price: 0, icon: 'nature', seasonalEvent: 'harvest_feast' },
+  { id: 'autumn_scarf', name: 'Autumn Scarf', description: 'Warm orange scarf with leaf embroidery', type: 'accessory', rarity: 'uncommon', price: 0, icon: 'shirt', seasonalEvent: 'harvest_feast' },
+  { id: 'winter_crown', name: 'Winter Crown', description: 'Icy crystal crown that sparkles in the light', type: 'hat', rarity: 'rare', price: 0, icon: 'crown', seasonalEvent: 'winter_lights' },
+  { id: 'aurora_outfit', name: 'Aurora Outfit', description: 'Shimmering outfit that glows like the Northern Lights', type: 'outfit', rarity: 'epic', price: 0, icon: 'sparkles', seasonalEvent: 'winter_lights' },
+  { id: 'snowflake_accessory', name: 'Snowflake Charm', description: 'A magical snowflake that never melts', type: 'accessory', rarity: 'uncommon', price: 0, icon: 'sparkles', seasonalEvent: 'winter_lights' },
+  { id: 'globe_hat', name: 'Globe Hat', description: 'A tiny spinning globe perched on your head', type: 'hat', rarity: 'rare', price: 0, icon: 'globe', seasonalEvent: 'world_culture_week' },
+  { id: 'diplomat_outfit', name: 'Diplomat Outfit', description: 'Dapper suit fit for a world ambassador', type: 'outfit', rarity: 'rare', price: 0, icon: 'shirt', seasonalEvent: 'world_culture_week' },
+  { id: 'leaf_hat', name: 'Leaf Hat', description: 'Hat woven from fresh green leaves', type: 'hat', rarity: 'uncommon', price: 0, icon: 'nature', seasonalEvent: 'earth_week' },
+  { id: 'earth_guardian_outfit', name: 'Earth Guardian Outfit', description: 'Verdant green outfit of a planet protector', type: 'outfit', rarity: 'rare', price: 0, icon: 'nature', seasonalEvent: 'earth_week' },
+  { id: 'recycled_accessory', name: 'Recycled Charm', description: 'Colorful bracelet made from upcycled materials', type: 'accessory', rarity: 'uncommon', price: 0, icon: 'heart', seasonalEvent: 'earth_week' },
 ];
 
 export const COSMETIC_TYPES: { type: CosmeticType; label: string; icon: IconName }[] = [
