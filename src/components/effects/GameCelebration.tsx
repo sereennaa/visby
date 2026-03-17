@@ -94,27 +94,27 @@ export const GameCelebration: React.FC<GameCelebrationProps> = ({
       hapticService.tap();
     }
 
-    bgOpacity.value = withTiming(1, { duration: 300 });
-    iconScale.value = withDelay(200, withSpring(1, { damping: 6, stiffness: 100 }));
-    titleOpacity.value = withDelay(500, withTiming(1, { duration: 400 }));
-    scoreOpacity.value = withDelay(700, withTiming(1, { duration: 400 }));
-    auraOpacity.value = withDelay(1000, withSpring(1, { damping: 12 }));
+    bgOpacity.value = withTiming(1, { duration: 220 });
+    iconScale.value = withDelay(140, withSpring(1, { damping: 7, stiffness: 120 }));
+    titleOpacity.value = withDelay(320, withTiming(1, { duration: 260 }));
+    scoreOpacity.value = withDelay(460, withTiming(1, { duration: 260 }));
+    auraOpacity.value = withDelay(650, withSpring(1, { damping: 13 }));
 
     if (tier === 'perfect') {
       glowPulse.value = withDelay(300, withRepeat(
         withSequence(
-          withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) }),
-          withTiming(0.4, { duration: 800 }),
+          withTiming(1, { duration: 650, easing: Easing.out(Easing.cubic) }),
+          withTiming(0.4, { duration: 650 }),
         ),
         -1,
         true,
       ));
-      starBurst.value = withDelay(200, withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) }));
+      starBurst.value = withDelay(140, withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }));
     } else if (tier === 'great') {
       glowPulse.value = withDelay(300, withSequence(
-        withTiming(1, { duration: 600 }),
-        withTiming(0.5, { duration: 800 }),
-        withTiming(0.7, { duration: 600 }),
+        withTiming(1, { duration: 460 }),
+        withTiming(0.5, { duration: 620 }),
+        withTiming(0.7, { duration: 460 }),
       ));
     }
     return () => {

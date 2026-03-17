@@ -18,21 +18,99 @@ import { Text } from '../ui/Text';
 import { getShadowStyle } from '../../theme/shadows';
 import { getTimePhase } from '../room/RoomAtmosphere';
 import {
+  COUNTRY_SIGNATURE_COMPLEXITY,
   COUNTRY_ARCHITECTURE,
+  getCountryStyleProfile,
   type RoofStyle,
   type WallStyle,
   type DoorStyle,
   type DecoElement,
   type WindowStyle,
   type PathStyle,
+  type SignatureLevel,
 } from '../../config/countryArchitecture';
 import {
+  renderCountryBackdrop,
   renderCountryPath,
   renderCountrySignature,
   renderCountryWindows,
 } from './countryHouseArt';
 
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
+const AnimatedG = Animated.createAnimatedComponent(G);
+
+type RGB = { r: number; g: number; b: number };
+
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+function hexToRgb(hex: string): RGB | null {
+  const clean = hex.replace('#', '').trim();
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  return {
+    r: parseInt(clean.slice(0, 2), 16),
+    g: parseInt(clean.slice(2, 4), 16),
+    b: parseInt(clean.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex({ r, g, b }: RGB): string {
+  const toHex = (n: number) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function mix(a: RGB, b: RGB, t: number): RGB {
+  const v = clamp(t, 0, 1);
+  return {
+    r: a.r + (b.r - a.r) * v,
+    g: a.g + (b.g - a.g) * v,
+    b: a.b + (b.b - a.b) * v,
+  };
+}
+
+function luminance({ r, g, b }: RGB): number {
+  const toLinear = (n: number) => {
+    const c = n / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lr = toLinear(r);
+  const lg = toLinear(g);
+  const lb = toLinear(b);
+  return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+}
+
+function saturation({ r, g, b }: RGB): number {
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  if (max === min) return 0;
+  const l = (max + min) / 2;
+  return (max - min) / (1 - Math.abs(2 * l - 1));
+}
+
+function tuneWallColor(hex: string, range: [number, number]): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const currentLum = luminance(rgb);
+  if (currentLum < range[0]) {
+    const amt = clamp((range[0] - currentLum) * 1.2, 0.04, 0.28);
+    return rgbToHex(mix(rgb, { r: 255, g: 255, b: 255 }, amt));
+  }
+  if (currentLum > range[1]) {
+    const amt = clamp((currentLum - range[1]) * 1.2, 0.04, 0.24);
+    return rgbToHex(mix(rgb, { r: 30, g: 30, b: 30 }, amt));
+  }
+  return hex;
+}
+
+function tuneRoofSaturation(hex: string, cap: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const sat = saturation(rgb);
+  if (sat <= cap) return hex;
+  const overshoot = sat - cap;
+  const amt = clamp(overshoot * 0.9, 0.05, 0.24);
+  const gray = (rgb.r + rgb.g + rgb.b) / 3;
+  return rgbToHex(mix(rgb, { r: gray, g: gray, b: gray }, amt));
+}
 
 type RoomTheme = 'traditional' | 'modern' | 'nature' | 'city' | 'coastal' | 'mountain';
 
@@ -819,6 +897,7 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
 }) => {
   const arch = countryId ? COUNTRY_ARCHITECTURE[countryId] : undefined;
   const themeC = THEME_COLORS[theme] || THEME_COLORS.traditional;
+  const styleProfile = getCountryStyleProfile(countryId);
 
   const rc = arch?.roofColor ?? themeC.roof;
   const rcd = arch?.roofDark ?? themeC.roofDark;
@@ -835,6 +914,12 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
   const pathStyle: PathStyle = arch?.pathStyle ?? 'plain';
   const decorations: DecoElement[] = arch?.decorations ?? [];
   const signature = arch?.signature;
+  const signatureLevel: SignatureLevel = arch?.signatureLevel ?? COUNTRY_SIGNATURE_COMPLEXITY[countryId ?? ''] ?? 2;
+
+  const roofColor = tuneRoofSaturation(rc, styleProfile.roofSaturationCap);
+  const roofDarkColor = tuneRoofSaturation(rcd, styleProfile.roofSaturationCap);
+  const wallColor = tuneWallColor(wc, styleProfile.wallLuminanceRange);
+  const wallDarkColor = tuneWallColor(wcd, styleProfile.wallLuminanceRange);
 
   const w = size;
   const h = size * 0.92;
@@ -842,10 +927,14 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
   const wallH = h * 0.45;
   const baseY = roofH;
   const isNight = getTimePhase() === 'night' || getTimePhase() === 'evening';
+  const detailTier = size >= 170 ? 3 : size >= 140 ? 2 : 1;
+  const enableMicroAnimations = animated && size >= 140;
+  const blinkBias = ((countryId?.charCodeAt(0) ?? 7) + (countryId?.charCodeAt(1) ?? 11)) % 5;
 
   const smokeDrift = useSharedValue(0);
-  const flagWave = useSharedValue(0);
+  const signatureSway = useSharedValue(0);
   const windowGlow = useSharedValue(0);
+  const tapPulse = useSharedValue(0);
 
   useEffect(() => {
     if (!animated) return;
@@ -860,27 +949,31 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
       );
       windowGlow.value = withRepeat(
         withSequence(
-          withTiming(1, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
-          withTiming(0.6, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+          withTiming(1, { duration: 1700 + blinkBias * 180, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+          withTiming(0.55 + blinkBias * 0.04, { duration: 1500 + blinkBias * 200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
         ),
         -1, true,
       );
     }
 
-    flagWave.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
-        withTiming(-1, { duration: 1200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
-      ),
-      -1, true,
-    );
+    if (enableMicroAnimations) {
+      signatureSway.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2000, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+          withTiming(-1, { duration: 2200, easing: Easing.bezier(0.37, 0, 0.63, 1) }),
+        ),
+        -1,
+        true,
+      );
+    }
 
     return () => {
       cancelAnimation(smokeDrift);
       cancelAnimation(windowGlow);
-      cancelAnimation(flagWave);
+      cancelAnimation(signatureSway);
+      cancelAnimation(tapPulse);
     };
-  }, [animated, isNight]);
+  }, [animated, isNight, enableMicroAnimations, signatureSway, smokeDrift, tapPulse, windowGlow, blinkBias]);
 
   const smokeProps = useAnimatedProps(() => ({
     opacity: interpolate(smokeDrift.value, [0, 1], [0.15, 0.35]),
@@ -897,9 +990,29 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
     opacity: isNight ? interpolate(windowGlow.value, [0.6, 1], [0.4, 0.7]) : 0,
   }));
 
+  const signatureMotionProps = useAnimatedProps(() => ({
+    transform: `translate(${interpolate(signatureSway.value, [-1, 1], [-0.7, 0.7])} ${interpolate(signatureSway.value, [-1, 1], [0.2, -0.2])})`,
+    opacity: 1,
+  }));
+
+  const tapPulseProps = useAnimatedProps(() => ({
+    rx: interpolate(tapPulse.value, [0, 1], [2, w * 0.12]),
+    ry: interpolate(tapPulse.value, [0, 1], [1.5, w * 0.08]),
+    opacity: interpolate(tapPulse.value, [0, 1], [0.5, 0]),
+  }));
+
   return (
-    <View style={[styles.container, { width: w }]}>
+    <View
+      style={[styles.container, { width: w }]}
+      onTouchStart={() => {
+        if (!enableMicroAnimations) return;
+        tapPulse.value = withSequence(withTiming(1, { duration: 280 }), withTiming(0, { duration: 220 }));
+      }}
+    >
       <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        {/* Backdrop layer */}
+        {renderCountryBackdrop(countryId, w, h, baseY, wallH, accent)}
+
         {/* Ground shadow */}
         <Ellipse cx={w * 0.5} cy={baseY + wallH + 6} rx={w * 0.5} ry={10} fill="rgba(0,0,0,0.08)" />
 
@@ -907,23 +1020,25 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
         {renderCountryPath(pathStyle, w, h, baseY, wallH, trim)}
 
         {/* Landscape decorations (behind house) */}
-        {decorations.map((d) => (
+        {decorations.slice(0, Math.max(1, Math.ceil(decorations.length / 2))).map((d) => (
           <G key={d}>{renderDecoration(d, w, wallH, baseY)}</G>
         ))}
 
         {/* Walls */}
-        {renderWalls(wallStyle, w, wallH, baseY, wc, wcd, trim)}
-        {renderWallTexture(wallStyle, w, wallH, baseY, wcd)}
+        {renderWalls(wallStyle, w, wallH, baseY, wallColor, wallDarkColor, trim)}
+        {renderWallTexture(wallStyle, w, wallH, baseY, wallDarkColor)}
+        <Rect x={w * 0.12} y={baseY + 2} width={w * 0.76} height={wallH * 0.16} fill="#FFFFFF" opacity={0.06 + detailTier * 0.01} rx={2} />
 
         {/* Roof */}
-        {renderRoof(roofStyle, w, roofH, baseY, rc, rcd)}
-        {renderRoofTexture(roofStyle, w, roofH, baseY, rc, rcd)}
+        {renderRoof(roofStyle, w, roofH, baseY, roofColor, roofDarkColor)}
+        {renderRoofTexture(roofStyle, w, roofH, baseY, roofColor, roofDarkColor)}
+        <Path d={`M ${w * 0.08} ${baseY + 1} Q ${w * 0.5} ${roofH * 0.14} ${w * 0.92} ${baseY + 1}`} stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
 
         {/* Chimney */}
-        {renderChimney(roofStyle, w, roofH, rc, rcd)}
+        {renderChimney(roofStyle, w, roofH, roofColor, roofDarkColor)}
 
         {/* Chimney smoke (night) */}
-        {isNight && animated && roofStyle !== 'flat' && roofStyle !== 'flatDome' && roofStyle !== 'thatched' && roofStyle !== 'tiered' && (
+        {isNight && enableMicroAnimations && roofStyle !== 'flat' && roofStyle !== 'flatDome' && roofStyle !== 'thatched' && roofStyle !== 'tiered' && (
           <G>
             <AnimatedEllipse cx={w * 0.745} rx={4} ry={4} fill="rgba(200,200,200,0.5)" animatedProps={smokeProps} />
             <AnimatedEllipse rx={3} ry={3} fill="rgba(200,200,200,0.4)" animatedProps={smoke2Props} />
@@ -934,12 +1049,30 @@ export const HouseExterior: React.FC<HouseExteriorProps> = React.memo(({
         {renderDoor(doorStyle, w, wallH, baseY, dc, accent, trim)}
         <Rect x={w * 0.44} y={baseY + wallH * 0.97} width={w * 0.12} height={3} fill="#A1887F" rx={1} opacity={0.75} />
         <Rect x={w * 0.415} y={baseY + wallH + 1} width={w * 0.17} height={4} fill={accent} rx={1} opacity={0.45} />
+        <AnimatedEllipse cx={w * 0.5} cy={baseY + wallH + 2} fill={accent} animatedProps={tapPulseProps} />
 
         {/* Windows */}
         {wallStyle !== 'round' && renderCountryWindows(windowStyle, w, wallH, baseY, isNight, trim, accent, windowGlowProps)}
 
         {/* Country signature details */}
-        {renderCountrySignature(countryId, signature, w, baseY, wallH, accent, trim)}
+        <AnimatedG animatedProps={signatureMotionProps}>
+          {renderCountrySignature(countryId, signature, signatureLevel, w, baseY, wallH, accent, trim)}
+        </AnimatedG>
+
+        {/* Front foliage/details layer */}
+        {decorations.slice(Math.max(1, Math.ceil(decorations.length / 2))).map((d, i) => (
+          <G key={`${d}-front-${i}`} opacity={0.92}>{renderDecoration(d, w, wallH, baseY)}</G>
+        ))}
+
+        {/* Regional material cue */}
+        <Rect
+          x={w * 0.14}
+          y={baseY + wallH - 4}
+          width={w * 0.72}
+          height={2}
+          fill={styleProfile.region === 'mediterranean' ? '#E3F2FD' : styleProfile.region === 'africa' ? '#E6C28B' : trim}
+          opacity={0.4}
+        />
 
         {/* Flag */}
         {flagEmoji && (

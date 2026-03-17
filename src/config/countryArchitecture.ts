@@ -9,6 +9,26 @@ export type DoorStyle = 'rounded' | 'arched' | 'sliding' | 'wooden' | 'horseshoe
 export type WindowStyle = 'square' | 'shuttered' | 'arched' | 'lattice' | 'tall' | 'round' | 'porthole';
 export type DecoElement = 'cherry_blossom' | 'bamboo' | 'lantern' | 'lavender' | 'cactus' | 'olive' | 'palm' | 'tulips' | 'acacia' | 'pine' | 'maple' | 'cedar' | 'sunflower' | 'bougainvillea' | 'vine' | 'hedge' | 'fern' | 'lotus' | 'potted_orange' | 'cypress' | 'rose' | 'protea' | 'papyrus';
 export type PathStyle = 'stone' | 'cobble' | 'wood' | 'tile' | 'sand' | 'brick' | 'plain';
+export type CountryRegion =
+  | 'east_asia'
+  | 'europe'
+  | 'mediterranean'
+  | 'caribbean_latin'
+  | 'mena'
+  | 'africa'
+  | 'north_america'
+  | 'oceania'
+  | 'special';
+export type MaterialProfile = 'timber' | 'stone' | 'limewash' | 'adobe' | 'brick' | 'painted';
+export type SignatureLevel = 1 | 2 | 3;
+
+export interface RegionStyleProfile {
+  region: CountryRegion;
+  wallLuminanceRange: [number, number];
+  roofSaturationCap: number;
+  accentContrastThreshold: number;
+  preferredMaterials: MaterialProfile[];
+}
 
 export interface CountryArchStyle {
   roof: RoofStyle;
@@ -25,6 +45,8 @@ export interface CountryArchStyle {
   windowStyle: WindowStyle;
   pathStyle: PathStyle;
   signature?: string[];
+  signatureLevel?: SignatureLevel;
+  materialProfile?: MaterialProfile;
 }
 
 export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
@@ -572,3 +594,107 @@ export const COUNTRY_ARCHITECTURE: Record<string, CountryArchStyle> = {
     windowStyle: 'arched', pathStyle: 'tile',
   },
 };
+
+export const COUNTRY_REGION: Record<string, CountryRegion> = {
+  jp: 'east_asia', kr: 'east_asia', cn: 'east_asia', tw: 'east_asia', vn: 'east_asia', th: 'east_asia', id: 'east_asia',
+  fr: 'europe', be: 'europe', mc: 'europe', gb: 'europe', nl: 'europe', de: 'europe', no: 'europe', se: 'europe', fi: 'europe', is: 'europe',
+  ch: 'europe', at: 'europe', sk: 'europe', si: 'europe', pl: 'europe', hu: 'europe', bg: 'europe', ro: 'europe', ba: 'europe', cz: 'europe', al: 'europe',
+  gr: 'mediterranean', it: 'mediterranean', hr: 'mediterranean', me: 'mediterranean', es: 'mediterranean', pt: 'mediterranean', tr: 'mediterranean',
+  cu: 'caribbean_latin', jm: 'caribbean_latin', bb: 'caribbean_latin', do: 'caribbean_latin', cw: 'caribbean_latin', lc: 'caribbean_latin',
+  mx: 'caribbean_latin', br: 'caribbean_latin', pe: 'caribbean_latin', ec: 'caribbean_latin', ar: 'caribbean_latin', cl: 'caribbean_latin', uy: 'caribbean_latin', co: 'caribbean_latin',
+  ma: 'mena', lb: 'mena', ae: 'mena', tn: 'mena', in: 'mena', eg: 'mena',
+  ke: 'africa', tz: 'africa', mg: 'africa', za: 'africa',
+  us: 'north_america', ca: 'north_america',
+  au: 'oceania', nz: 'oceania',
+  va: 'special',
+};
+
+export const REGION_STYLE_PROFILES: Record<CountryRegion, RegionStyleProfile> = {
+  east_asia: {
+    region: 'east_asia',
+    wallLuminanceRange: [0.72, 0.92],
+    roofSaturationCap: 0.72,
+    accentContrastThreshold: 3.1,
+    preferredMaterials: ['timber', 'painted', 'limewash'],
+  },
+  europe: {
+    region: 'europe',
+    wallLuminanceRange: [0.62, 0.9],
+    roofSaturationCap: 0.62,
+    accentContrastThreshold: 3.2,
+    preferredMaterials: ['stone', 'timber', 'brick', 'limewash'],
+  },
+  mediterranean: {
+    region: 'mediterranean',
+    wallLuminanceRange: [0.78, 0.98],
+    roofSaturationCap: 0.7,
+    accentContrastThreshold: 3.0,
+    preferredMaterials: ['limewash', 'stone', 'adobe', 'painted'],
+  },
+  caribbean_latin: {
+    region: 'caribbean_latin',
+    wallLuminanceRange: [0.62, 0.95],
+    roofSaturationCap: 0.82,
+    accentContrastThreshold: 2.8,
+    preferredMaterials: ['painted', 'adobe', 'brick', 'timber'],
+  },
+  mena: {
+    region: 'mena',
+    wallLuminanceRange: [0.68, 0.94],
+    roofSaturationCap: 0.66,
+    accentContrastThreshold: 3.3,
+    preferredMaterials: ['adobe', 'stone', 'limewash'],
+  },
+  africa: {
+    region: 'africa',
+    wallLuminanceRange: [0.56, 0.9],
+    roofSaturationCap: 0.72,
+    accentContrastThreshold: 2.9,
+    preferredMaterials: ['adobe', 'timber', 'painted'],
+  },
+  north_america: {
+    region: 'north_america',
+    wallLuminanceRange: [0.64, 0.94],
+    roofSaturationCap: 0.6,
+    accentContrastThreshold: 3.2,
+    preferredMaterials: ['timber', 'brick', 'painted'],
+  },
+  oceania: {
+    region: 'oceania',
+    wallLuminanceRange: [0.7, 0.94],
+    roofSaturationCap: 0.68,
+    accentContrastThreshold: 3.0,
+    preferredMaterials: ['timber', 'painted', 'stone'],
+  },
+  special: {
+    region: 'special',
+    wallLuminanceRange: [0.7, 0.96],
+    roofSaturationCap: 0.74,
+    accentContrastThreshold: 3.0,
+    preferredMaterials: ['stone', 'painted'],
+  },
+};
+
+const REGION_SIGNATURE_LEVEL: Record<CountryRegion, SignatureLevel> = {
+  east_asia: 3,
+  europe: 2,
+  mediterranean: 3,
+  caribbean_latin: 3,
+  mena: 3,
+  africa: 2,
+  north_america: 2,
+  oceania: 2,
+  special: 3,
+};
+
+export const COUNTRY_SIGNATURE_COMPLEXITY: Record<string, SignatureLevel> = Object.fromEntries(
+  Object.keys(COUNTRY_ARCHITECTURE).map((countryId) => {
+    const region = COUNTRY_REGION[countryId] ?? 'special';
+    return [countryId, REGION_SIGNATURE_LEVEL[region]];
+  }),
+) as Record<string, SignatureLevel>;
+
+export function getCountryStyleProfile(countryId?: string): RegionStyleProfile {
+  const region = (countryId && COUNTRY_REGION[countryId]) || 'special';
+  return REGION_STYLE_PROFILES[region];
+}

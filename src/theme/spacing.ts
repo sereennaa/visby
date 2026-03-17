@@ -13,6 +13,9 @@ export const spacing = {
   screenPadding: 22,
   sectionGap: 24,
   itemGap: 12,
+  panelPadding: 14,
+  compactGap: 6,
+  roomyGap: 18,
 
   radius: {
     xs: 6,

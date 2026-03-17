@@ -112,7 +112,7 @@ type CardState = 'idle' | 'selected' | 'matched' | 'wrong';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const ForeignCard: React.FC<{
+const ForeignCardBase: React.FC<{
   word: string;
   language: string;
   state: CardState;
@@ -218,7 +218,17 @@ const ForeignCard: React.FC<{
   );
 };
 
-const EnglishCard: React.FC<{
+const ForeignCard = React.memo(
+  ForeignCardBase,
+  (prev, next) =>
+    prev.word === next.word
+    && prev.language === next.language
+    && prev.state === next.state
+    && prev.index === next.index
+    && prev.imageUrl === next.imageUrl,
+);
+
+const EnglishCardBase: React.FC<{
   word: string;
   state: CardState;
   onPress: () => void;
@@ -304,6 +314,14 @@ const EnglishCard: React.FC<{
     </Animated.View>
   );
 };
+
+const EnglishCard = React.memo(
+  EnglishCardBase,
+  (prev, next) =>
+    prev.word === next.word
+    && prev.state === next.state
+    && prev.index === next.index,
+);
 
 const AuraPopup: React.FC<{ visible: boolean }> = ({ visible }) => {
   if (!visible) return null;

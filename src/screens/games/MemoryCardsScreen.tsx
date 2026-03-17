@@ -114,7 +114,7 @@ function buildDeck(pool: MemoryPair[]): GameCard[] {
 
 type FlipState = 'down' | 'up' | 'matched';
 
-const MemoryCard: React.FC<{
+const MemoryCardBase: React.FC<{
   card: GameCard;
   state: FlipState;
   onPress: () => void;
@@ -223,6 +223,14 @@ const MemoryCard: React.FC<{
     </Animated.View>
   );
 };
+
+const MemoryCard = React.memo(
+  MemoryCardBase,
+  (prev, next) =>
+    prev.card.uid === next.card.uid
+    && prev.state === next.state
+    && prev.index === next.index,
+);
 
 const GAME_NAME = 'MemoryCards';
 

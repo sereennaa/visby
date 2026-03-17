@@ -54,13 +54,13 @@ export const GameLaunchSequence: React.FC<GameLaunchSequenceProps> = ({
   }, []);
 
   useEffect(() => {
-    bgOpacity.value = withTiming(1, { duration: 250 });
+    bgOpacity.value = withTiming(1, { duration: 180 });
 
-    titleScale.value = withDelay(100, withSpring(1, { damping: 8, stiffness: 120 }));
-    titleOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
+    titleScale.value = withDelay(80, withSpring(1, { damping: 9, stiffness: 140 }));
+    titleOpacity.value = withDelay(80, withTiming(1, { duration: 220 }));
 
     if (rules) {
-      rulesOpacity.value = withDelay(400, withTiming(1, { duration: 300 }));
+      rulesOpacity.value = withDelay(280, withTiming(1, { duration: 220 }));
     }
 
     const countdownStart = rules ? 1000 : 600;
@@ -74,7 +74,7 @@ export const GameLaunchSequence: React.FC<GameLaunchSequenceProps> = ({
     const totalDuration = countdownStart + 4 * 450 + 200;
 
     exitOpacity.value = withDelay(totalDuration - 300, withTiming(0, {
-      duration: 300,
+      duration: 220,
       easing: Easing.in(Easing.cubic),
     }));
 
@@ -143,12 +143,12 @@ const CountdownNumber: React.FC<{ text: string; isGo: boolean }> = ({ text, isGo
 
   useEffect(() => {
     scale.value = withSequence(
-      withSpring(isGo ? 1.4 : 1.2, { damping: 6, stiffness: 150 }),
-      withTiming(isGo ? 1.2 : 0.8, { duration: 250 }),
+      withSpring(isGo ? 1.35 : 1.18, { damping: 7, stiffness: 170 }),
+      withTiming(isGo ? 1.16 : 0.82, { duration: 190 }),
     );
     opacity.value = withSequence(
-      withTiming(1, { duration: 100 }),
-      withDelay(250, withTiming(isGo ? 1 : 0, { duration: 150 })),
+      withTiming(1, { duration: 80 }),
+      withDelay(180, withTiming(isGo ? 1 : 0, { duration: 130 })),
     );
   }, []);
 

@@ -49,7 +49,7 @@ const STATE_CONFIG = {
   mastered: { opacity: 1, saturation: 1 },
 };
 
-export const MapPin: React.FC<MapPinProps> = ({
+const MapPinBase: React.FC<MapPinProps> = ({
   name,
   type,
   iconName,
@@ -242,6 +242,18 @@ export const MapPin: React.FC<MapPinProps> = ({
     </GestureDetector>
   );
 };
+
+export const MapPin = React.memo(
+  MapPinBase,
+  (prev, next) =>
+    prev.name === next.name
+    && prev.type === next.type
+    && prev.iconName === next.iconName
+    && prev.stopCount === next.stopCount
+    && prev.state === next.state
+    && prev.size === next.size
+    && prev.delay === next.delay,
+);
 
 const styles = StyleSheet.create({
   container: {

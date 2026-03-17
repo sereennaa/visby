@@ -1,7 +1,13 @@
 import React from 'react';
-import { G, Rect, Circle, Ellipse, Line, Path, Polygon } from 'react-native-svg';
+import { G, Rect, Circle, Ellipse, Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
 import Animated from 'react-native-reanimated';
-import type { PathStyle, WindowStyle } from '../../config/countryArchitecture';
+import {
+  COUNTRY_SIGNATURE_COMPLEXITY,
+  getCountryStyleProfile,
+  type PathStyle,
+  type SignatureLevel,
+  type WindowStyle,
+} from '../../config/countryArchitecture';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
@@ -99,6 +105,36 @@ const COUNTRY_SIGNATURES: Record<string, Token[]> = {
   nz: ['kiwi', 'koru', 'southern_cross'],
   va: ['papal_keys', 'balcony', 'dormer'],
 };
+
+interface SignaturePiece {
+  token: Token;
+  tx: number;
+  ty: number;
+  scale: number;
+  rotate: number;
+}
+
+const hashCountry = (countryId: string) => {
+  let h = 0;
+  for (let i = 0; i < countryId.length; i += 1) h = (h * 33 + countryId.charCodeAt(i)) % 997;
+  return h;
+};
+
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+function createSignatureComposition(countryId: string, tokens: Token[], level: SignatureLevel): SignaturePiece[] {
+  const seed = hashCountry(countryId);
+  const maxPieces = level === 1 ? 2 : 3;
+  const selected = tokens.slice(0, maxPieces);
+  return selected.map((token, i) => {
+    const n = (seed + i * 47) % 100;
+    const tx = (n % 3 === 0 ? -1 : 1) * (6 + (n % 7));
+    const ty = -2 - ((n + i * 7) % 8);
+    const scale = clamp(0.85 + ((seed + i * 13) % 35) / 100, 0.82, 1.2);
+    const rotate = ((seed + i * 23) % 11) - 5;
+    return { token, tx, ty, scale, rotate };
+  });
+}
 
 function drawToken(token: Token, w: number, wallY: number, wallH: number, accent: string, trim: string) {
   const gy = wallY + wallH;
@@ -348,9 +384,56 @@ export function renderCountryPath(pathStyle: PathStyle | undefined, w: number, h
   );
 }
 
+export function renderCountryBackdrop(
+  countryId: string | undefined,
+  w: number,
+  h: number,
+  baseY: number,
+  wallH: number,
+  accent: string,
+) {
+  if (!countryId) return null;
+  const profile = getCountryStyleProfile(countryId);
+  const gy = baseY + wallH;
+  const soft = `${accent}33`;
+
+  if (profile.region === 'oceania' || profile.region === 'caribbean_latin') {
+    return (
+      <G>
+        <Path d={`M ${w * 0.04} ${gy - 10} Q ${w * 0.24} ${gy - 16} ${w * 0.42} ${gy - 11}`} fill="none" stroke={soft} strokeWidth={2} />
+        <Path d={`M ${w * 0.58} ${gy - 11} Q ${w * 0.76} ${gy - 17} ${w * 0.95} ${gy - 10}`} fill="none" stroke={soft} strokeWidth={2} />
+      </G>
+    );
+  }
+  if (profile.region === 'europe' || profile.region === 'mediterranean') {
+    return (
+      <G>
+        <Polygon points={`${w * 0.03},${gy} ${w * 0.2},${gy - 14} ${w * 0.37},${gy}`} fill={soft} />
+        <Polygon points={`${w * 0.63},${gy} ${w * 0.8},${gy - 12} ${w * 0.97},${gy}`} fill={soft} />
+      </G>
+    );
+  }
+  if (profile.region === 'mena' || profile.region === 'africa') {
+    return (
+      <G>
+        <Path d={`M ${w * 0.05} ${gy - 6} Q ${w * 0.3} ${gy - 16} ${w * 0.55} ${gy - 8} Q ${w * 0.8} ${gy - 2} ${w * 0.96} ${gy - 9}`} fill="none" stroke={soft} strokeWidth={2.2} />
+      </G>
+    );
+  }
+
+  return (
+    <G>
+      {[0.12, 0.24, 0.76, 0.88].map((p, i) => (
+        <Rect key={`skyline-${i}`} x={w * p} y={gy - 14 - (i % 2) * 4} width={w * 0.08} height={10 + (i % 2) * 4} fill={soft} rx={1} />
+      ))}
+    </G>
+  );
+}
+
 export function renderCountrySignature(
   countryId: string | undefined,
   signature: string[] | undefined,
+  signatureLevel: SignatureLevel | undefined,
   w: number,
   wallY: number,
   wallH: number,
@@ -358,6 +441,28 @@ export function renderCountrySignature(
   trim: string,
 ) {
   if (!countryId) return null;
-  const tokens = (signature as Token[] | undefined) ?? COUNTRY_SIGNATURES[countryId] ?? [];
-  return <G>{tokens.slice(0, 3).map((t, i) => <G key={`${countryId}-${t}-${i}`}>{drawToken(t, w, wallY, wallH, accent, trim)}</G>)}</G>;
+  const level = signatureLevel ?? COUNTRY_SIGNATURE_COMPLEXITY[countryId] ?? 2;
+  const tokens = ((signature as Token[] | undefined) ?? COUNTRY_SIGNATURES[countryId] ?? []).slice(0, 3);
+  const composition = createSignatureComposition(countryId, tokens, level);
+  const crestX = w * 0.5 + ((hashCountry(countryId) % 9) - 4);
+  const crestY = wallY + wallH * 0.2;
+  return (
+    <G>
+      {composition.map((piece, i) => (
+        <G
+          key={`${countryId}-${piece.token}-${i}`}
+          transform={`translate(${piece.tx} ${piece.ty}) scale(${piece.scale}) rotate(${piece.rotate} ${w * 0.5} ${wallY + wallH * 0.6})`}
+        >
+          {drawToken(piece.token, w, wallY, wallH, accent, trim)}
+        </G>
+      ))}
+      <G>
+        <Circle cx={crestX} cy={crestY} r={4.5} fill={trim} opacity={0.85} />
+        <Circle cx={crestX} cy={crestY} r={3.4} fill={accent} opacity={0.85} />
+        <SvgText x={crestX} y={crestY + 1.6} fontSize={3.4} textAnchor="middle" fill="#FFFFFF" fontWeight="700">
+          {countryId.toUpperCase()}
+        </SvgText>
+      </G>
+    </G>
+  );
 }

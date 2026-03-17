@@ -1,0 +1,20 @@
+src/navigation/AppNavigator.tsx(85,24): error TS2339: Property 'logError' does not exist on type '{ track(name: string, properties?: Record<string, string | number | boolean> | undefined): void; trackScreenView(screenName: string): void; trackGameStart(gameType: string, countryId?: string | undefined): void; ... 16 more ...; getQueueSize(): number; }'.
+src/navigation/AppNavigator.tsx(290,32): error TS2322: Type 'NavigationContainerRefWithCurrent<RootParamList>' is not assignable to type 'NavigationContainerRefWithCurrent<RootStackParamList>'.
+src/screens/world/CountryRoomScreen.tsx(198,40): error TS2339: Property 'hunger' does not exist on type 'Visby'.
+src/screens/world/CountryRoomScreen.tsx(198,55): error TS2339: Property 'happiness' does not exist on type 'Visby'.
+src/screens/world/CountryRoomScreen.tsx(198,73): error TS2339: Property 'energy' does not exist on type 'Visby'.
+src/screens/world/CountryRoomScreen.tsx(198,88): error TS2339: Property 'knowledge' does not exist on type 'Visby'.
+src/screens/world/CountryRoomScreen.tsx(333,51): error TS2367: This comparison appears to be unintentional because the types 'FurnitureInteractionType | null | undefined' and '"lamp"' have no overlap.
+src/screens/world/CountryRoomScreen.tsx(921,40): error TS2339: Property 'roomCardSwatch' does not exist on type '{ container: { flex: number; }; safeArea: { flex: number; }; countryIntroOverlay: { justifyContent: "center"; alignItems: "center"; zIndex: number; position: "absolute"; left: 0; right: 0; top: 0; bottom: 0; }; ... 240 more ...; masteryContinueText: { ...; }; }'.
+src/screens/world/CountryRoomScreen.tsx(922,39): error TS2339: Property 'roomCardContent' does not exist on type '{ container: { flex: number; }; safeArea: { flex: number; }; countryIntroOverlay: { justifyContent: "center"; alignItems: "center"; zIndex: number; position: "absolute"; left: 0; right: 0; top: 0; bottom: 0; }; ... 240 more ...; masteryContinueText: { ...; }; }'.
+src/screens/world/CountryRoomScreen.tsx(1141,66): error TS2345: Argument of type 'FurnitureInteractionType | null | undefined' is not assignable to parameter of type 'string | undefined'.
+src/screens/world/CountryRoomScreen.tsx(1167,29): error TS2322: Type 'FurnitureInteractionType | null | undefined' is not assignable to type 'FurnitureInteractionType | undefined'.
+src/screens/world/CountryRoomScreen.tsx(1726,19): error TS2322: Type 'FurnitureInteractionType | null | undefined' is not assignable to type 'FurnitureInteractionType | undefined'.
+src/store/useStore.ts(1005,23): error TS2339: Property 'createdAt' does not exist on type 'Bite'.
+src/store/useStore.ts(1006,66): error TS2339: Property 'dishName' does not exist on type 'Bite'.
+src/store/useStore.ts(1006,140): error TS2339: Property 'createdAt' does not exist on type 'Bite'.
+src/store/useStore.ts(1010,24): error TS2339: Property 'createdAt' does not exist on type 'Stamp'.
+src/store/useStore.ts(1011,93): error TS2339: Property 'name' does not exist on type 'Stamp'.
+src/store/useStore.ts(1011,143): error TS2339: Property 'createdAt' does not exist on type 'Stamp'.
+src/store/useStore.ts(2257,38): error TS2698: Spread types may only be created from object types.
+src/store/useStore.ts(2331,30): error TS2322: Type 'AppStore' is not assignable to type '{ settings: { hapticFeedback?: boolean | undefined; }; }'.

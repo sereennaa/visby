@@ -35,8 +35,8 @@ export const PinPreviewTooltip: React.FC<PinPreviewTooltipProps> = ({
     <>
       {/* Backdrop */}
       <Animated.View
-        entering={FadeIn.duration(200)}
-        exiting={FadeOut.duration(150)}
+        entering={FadeIn.duration(130)}
+        exiting={FadeOut.duration(110)}
         style={styles.backdrop}
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onDismiss} activeOpacity={1} />
@@ -44,8 +44,8 @@ export const PinPreviewTooltip: React.FC<PinPreviewTooltipProps> = ({
 
       {/* Card */}
       <Animated.View
-        entering={SlideInUp.duration(300).springify().damping(14)}
-        exiting={FadeOut.duration(150)}
+        entering={SlideInUp.duration(210).springify().damping(16)}
+        exiting={FadeOut.duration(110)}
         style={styles.card}
       >
         {/* Arrow pointer */}
@@ -123,9 +123,9 @@ const styles = StyleSheet.create({
   card: {
     position: 'absolute',
     alignSelf: 'center',
-    bottom: '35%',
+    bottom: '33%',
     zIndex: 51,
-    width: 240,
+    width: 268,
   },
   arrow: {
     alignSelf: 'center',
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   },
   imageWrap: {
     width: '100%',
-    height: 100,
+    height: 116,
     position: 'relative',
   },
   image: {
@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: {
-    padding: spacing.sm,
-    paddingBottom: 4,
+    padding: spacing.md,
+    paddingBottom: spacing.xs,
   },
   name: {
     fontFamily: 'Baloo2-SemiBold',
-    fontSize: 16,
+    fontSize: 17,
     color: colors.text.primary,
     marginBottom: 2,
   },
@@ -215,21 +215,22 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   hint: {
-    marginTop: 2,
-    fontStyle: 'italic',
+    marginTop: spacing.xs,
+    fontStyle: 'normal',
     color: colors.text.muted,
+    lineHeight: 16,
   },
   goBtn: {
-    margin: spacing.sm,
-    marginTop: 4,
-    borderRadius: 10,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   goBtnGrad: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 11,
     gap: 4,
   },
   goBtnText: {

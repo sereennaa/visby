@@ -124,7 +124,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Animated.View entering={ZoomIn.duration(300).springify()}>
+        <Animated.View entering={ZoomIn.duration(210).springify().damping(15)}>
         <Animated.View style={[styles.card, cardAnimatedStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={(e) => e.stopPropagation()}>
           <LinearGradient
@@ -149,7 +149,7 @@ export const RoomFactModal = React.memo<RoomFactModalProps>(({
               <Icon name={fact.icon as IconName} size={48} color={colors.primary.wisteriaDark} />
             </View>
           )}
-          <Animated.View entering={FadeInDown.duration(400).delay(80)} style={styles.body}>
+          <Animated.View entering={FadeInDown.duration(260).delay(50)} style={styles.body}>
             <Heading level={2} style={styles.title}>{fact.title}</Heading>
             <Text variant="body" style={styles.content}>{fact.content}</Text>
             <View style={styles.auraRow}>

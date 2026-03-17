@@ -241,7 +241,7 @@ import { TouchableOpacity } from 'react-native';
 const styles = StyleSheet.create({
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
+    justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
   },
   content: {
     borderRadius: 24, overflow: 'hidden',
@@ -249,10 +249,10 @@ const styles = StyleSheet.create({
   },
   contentWithImage: {
     borderRadius: 28, overflow: 'hidden',
-    maxWidth: 360, width: '100%',
+    maxWidth: 372, width: '100%',
     borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
   },
-  objectImageWrap: { width: '100%', height: 180, position: 'relative' },
+  objectImageWrap: { width: '100%', height: 194, position: 'relative' },
   objectImage: { width: '100%', height: '100%' },
   objectImageOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.15)' },
   iconRowLarge: { paddingVertical: spacing.xl, alignItems: 'center', backgroundColor: colors.primary.wisteriaFaded },
@@ -261,24 +261,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: colors.primary.wisteria + '30',
   },
-  contentBody: { padding: spacing.xl },
+  contentBody: { padding: spacing.xl, gap: spacing.xs },
   didYouKnowBadge: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    paddingVertical: 4, paddingHorizontal: spacing.md, marginBottom: spacing.sm,
+    paddingVertical: 6, paddingHorizontal: spacing.md, marginBottom: spacing.sm,
     backgroundColor: colors.reward.peachLight, borderRadius: 12, alignSelf: 'center',
   },
   didYouKnowText: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.reward.amber },
   iconRow: { alignItems: 'center', marginBottom: spacing.sm },
-  body: { marginTop: spacing.sm, marginBottom: spacing.sm, textAlign: 'center', lineHeight: 22 },
+  body: { marginTop: spacing.sm, marginBottom: spacing.sm, textAlign: 'center', lineHeight: 23 },
   auraRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    paddingVertical: 8, marginBottom: spacing.sm,
+    paddingVertical: 9, marginBottom: spacing.sm,
     backgroundColor: colors.status.streakBg, borderRadius: 12,
     borderWidth: 1, borderColor: colors.reward.gold + '30',
   },
   auraText: { fontFamily: 'Baloo2-SemiBold', fontSize: 16, color: colors.status.streak },
   auraSubtext: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.reward.gold, marginTop: 2 },
-  actions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
+  actions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm },
   microCard: {
     padding: spacing.xl, borderRadius: 24, alignItems: 'center',
     maxWidth: 280, overflow: 'hidden',

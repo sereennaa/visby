@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "quality:country": "node tools/country-quality-check.mjs",
+    "test:country-data": "node tools/country-data-smoke.mjs",
     "build:ios": "eas build --platform ios --profile production",
     "submit:ios": "eas submit --platform ios --latest --profile production"
   },

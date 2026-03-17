@@ -42,6 +42,7 @@ import { getCountryMapPins, getPinRegionHint, type CountryMapPin } from '../../c
 import { getCountryLocations } from '../../config/learningContent';
 import { getCountryLandmarks, getCountryFoodHighlights, getCountryHistory } from '../../config/countryKnowledge';
 import { getCountryOutlinePath } from '../../config/countryOutlines';
+import { getCountryIdFromParams } from '../../config/countryAccess';
 import { CountryOutline } from '../../components/maps/CountryOutline';
 import { CountryMapDecorations } from '../../components/maps/CountryMapDecorations';
 import { AnimatedTrailPath } from '../../components/maps/AnimatedTrailPath';
@@ -211,28 +212,28 @@ const CompassRose: React.FC = () => {
 // ── Main Screen ──
 
 export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, route }) => {
-  const { countryId } = route.params;
+  const countryId = getCountryIdFromParams(route.params);
   const country = COUNTRIES.find((c) => c.id === countryId);
   const pins = getCountryMapPins(countryId);
   const getCountryProgress = useStore((s) => s.getCountryProgress);
   const countryProgress = getCountryProgress(countryId);
   const visitedPins = useStore((s) => s.visitedPins);
   const visitedStops = useStore((s) => s.visitedStops);
+  const countryLocations = useMemo(() => getCountryLocations(countryId), [countryId]);
 
   // Pin preview tooltip
   const [previewPin, setPreviewPin] = useState<CountryMapPin | null>(null);
 
   // Get first stop image for each pin (for list cards and tooltip)
   const pinImages = useMemo(() => {
-    const locs = getCountryLocations(countryId);
     const map: Record<string, string | null> = {};
     for (const pin of pins) {
       const firstLocId = pin.locationIds[0];
-      const loc = locs.find((l) => l.id === firstLocId);
+      const loc = countryLocations.find((l) => l.id === firstLocId);
       map[pin.id] = loc?.imageUrl ?? null;
     }
     return map;
-  }, [countryId, pins]);
+  }, [countryLocations, pins]);
 
   const pinKnowledgeHints = useMemo(() => {
     const landmarks = getCountryLandmarks(countryId);
@@ -257,6 +258,18 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
     return map;
   }, [countryId, pins]);
 
+  const mapNarrativeLine = useMemo(() => {
+    const history = getCountryHistory(countryId);
+    const foods = getCountryFoodHighlights(countryId);
+    if (history.length > 0) {
+      return `Story thread: ${history[0].title}`;
+    }
+    if (foods.length > 0) {
+      return `Taste trail: ${foods[0].name}`;
+    }
+    return 'Follow the pins to uncover local stories.';
+  }, [countryId]);
+
   // Pin visited states based on per-pin and per-stop tracking
   const pinStates = useMemo((): Record<string, PinState> => {
     const completedPins = visitedPins[countryId] ?? [];
@@ -273,6 +286,43 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
     }
     return result;
   }, [pins, visitedPins, visitedStops, countryId]);
+
+  const mapFogPins = useMemo(
+    () => pins.map((p) => ({
+      xPercent: p.xPercent,
+      yPercent: p.yPercent,
+      visited: pinStates[p.id] === 'visited' || pinStates[p.id] === 'mastered',
+    })),
+    [pins, pinStates],
+  );
+
+  const pinDisplayData = useMemo(
+    () => pins.map((pin) => {
+      const pinColor = pin.type === 'city' ? colors.primary.wisteria : colors.reward.peach;
+      const iconName = LANDMARK_ICONS[pin.type] || 'landmark';
+      const stopsTotal = pin.locationIds.length;
+      const state = pinStates[pin.id] || 'unvisited';
+      const visited = state === 'visited' || state === 'mastered';
+      const isMastered = state === 'mastered';
+      const regionHint = [getPinRegionHint(pin.id), pinKnowledgeHints[pin.id]].filter(Boolean).join(' ');
+      const x = (pin.xPercent / 100) * (MAP_WIDTH - PIN_SIZE) - 8;
+      const y = (pin.yPercent / 100) * (MAP_HEIGHT - PIN_SIZE) - 8;
+      return {
+        pin,
+        pinColor,
+        iconName,
+        stopsTotal,
+        state,
+        visited,
+        isMastered,
+        regionHint,
+        x,
+        y,
+        imageUrl: pinImages[pin.id],
+      };
+    }),
+    [pins, pinStates, pinKnowledgeHints, pinImages],
+  );
 
   const completedPinCount = (visitedPins[countryId] ?? []).length;
   const getCountryJourneyProgress = useStore((s) => s.getCountryJourneyProgress);
@@ -407,6 +457,11 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
     setPreviewPin(pin);
   }, []);
 
+  const handleOpenStreet = useCallback((pinId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('PlaceStreet', { countryId, pinId });
+  }, [countryId, navigation]);
+
   const handleGoToStreet = useCallback(() => {
     if (!previewPin) return;
     setPreviewPin(null);
@@ -436,6 +491,7 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
             <Heading level={3} style={styles.headerTitle}>
               {country.flagEmoji} Map of {country.name}
             </Heading>
+            <Caption style={styles.headerSub}>{mapNarrativeLine}</Caption>
           </View>
           <View style={styles.headerSpacer} />
         </Animated.View>
@@ -498,11 +554,7 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
 
                 {/* Fog of war */}
                 <MapFogOverlay
-                  pins={pins.map((p) => ({
-                    xPercent: p.xPercent,
-                    yPercent: p.yPercent,
-                    visited: pinStates[p.id] === 'visited' || pinStates[p.id] === 'mastered',
-                  }))}
+                  pins={mapFogPins}
                   width={MAP_WIDTH}
                   height={MAP_HEIGHT}
                   pinSize={PIN_SIZE}
@@ -511,10 +563,7 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
                 />
 
                 {/* Map Pins */}
-                {pins.map((pin, idx) => {
-                  const x = (pin.xPercent / 100) * (MAP_WIDTH - PIN_SIZE) - 8;
-                  const y = (pin.yPercent / 100) * (MAP_HEIGHT - PIN_SIZE) - 8;
-                  const iconName = LANDMARK_ICONS[pin.type] || 'landmark';
+                {pinDisplayData.map(({ pin, x, y, iconName, state }, idx) => {
                   return (
                     <View key={pin.id} style={[styles.pinWrap, { left: x, top: y }]}>
                       <MapPin
@@ -522,7 +571,7 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
                         type={pin.type}
                         iconName={iconName}
                         stopCount={pin.locationIds.length}
-                        state={pinStates[pin.id] || 'unvisited'}
+                        state={state}
                         size={PIN_SIZE}
                         delay={300 + idx * 120}
                         onPress={() => handlePinPress(pin)}
@@ -548,23 +597,12 @@ export const CountryMapScreen: React.FC<CountryMapScreenProps> = ({ navigation, 
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
-          {pins.map((pin, idx) => {
-            const regionHint = [getPinRegionHint(pin.id), pinKnowledgeHints[pin.id]].filter(Boolean).join(' ');
-            const pinColor = pin.type === 'city' ? colors.primary.wisteria : colors.reward.peach;
-            const iconName = LANDMARK_ICONS[pin.type] || 'landmark';
-            const imageUrl = pinImages[pin.id];
-            const stopsTotal = pin.locationIds.length;
-            const visited = pinStates[pin.id] === 'visited' || pinStates[pin.id] === 'mastered';
-            const isMastered = pinStates[pin.id] === 'mastered';
-
+          {pinDisplayData.map(({ pin, regionHint, pinColor, iconName, imageUrl, stopsTotal, visited, isMastered }, idx) => {
             return (
               <Animated.View key={pin.id} entering={FadeInDown.delay(400 + idx * 80).duration(350)}>
                 <TouchableOpacity
                   style={styles.listCard}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    navigation.navigate('PlaceStreet', { countryId, pinId: pin.id });
-                  }}
+                  onPress={() => handleOpenStreet(pin.id)}
                   activeOpacity={0.85}
                 >
                   {/* Gradient accent bar */}
@@ -668,12 +706,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  backBtn: { padding: spacing.xs },
+  backBtn: { padding: spacing.sm, borderRadius: radii.md, backgroundColor: colors.surface.card },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { textAlign: 'center' },
+  headerTitle: { textAlign: 'center', fontSize: 20 },
+  headerSub: { marginTop: 2, color: colors.text.secondary },
   headerSpacer: { width: 40 },
 
   mapWrap: {
@@ -683,8 +722,8 @@ const styles = StyleSheet.create({
   mapCanvas: {
     width: MAP_WIDTH,
     height: MAP_HEIGHT,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    borderRadius: 22,
+    borderWidth: 2,
     borderColor: colors.journey.cardBorder,
     overflow: 'hidden',
     position: 'relative',
@@ -722,7 +761,7 @@ const styles = StyleSheet.create({
   listScroll: { flex: 1 },
   listContent: {
     paddingHorizontal: spacing.screenPadding,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
   },
   listBottom: { height: spacing.xxl * 3 },
 
@@ -730,8 +769,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface.card,
-    borderRadius: 16,
-    marginBottom: spacing.sm,
+    borderRadius: 18,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.journey.cardBorder,
     overflow: 'hidden',
     ...Platform.select({
       web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)' },
@@ -769,7 +810,7 @@ const styles = StyleSheet.create({
   },
   listTextWrap: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
   listTitle: {
     fontFamily: 'Baloo2-SemiBold',
@@ -793,7 +834,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   listHint: {
-    marginTop: 2,
+    marginTop: 4,
     fontStyle: 'italic',
     color: colors.text.muted,
   },
@@ -807,8 +848,8 @@ const styles = StyleSheet.create({
 const masteryStyles = StyleSheet.create({
   bar: {
     marginHorizontal: MAP_PADDING,
-    marginBottom: spacing.sm,
-    padding: spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.md,
     backgroundColor: colors.surface.card,
     borderRadius: radii.lg,
     borderWidth: 1,

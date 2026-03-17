@@ -47,6 +47,7 @@ import { getCountryQuiz, getCountryLocations, getMythsForCountry, getNatureForCo
 import { getCountryGreetings, getCountryManners, getCountrySustainability, getCountryLandmarks, getCountryFoodHighlights, getCountryHistory } from '../../config/countryKnowledge';
 import { COUNTRY_HOUSES, RoomObject, HouseRoom } from '../../config/countryRooms';
 import { getCountryAtmosphere } from '../../config/countryAtmosphere';
+import { getCountryIdFromParams } from '../../config/countryAccess';
 import { getCountryStampProgress } from '../../config/collectionGoals';
 import { getRoomEntryLine } from '../../config/visbyLines';
 import { FurnitureVisual } from '../../components/furniture/FurnitureVisual';
@@ -116,7 +117,8 @@ type CountryRoomScreenProps = {
 };
 
 export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation, route }) => {
-  const { countryId, friendUserId } = route.params;
+  const countryId = getCountryIdFromParams(route.params);
+  const friendUserId = route.params.friendUserId;
   const country = COUNTRIES.find((c) => c.id === countryId);
   const houseData = COUNTRY_HOUSES[countryId];
 
@@ -276,6 +278,16 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
   const landmarkKnowledge = useMemo(() => getCountryLandmarks(countryId), [countryId]);
   const foodKnowledge = useMemo(() => getCountryFoodHighlights(countryId), [countryId]);
   const historyKnowledge = useMemo(() => getCountryHistory(countryId), [countryId]);
+  const myths = useMemo(() => getMythsForCountry(countryId), [countryId]);
+  const natureFacts = useMemo(() => getNatureForCountry(countryId), [countryId]);
+  const phrases = useMemo(() => getPhrasesForCountry(countryId), [countryId]);
+  const timelineHistory = useMemo(() => getHistoryForCountry(countryId), [countryId]);
+  const passportFlourish = useMemo(() => {
+    if (greetings.length > 0) return `Passport phrase: ${greetings[0].phrase}`;
+    if (foodKnowledge.length > 0) return `Local flavor: ${foodKnowledge[0].name}`;
+    if (landmarkKnowledge.length > 0) return `Next landmark: ${landmarkKnowledge[0].name}`;
+    return `Collect stamps to master ${countryId.toUpperCase()}.`;
+  }, [greetings, foodKnowledge, landmarkKnowledge, countryId]);
   const [editMode, setEditMode] = useState(false);
   const [selectedPlacedItem, setSelectedPlacedItem] = useState<string | null>(null);
   const [lastPlacedId, setLastPlacedId] = useState<string | null>(null);
@@ -419,6 +431,36 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
     () => isPlaceComplete && countryProgress.gamesPlayedCount > 0 && countryProgress.locationsVisitedCount > 0,
     [isPlaceComplete, countryProgress],
   );
+  const knowledgeCategories = useMemo(() => ([
+    { label: 'Facts', icon: 'book' as const, color: colors.calm.ocean, count: readFacts.size, total: country?.facts?.length ?? 0 },
+    { label: 'Quiz', icon: 'quiz' as const, color: colors.primary.wisteriaDark, count: countryProgress.quizCompleted ? 1 : 0, total: 1 },
+    { label: 'Locations', icon: 'compass' as const, color: colors.success.emerald, count: visitedLocations.size, total: locations.length },
+    { label: 'Greetings', icon: 'language' as const, color: '#42A5F5', count: 0, total: greetings.length },
+    { label: 'Manners', icon: 'heart' as const, color: '#E91E63', count: 0, total: manners.length },
+    { label: 'Sustainability', icon: 'nature' as const, color: '#2E7D32', count: 0, total: sustainability.length },
+    { label: 'Myths', icon: 'sparkles' as const, color: colors.primary.wisteria, count: 0, total: myths.length },
+    { label: 'Landmarks', icon: 'landmark' as const, color: '#5C6BC0', count: 0, total: landmarkKnowledge.length },
+    { label: 'Food', icon: 'food' as const, color: colors.reward.peachDark, count: 0, total: foodKnowledge.length },
+    { label: 'Nature', icon: 'nature' as const, color: '#4CAF50', count: 0, total: natureFacts.length },
+    { label: 'History', icon: 'globe' as const, color: '#FF9800', count: 0, total: Math.max(timelineHistory.length, historyKnowledge.length) },
+    { label: 'Phrases', icon: 'language' as const, color: '#42A5F5', count: 0, total: phrases.length },
+  ]), [
+    readFacts.size,
+    country?.facts?.length,
+    countryProgress.quizCompleted,
+    visitedLocations.size,
+    locations.length,
+    greetings.length,
+    manners.length,
+    sustainability.length,
+    myths.length,
+    landmarkKnowledge.length,
+    foodKnowledge.length,
+    natureFacts.length,
+    timelineHistory.length,
+    historyKnowledge.length,
+    phrases.length,
+  ]);
 
   const masteryKey = `mastery_${countryId}`;
   useEffect(() => {
@@ -1483,6 +1525,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
               <Text style={styles.sectionTitle}>Discover {country.name}</Text>
               <Text style={styles.factsSectionCount}>{readFacts.size}/{facts.length}</Text>
             </View>
+            <Caption style={styles.passportFlourish}>{passportFlourish}</Caption>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.factsScroll}>
               {facts.map((fact, index) => {
                 const isRead = readFacts.has(fact.id);
@@ -1782,20 +1825,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                 <Caption>{country?.name}</Caption>
               </View>
               <ScrollView style={styles.knowledgeScroll} showsVerticalScrollIndicator={false}>
-                {[
-                  { label: 'Facts', icon: 'book' as const, color: colors.calm.ocean, count: readFacts.size, total: facts.length },
-                  { label: 'Quiz', icon: 'quiz' as const, color: colors.primary.wisteriaDark, count: countryProgress.quizCompleted ? 1 : 0, total: 1 },
-                  { label: 'Locations', icon: 'compass' as const, color: colors.success.emerald, count: visitedLocations.size, total: locations.length },
-                  { label: 'Greetings', icon: 'language' as const, color: '#42A5F5', count: 0, total: greetings.length },
-                  { label: 'Manners', icon: 'heart' as const, color: '#E91E63', count: 0, total: manners.length },
-                  { label: 'Sustainability', icon: 'nature' as const, color: '#2E7D32', count: 0, total: sustainability.length },
-                  { label: 'Myths', icon: 'sparkles' as const, color: colors.primary.wisteria, count: 0, total: getMythsForCountry(countryId).length },
-                  { label: 'Landmarks', icon: 'landmark' as const, color: '#5C6BC0', count: 0, total: landmarkKnowledge.length },
-                  { label: 'Food', icon: 'food' as const, color: colors.reward.peachDark, count: 0, total: foodKnowledge.length },
-                  { label: 'Nature', icon: 'nature' as const, color: '#4CAF50', count: 0, total: getNatureForCountry(countryId).length },
-                  { label: 'History', icon: 'globe' as const, color: '#FF9800', count: 0, total: Math.max(getHistoryForCountry(countryId).length, historyKnowledge.length) },
-                  { label: 'Phrases', icon: 'language' as const, color: '#42A5F5', count: 0, total: getPhrasesForCountry(countryId).length },
-                ].map((cat) => {
+                {knowledgeCategories.map((cat) => {
                   const pct = cat.total > 0 ? Math.round((cat.count / cat.total) * 100) : 0;
                   return (
                     <View key={cat.label} style={styles.knowledgeRow}>
@@ -1878,7 +1908,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
                     ))}
                   </View>
                 )}
-                {getMythsForCountry(countryId).length === 0 && getNatureForCountry(countryId).length === 0 && (
+                {myths.length === 0 && natureFacts.length === 0 && (
                   <View style={styles.knowledgeEmpty}>
                     <Icon name="sparkles" size={24} color={colors.text.muted} />
                     <Caption>More content is being added for this country!</Caption>
@@ -2023,9 +2053,9 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
   },
-  backBtn: { padding: spacing.xs },
+  backBtn: { padding: spacing.sm, borderRadius: spacing.radius.md, backgroundColor: colors.surface.card },
   headerCenter: { alignItems: 'center', flex: 1 },
   flagTitle: { fontSize: 20, fontFamily: 'Baloo2-SemiBold', color: colors.text.primary },
   ownerTag: { color: colors.success.emerald, fontFamily: 'Nunito-Bold', fontSize: 12, marginTop: 2 },
@@ -2475,7 +2505,7 @@ const styles = StyleSheet.create({
   },
   removeBtnText: { fontFamily: 'Nunito-Bold', fontSize: 10, color: '#FFFFFF' },
 
-  actionsWrap: { paddingHorizontal: spacing.lg, marginTop: spacing.lg, gap: spacing.sm },
+  actionsWrap: { paddingHorizontal: spacing.lg, marginTop: spacing.lg, gap: spacing.md },
   heroQuizCard: {
     borderRadius: 20, overflow: 'hidden', borderWidth: 1,
     borderColor: colors.primary.wisteriaFaded, minHeight: 72, justifyContent: 'center',
@@ -2492,17 +2522,17 @@ const styles = StyleSheet.create({
   heroQuizLabel: { fontFamily: 'Baloo2-SemiBold', fontSize: 17, color: colors.text.primary },
   heroQuizSub: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.text.secondary, marginTop: 2 },
   actionsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: spacing.xs,
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingVertical: spacing.xs,
   },
   actionGridItem: {
-    width: '31%' as any, borderRadius: 14, padding: 10, alignItems: 'center', gap: 6,
-    minHeight: 76,
+    width: '31%' as any, borderRadius: 16, padding: spacing.sm, alignItems: 'center', gap: spacing.xs,
+    minHeight: 84, borderWidth: 1, borderColor: colors.primary.wisteriaFaded,
   },
   actionGridIcon: {
-    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
   },
-  actionGridLabel: { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.text.primary, textAlign: 'center' },
-  actionGridBadge: { fontFamily: 'Nunito-SemiBold', fontSize: 9, color: colors.text.muted },
+  actionGridLabel: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.text.primary, textAlign: 'center' },
+  actionGridBadge: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.text.muted },
   collectionGoalCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
@@ -2526,11 +2556,12 @@ const styles = StyleSheet.create({
   },
   chatInRoomBtnText: { fontSize: 13, fontFamily: 'Nunito-SemiBold', color: colors.primary.wisteriaDark },
 
-  factsSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  factsSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.sm },
   factsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   factsSectionBadge: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   factsSectionCount: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.text.muted, marginLeft: 'auto' as any },
-  sectionTitle: { fontFamily: 'Baloo2-Bold', fontSize: 16, color: colors.text.primary },
+  sectionTitle: { fontFamily: 'Baloo2-Bold', fontSize: 17, color: colors.text.primary },
+  passportFlourish: { marginBottom: spacing.xs, color: colors.primary.wisteriaDark },
   factsScroll: { gap: 10, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   discoveryCard: {
     width: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface.card,
@@ -2617,14 +2648,19 @@ const styles = StyleSheet.create({
   },
   knowledgeCard: {
     maxWidth: 380, width: '100%', borderRadius: 24, overflow: 'hidden',
-    maxHeight: '80%',
+    maxHeight: '84%',
   },
   knowledgeHeader: {
     alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.md,
   },
-  knowledgeScroll: { paddingHorizontal: spacing.xl },
+  knowledgeScroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
   knowledgeRow: {
     flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm,
+    backgroundColor: colors.surface.card,
+    borderRadius: 12,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary.wisteriaFaded,
   },
   knowledgeIconWrap: {
     width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
@@ -2650,7 +2686,7 @@ const styles = StyleSheet.create({
   },
   knowledgeSectionTitle: {
     fontFamily: 'Baloo2-SemiBold',
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },
