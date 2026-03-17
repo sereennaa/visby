@@ -6,7 +6,9 @@ import type { VisbyMood } from '../types';
 
 type GameKey = 'WordMatch' | 'MemoryCards' | 'CookingGame' | 'TreasureHunt';
 
-const LINES = {
+type MoodLines = Partial<Record<VisbyMood, readonly string[]>>;
+
+const LINES: Record<string, MoodLines> = {
   game_won: {
     excited: ['We did it!', 'So much fun!', 'You\'re amazing!'],
     happy: ['Nice one!', 'Great job!', 'Well played!'],
@@ -47,25 +49,26 @@ const LINES = {
     confused: ['I think I get it now!', 'More lessons help!'],
     sick: ['You studied for both of us!', 'Thank you!'],
   },
-} as const;
+};
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 export function getPostGameLine(
-  gameKey: GameKey,
+  _gameKey: GameKey,
   outcome: 'won' | 'lost' | 'perfect',
-  mood: VisbyMood
+  mood: VisbyMood,
 ): string {
   const key = outcome === 'perfect' ? 'game_perfect' : outcome === 'won' ? 'game_won' : 'game_lost';
-  const byMood = LINES[key];
-  const lines = byMood[mood] ?? byMood.happy;
+  const byMood = LINES[key]!;
+  const lines = byMood[mood] ?? byMood.happy ?? ['Good job!'];
   return pick(lines);
 }
 
 export function getPostLessonLine(mood: VisbyMood): string {
-  const lines = LINES.lesson[mood] ?? LINES.lesson.happy;
+  const byMood = LINES.lesson!;
+  const lines = byMood[mood] ?? byMood.happy ?? ['Nice work!'];
   return pick(lines);
 }
 

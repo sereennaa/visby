@@ -96,7 +96,7 @@ export const RarityWrapper: React.FC<RarityWrapperProps> = ({ rarity, children, 
   );
 };
 
-const ShimmerOverlay: React.FC<{ shimmer: Animated.SharedValue<number>; color: string }> = ({ shimmer, color }) => {
+const ShimmerOverlay: React.FC<{ shimmer: import('react-native-reanimated').SharedValue<number>; color: string }> = ({ shimmer, color }) => {
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(shimmer.value, [0, 1], [-200, 200]) }],
   }));

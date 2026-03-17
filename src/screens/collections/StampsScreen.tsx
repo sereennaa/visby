@@ -407,10 +407,10 @@ export const StampsScreen: React.FC<StampsScreenProps> = ({ navigation }) => {
         {viewMode === 'stampbook' && !isLoading && stamps.length > 0 ? (
           <StampBook
             stamps={stamps.map((s) => {
-              const country = COUNTRIES.find((c) => c.id === s.countryId);
+              const country = COUNTRIES.find((c) => c.id === s.countryCode);
               return {
                 id: s.id,
-                name: s.city || s.name || s.countryId,
+                name: s.city || s.locationName || s.countryCode,
                 country: country?.name ?? s.country,
                 countryEmoji: country?.flagEmoji ?? '',
                 type: s.type,

@@ -197,7 +197,7 @@ export const CountryRoomScreen: React.FC<CountryRoomScreenProps> = ({ navigation
       wordMatchGames: 0,
       gamesPlayed: 0,
       stampsCollected: stamps?.length ?? 0,
-      averageNeedLevel: visby ? (visby.hunger + visby.happiness + visby.energy + visby.knowledge) / 4 : 50,
+      averageNeedLevel: visby?.needs ? (visby.needs.hunger + visby.needs.happiness + visby.needs.energy + visby.needs.knowledge) / 4 : 50,
     });
     return getDominantTrait(traits);
   }, [stamps?.length, user?.visitedCountries?.length, visby]);
@@ -2108,6 +2108,12 @@ const styles = StyleSheet.create({
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: 'rgba(255,215,0,0.18)',
     alignItems: 'center', justifyContent: 'center',
+  },
+  roomCardSwatch: {
+    width: '100%', height: 6, borderTopLeftRadius: 10, borderTopRightRadius: 10,
+  },
+  roomCardContent: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, gap: 2,
   },
   roomCardLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.text.secondary },
   roomCardLabelActive: { color: colors.primary.wisteriaDark, fontFamily: 'Nunito-Bold' },

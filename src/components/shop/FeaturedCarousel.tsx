@@ -145,7 +145,7 @@ export const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ onItemPress 
   );
 };
 
-const AnimatedDot: React.FC<{ index: number; scrollX: Animated.SharedValue<number>; cardW: number }> = ({ index, scrollX, cardW }) => {
+const AnimatedDot: React.FC<{ index: number; scrollX: import('react-native-reanimated').SharedValue<number>; cardW: number }> = ({ index, scrollX, cardW }) => {
   const style = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * cardW, index * cardW, (index + 1) * cardW];
     const width = interpolate(scrollX.value, inputRange, [6, 22, 6], Extrapolation.CLAMP);

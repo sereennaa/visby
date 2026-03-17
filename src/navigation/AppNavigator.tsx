@@ -214,7 +214,7 @@ function getActiveTabFromState(state: any): keyof MainTabParamList {
 
 export const AppNavigator = () => {
   const isAuthenticated = useStore(s => s.isAuthenticated);
-  const navigationRef = useNavigationContainerRef();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [currentRoute, setCurrentRoute] = useState('');
   const [activeTab, setActiveTab] = useState<keyof MainTabParamList>('Home');
 

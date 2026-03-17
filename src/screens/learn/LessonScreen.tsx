@@ -140,7 +140,7 @@ const DEFAULT_CONTENT = {
 
 type LessonScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
-  route: RouteProp<{ Lesson: { lessonId: string } }, 'Lesson'>;
+  route: RouteProp<RootStackParamList, 'Lesson'>;
 };
 
 function shuffleOptions<T>(arr: [T, T]): [T, T] {
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   slideImageWrap: {
     width: '100%', maxHeight: 200, borderRadius: 20, overflow: 'hidden', marginBottom: spacing.xl,
-    backgroundColor: colors.base.skyLight, borderWidth: 1, borderColor: colors.primary.wisteriaLight + '50',
+    backgroundColor: colors.calm.skyLight, borderWidth: 1, borderColor: colors.primary.wisteriaLight + '50',
   },
   slideImage: { width: '100%', height: 200 },
   slideIconWrap: {

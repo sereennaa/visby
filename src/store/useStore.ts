@@ -229,6 +229,8 @@ interface AppStore {
     quieterMode: boolean;
     /** Optional ambient sound in home/country rooms (placeholder for future). */
     ambientSound: boolean;
+    /** Read words and phrases aloud for pronunciation practice. */
+    readAloud: boolean;
     /** Chat mode for place chat: friends_only (default), safe_chat_only (quick phrases only), off */
     chatMode: 'friends_only' | 'safe_chat_only' | 'off';
     /** 4-digit parent PIN to protect social/safety settings. Empty = not set. */
@@ -1002,13 +1004,13 @@ export const useStore = create<AppStore>()(
         }
 
         const lastBite = bites.length > 0 ? bites[bites.length - 1] : null;
-        if (lastBite?.createdAt) {
-          candidates.push({ text: `Discovered a dish: ${lastBite.dishName || lastBite.name || 'something tasty'}`, time: new Date(lastBite.createdAt).getTime() });
+        if (lastBite?.collectedAt) {
+          candidates.push({ text: `Discovered a dish: ${lastBite.name || 'something tasty'}`, time: new Date(lastBite.collectedAt).getTime() });
         }
 
         const lastStamp = stamps.length > 0 ? stamps[stamps.length - 1] : null;
-        if (lastStamp?.createdAt) {
-          candidates.push({ text: `Collected a stamp: ${lastStamp.locationName || lastStamp.name || 'a new place'}`, time: new Date(lastStamp.createdAt).getTime() });
+        if (lastStamp?.collectedAt) {
+          candidates.push({ text: `Collected a stamp: ${lastStamp.locationName || 'a new place'}`, time: new Date(lastStamp.collectedAt).getTime() });
         }
 
         if (user?.lastLessonDate === new Date().toDateString()) {
@@ -2254,7 +2256,7 @@ export const useStore = create<AppStore>()(
       name: 'visby-store',
       storage: createJSONStorage(() => AsyncStorage),
       merge: (persisted, current) => {
-        const merged = { ...current, ...persisted } as typeof current & Record<string, unknown>;
+        const merged = { ...current, ...(persisted as object) } as typeof current & Record<string, unknown>;
         if (merged.settings && (merged.settings as { reminderTime?: string }).reminderTime === undefined) {
           (merged.settings as { reminderTime: string }).reminderTime = '19:00';
         }

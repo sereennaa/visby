@@ -15,12 +15,17 @@ import { IconBadge, IconName } from './Icon';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   icon: IconName;
   title: string;
-  message: string;
+  message?: string;
+  subtitle?: string;
   ctaLabel?: string;
+  actionLabel?: string;
   onCta?: () => void;
+  onAction?: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
   style?: ViewStyle;
 }
 
@@ -28,10 +33,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
   title,
   message,
+  subtitle,
   ctaLabel,
+  actionLabel,
   onCta,
+  onAction,
+  secondaryLabel,
+  onSecondary,
   style,
 }) => {
+  const displayMessage = message ?? subtitle ?? '';
+  const displayCtaLabel = ctaLabel ?? actionLabel;
+  const displayOnCta = onCta ?? onAction;
   const bounce = useSharedValue(0);
 
   useEffect(() => {
@@ -63,13 +76,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </Animated.View>
       <Heading level={2} style={styles.title}>{title}</Heading>
       <Text variant="body" color={colors.text.muted} style={styles.message}>
-        {message}
+        {displayMessage}
       </Text>
-      {ctaLabel && onCta && (
+      {displayCtaLabel && displayOnCta && (
         <Button
-          title={ctaLabel}
-          onPress={onCta}
+          title={displayCtaLabel}
+          onPress={displayOnCta}
           variant="primary"
+          style={styles.cta}
+        />
+      )}
+      {secondaryLabel && onSecondary && (
+        <Button
+          title={secondaryLabel}
+          onPress={onSecondary}
+          variant="ghost"
           style={styles.cta}
         />
       )}

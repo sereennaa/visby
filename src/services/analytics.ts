@@ -88,6 +88,14 @@ export const analyticsService = {
     this.track('purchase', { product_id: productId, amount });
   },
 
+  logError(context: string, error?: unknown): void {
+    const message = error instanceof Error ? error.message : String(error ?? 'unknown');
+    this.track('error', { context, message });
+    if (__DEV__) {
+      console.warn(`[analytics:error] ${context}:`, message);
+    }
+  },
+
   // ─── FLUSH / PERSISTENCE ───
 
   async flush(): Promise<void> {

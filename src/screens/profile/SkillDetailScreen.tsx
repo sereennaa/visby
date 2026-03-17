@@ -41,7 +41,7 @@ export const SkillDetailScreen: React.FC<SkillDetailScreenProps> = ({ navigation
 
   const handleAction = useCallback(
     (screen: string, params?: Record<string, unknown>) => {
-      navigation.navigate(screen as keyof RootStackParamList, params as never);
+      (navigation as any).navigate(screen, params);
     },
     [navigation]
   );

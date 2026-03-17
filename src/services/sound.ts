@@ -44,10 +44,7 @@ async function playUrl(uri: string): Promise<void> {
     await ensureAudioMode();
     const player = createAudioPlayer(uri);
     if (!player) return;
-    const playPromise = player.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {});
-    }
+    player.play();
     setTimeout(() => {
       try { player.release(); } catch { /* noop */ }
     }, 2000);

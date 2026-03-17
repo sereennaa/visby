@@ -35,6 +35,7 @@ function mapRowToStamp(row: StampRow): Stamp {
     latitude: Number(row.latitude),
     longitude: Number(row.longitude),
     collectedAt: new Date(row.collected_at),
+    source: 'visit' as const,
     photoUrl: row.photo_url ?? undefined,
     notes: row.notes ?? undefined,
     isFastTravel: row.is_fast_travel ?? false,

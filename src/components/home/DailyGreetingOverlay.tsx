@@ -45,7 +45,7 @@ export const DailyGreetingOverlay: React.FC<DailyGreetingOverlayProps> = ({
   const badges = useStore((s) => s.badges);
 
   const [giftOpened, setGiftOpened] = useState(false);
-  const giftTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const giftTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const bgOpacity = useSharedValue(0);
   const visbyScale = useSharedValue(0);

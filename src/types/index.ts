@@ -191,6 +191,7 @@ export interface VisbyAppearance {
 }
 
 export interface EquippedCosmetics {
+  [key: string]: string | undefined;
   hat?: string;
   outfit?: string;
   accessory?: string;
@@ -246,6 +247,7 @@ export interface SafetyFlag {
 }
 
 export interface SkillProgress {
+  [key: string]: number;
   language: number;    // 0-100
   geography: number;   // 0-100
   culture: number;     // 0-100
@@ -690,7 +692,7 @@ export interface UserHouse {
 }
 
 /** What the Visby can do with this furniture — fulfills needs + earns Aura */
-export type FurnitureInteractionType = 'table' | 'stove' | 'bed' | 'bookshelf' | 'toy';
+export type FurnitureInteractionType = 'table' | 'stove' | 'bed' | 'bookshelf' | 'toy' | 'lamp';
 
 export interface FurnitureItem {
   id: string;
@@ -706,7 +708,7 @@ export interface FurnitureItem {
   /** Sims-style rich description: materials, style, where it's from */
   description?: string;
   /** If set, Visby can use this furniture to fulfill a need and earn Aura */
-  interactionType?: FurnitureInteractionType | null;
+  interactionType?: FurnitureInteractionType;
   /** Short label for the action, e.g. "Eat a meal", "Cook traditional meal" */
   interactionLabel?: string;
   /** Aura reward when using this furniture */
@@ -925,11 +927,11 @@ export type RootStackParamList = {
   Onboarding: undefined;
   
   // Main App
-  Main: undefined;
+  Main: import('@react-navigation/native').NavigatorScreenParams<MainTabParamList> | undefined;
 
   // Tab roots
   Home: undefined;
-  Explore: undefined;
+  Explore: import('@react-navigation/native').NavigatorScreenParams<ExploreStackParamList> | undefined;
   Inbox: undefined;
 
   // Map & Explore (stack screens, reachable from Explore tab)
@@ -957,7 +959,7 @@ export type RootStackParamList = {
   DiscoveryLog: undefined;
   LessonCategory: { categoryId: string };
   Lesson: { lessonId: string; pathNodeId?: string };
-  Quiz: { category?: string; pathNodeId?: string } | undefined;
+  Quiz: { category?: string; pathNodeId?: string; mode?: string } | undefined;
   Flashcards: { deckId?: string; pathNodeId?: string } | undefined;
   
   // Profile & Friends

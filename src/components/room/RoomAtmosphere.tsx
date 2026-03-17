@@ -445,7 +445,7 @@ export const RoomTintOverlay: React.FC<RoomTintOverlayProps> = ({ hasLamp, lampX
 interface ParallaxLayerProps {
   children: React.ReactNode;
   depth: number;
-  sway: Animated.SharedValue<number>;
+  sway: import('react-native-reanimated').SharedValue<number>;
 }
 
 export const ParallaxLayer: React.FC<ParallaxLayerProps> = ({ children, depth, sway }) => {

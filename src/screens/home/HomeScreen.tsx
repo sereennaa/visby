@@ -131,6 +131,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     trySurprise, useStreakFreeze, declineStreakFreezeOffer,
     dismissComebackReward, markWeeklyRecapShown, getCurrentWeekKey,
     markStoryBeatShown, getAdventureOfTheDay, awardAdventureIfCompleted,
+    getWeeklyChallengeProgress,
   } = useStore(useShallow((s) => ({
     dailyCheckIn: s.dailyCheckIn, getStreakMultiplier: s.getStreakMultiplier,
     updateVisbyNeeds: s.updateVisbyNeeds, getVisbyNeeds: s.getVisbyNeeds,

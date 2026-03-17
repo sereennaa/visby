@@ -3,7 +3,7 @@ import { Text as RNText, TextStyle, StyleProp, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
 import { typography, textStyles } from '../../theme/typography';
 
-interface TextProps {
+export interface TextProps {
   children: React.ReactNode;
   variant?:
     | 'heroTitle'
@@ -20,6 +20,7 @@ interface TextProps {
   align?: 'left' | 'center' | 'right';
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  accessibilityLabel?: string;
 }
 
 export const Text: React.FC<TextProps> = ({
@@ -29,6 +30,7 @@ export const Text: React.FC<TextProps> = ({
   align = 'left',
   style,
   numberOfLines,
+  accessibilityLabel,
 }) => {
   const getVariantStyle = (): TextStyle => {
     const variantStyles = textStyles[variant];
@@ -62,6 +64,7 @@ export const Text: React.FC<TextProps> = ({
         style,
       ]}
       numberOfLines={numberOfLines}
+      accessibilityLabel={accessibilityLabel}
     >
       {children}
     </RNText>

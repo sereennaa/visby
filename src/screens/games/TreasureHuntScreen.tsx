@@ -823,6 +823,7 @@ export const TreasureHuntScreen: React.FC<TreasureHuntScreenProps> = ({ navigati
   }
 
   // --- Room hunt: immersive room stage, clue, treasure slots, reveal modal ---
+  if (!roomHuntData) return null;
   const currentClue = roomHuntData.items[clueIndex];
   const room = roomHuntData.room;
   const huntItemIds = new Set(roomHuntData.items.map((i) => i.id));
@@ -1711,7 +1712,7 @@ function SparkleBurst() {
   );
 }
 
-function SparkleParticle({ angle, progress }: { angle: number; progress: Animated.SharedValue<number> }) {
+function SparkleParticle({ angle, progress }: { angle: number; progress: import('react-native-reanimated').SharedValue<number> }) {
   const animStyle = useAnimatedStyle(() => {
     'worklet';
     const d = progress.value * 100;

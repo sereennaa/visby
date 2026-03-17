@@ -31,7 +31,7 @@ const TASK_TIPS: Record<string, { tip: string; screen: string; icon: IconName }>
   hello_languages: { tip: 'Visit different country rooms to learn greetings!', screen: 'CountryWorld', icon: 'language' },
   visit_countries: { tip: 'Explore the world map and visit new countries!', screen: 'CountryWorld', icon: 'globe' },
   daily_streak: { tip: 'Just check in every day to keep your streak going!', screen: 'Home', icon: 'flame' },
-  correct_answers: { tip: 'Take quizzes in country rooms to answer questions.', screen: 'Learn', icon: 'checkmark' },
+  correct_answers: { tip: 'Take quizzes in country rooms to answer questions.', screen: 'Learn', icon: 'check' },
   read_food_facts: { tip: 'Visit country rooms and look for food-related facts.', screen: 'CountryWorld', icon: 'food' },
   play_cooking: { tip: 'Try the Cooking Game in the Games section!', screen: 'CookingGame', icon: 'food' },
   read_myths: { tip: 'Look for mythology stories in country rooms.', screen: 'CountryWorld', icon: 'sparkles' },
@@ -108,7 +108,7 @@ const WeeklyChallengeScreen: React.FC<Props> = ({ navigation }) => {
           {/* Stats row */}
           <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.statsRow}>
             <View style={styles.statChip}>
-              <Icon name="checkmark" size={14} color={colors.semantic.successAccent} />
+              <Icon name="check" size={14} color={colors.semantic.successAccent} />
               <Text variant="bodySmall" style={styles.statText}>{completedCount}/{challenge.tasks.length} tasks</Text>
             </View>
             <View style={styles.statChip}>
@@ -167,7 +167,7 @@ const WeeklyChallengeScreen: React.FC<Props> = ({ navigation }) => {
                   <Card style={[styles.taskCard, isDone && styles.taskCardDone]}>
                     <View style={styles.taskHeader}>
                       <View style={[styles.taskCheck, isDone && styles.taskCheckDone]}>
-                        {isDone && <Icon name="checkmark" size={14} color="#FFF" />}
+                        {isDone && <Icon name="check" size={14} color="#FFF" />}
                       </View>
                       <View style={styles.taskInfo}>
                         <Text

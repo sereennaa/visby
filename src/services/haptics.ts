@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
-let _getStore: (() => { settings: { hapticFeedback?: boolean } }) | null = null;
+let _getStore: (() => { settings: Record<string, unknown> }) | null = null;
 
-export function setHapticStoreAccessor(accessor: () => { settings: { hapticFeedback?: boolean } }) {
+export function setHapticStoreAccessor(accessor: () => { settings: Record<string, unknown> }) {
   _getStore = accessor;
 }
 
